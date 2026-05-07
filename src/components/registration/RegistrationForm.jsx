@@ -35,13 +35,17 @@ export default function RegistrationForm({ services, participants = [], eventSet
   const selectedMedical = services.find(s => s.id === form.medical_service_id);
   const selectedEye = services.find(s => s.id === form.eye_service_id);
 
-  // Category quota checks
+  // Category quota checks (using tiered quota fields)
   const freeCheckUsed = participants.filter(p => p.participant_category === "FREE_CHECK").length;
   const paymentUsed = participants.filter(p => p.participant_category === "PAYMENT").length;
   const freeCheckQuota = eventSetting?.free_check_quota ?? 0;
   const paymentQuota = eventSetting?.payment_quota ?? 0;
   const freeCheckFull = freeCheckQuota > 0 && freeCheckUsed >= freeCheckQuota;
   const paymentFull = paymentQuota > 0 && paymentUsed >= paymentQuota;
+  
+  // Tiered quota details for display
+  const freeCheckRemaining = Math.max(0, freeCheckQuota - freeCheckUsed);
+  const paymentRemaining = Math.max(0, paymentQuota - paymentUsed);
 
   // Map category to quota category (tiered)
   const getQuotaCategoryForCategory = (cat) => cat === "FREE_CHECK" ? "FULL_FREE" : "FULL_PAID";
@@ -225,7 +229,7 @@ export default function RegistrationForm({ services, participants = [], eventSet
     }
   };
 
-  const CategoryCard = ({ value, label, icon: CatIcon, desc, quota, used, isFull }) => (
+  const CategoryCard = ({ value, label, icon: CatIcon, desc, quota, used, remaining, isFull }) => (
     <div
       className={`flex items-start gap-3 px-4 py-3 rounded-xl border-2 cursor-pointer transition-all
         ${isFull ? "opacity-50 cursor-not-allowed border-border bg-muted/20" :
@@ -250,7 +254,7 @@ export default function RegistrationForm({ services, participants = [], eventSet
         <p className="text-xs text-muted-foreground mt-0.5">{desc}</p>
         {quota > 0 && (
           <p className="text-[10px] text-muted-foreground mt-1">
-            Sisa: <span className="font-bold">{Math.max(0, quota - used)}</span> / {quota}
+            Sisa: <span className="font-bold">{remaining}</span> / {quota}
           </p>
         )}
       </div>
@@ -328,23 +332,25 @@ export default function RegistrationForm({ services, participants = [], eventSet
                 onValueChange={val => { setForm(p => ({ ...p, participant_category: val, medical_service_id: "", eye_service_id: "" })); setErrors(p => ({ ...p, participant_category: undefined })); }}
                 className="space-y-2">
                 <CategoryCard
-                  value="FREE_CHECK"
-                  label="FREE CHECK"
-                  icon={Gift}
-                  desc="Pemeriksaan gratis — tidak dipungut biaya"
-                  quota={freeCheckQuota}
-                  used={freeCheckUsed}
-                  isFull={freeCheckFull}
-                />
-                <CategoryCard
-                  value="PAYMENT"
-                  label="PAYMENT"
-                  icon={CreditCard}
-                  desc="Pemeriksaan berbayar — diperlukan konfirmasi pembayaran"
-                  quota={paymentQuota}
-                  used={paymentUsed}
-                  isFull={paymentFull}
-                />
+                   value="FREE_CHECK"
+                   label="FREE CHECK"
+                   icon={Gift}
+                   desc="Pemeriksaan gratis — tidak dipungut biaya"
+                   quota={freeCheckQuota}
+                   used={freeCheckUsed}
+                   remaining={freeCheckRemaining}
+                   isFull={freeCheckFull}
+                 />
+                 <CategoryCard
+                   value="PAYMENT"
+                   label="PAYMENT"
+                   icon={CreditCard}
+                   desc="Pemeriksaan berbayar — diperlukan konfirmasi pembayaran"
+                   quota={paymentQuota}
+                   used={paymentUsed}
+                   remaining={paymentRemaining}
+                   isFull={paymentFull}
+                 />
               </RadioGroup>
               {errors.participant_category && <p className="text-xs text-destructive mt-1">{errors.participant_category}</p>}
             </div>
