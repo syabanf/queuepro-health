@@ -3,7 +3,6 @@ import { createClientFromRequest } from 'npm:@base44/sdk@0.8.25';
 const DEMO_USERS = [
   { email: "admin@brilianhealth.demo", password: "Demo@Admin123", role: "admin" },
   { email: "nakes@brilianhealth.demo", password: "Demo@Nakes123", role: "user" },
-  { email: "user@brilianhealth.demo", password: "Demo@User123", role: "user" },
 ];
 
 Deno.serve(async (req) => {
@@ -13,24 +12,22 @@ Deno.serve(async (req) => {
 
     for (const u of DEMO_USERS) {
       try {
-        // Invite using service role
-        await base44.asServiceRole.users.inviteUser(u.email, u.role);
-        results.push({ email: u.email, invited: true });
-      } catch (e) {
-        results.push({ email: u.email, invited: false, error: e.message });
-        continue;
-      }
-
-      // Set password
-      try {
-        const users = await base44.asServiceRole.entities.User.filter({ email: u.email });
-        if (users && users.length > 0) {
-          await base44.asServiceRole.auth.setUserPassword(users[0].id, u.password);
-          results[results.length - 1].passwordSet = true;
+        // Check if user exists
+        let users = await base44.asServiceRole.entities.User.filter({ email: u.email });
+        
+        // If doesn't exist, can't create via SDK - return error
+        if (!users || users.length === 0) {
+          results.push({ email: u.email, status: "notfound", reason: "User must be invited via dashboard" });
+          continue;
         }
+
+        const userId = users[0].id;
+
+        // Set password using setUserPassword
+        await base44.asServiceRole.auth.setUserPassword(userId, u.password);
+        results.push({ email: u.email, status: "success", userId, passwordSet: true });
       } catch (e) {
-        results[results.length - 1].passwordSet = false;
-        results[results.length - 1].passwordError = e.message;
+        results.push({ email: u.email, status: "error", error: e.message });
       }
     }
 

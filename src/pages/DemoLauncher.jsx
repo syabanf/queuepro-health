@@ -29,13 +29,16 @@ export default function DemoLauncher() {
       if (token && typeof token === "string") {
         base44.auth.setToken(token);
       }
-      window.location.href = redirectTo;
+      // Use setTimeout to ensure token is set before redirect
+      setTimeout(() => {
+        window.location.href = redirectTo;
+      }, 100);
     } catch (err) {
       const msg = err?.response?.data?.message
         || err?.response?.data?.detail
         || err?.data?.message
         || err?.message
-        || "Login gagal.";
+        || "Login gagal — coba akun yang berbeda atau hubungi admin.";
       setError(msg);
       if (demoKey) setDemoLoading(null); else setLoading(false);
     }
