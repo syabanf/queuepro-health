@@ -135,11 +135,11 @@ export default function AdminDashboard() {
     const cancelled = queues.filter(q => q.status === "CANCELLED").length;
     const freeUsed = freeCheckParticipants;
     const paidUsed = paymentParticipants;
-    const remaining = eventMaxParticipants - participants.length;
+    const remaining = totalQuota - participants.length;
     return { completed, partial, waiting, serving, skipped, cancelled, freeUsed, paidUsed, remaining };
-  }, [participants, queues, eventMaxParticipants, freeCheckParticipants, paymentParticipants]);
+  }, [participants, queues, totalQuota, freeCheckParticipants, paymentParticipants]);
 
-  const fillPct = Math.min(100, Math.round((participants.length / eventMaxParticipants) * 100));
+  const fillPct = Math.min(100, Math.round((participants.length / totalQuota) * 100));
   const medicalServices = services.filter(s => s.service_group === "MEDICAL");
   const eyeServices = services.filter(s => s.service_group === "EYE_CHECK");
   const latestParticipants = participants.slice(0, 5);
@@ -185,7 +185,7 @@ export default function AdminDashboard() {
             </div>
             <div className="flex items-center gap-2">
               <span className="text-sm font-black">{participants.length}</span>
-              <span className="text-muted-foreground text-sm">/ {eventMaxParticipants}</span>
+              <span className="text-muted-foreground text-sm">/ {totalQuota}</span>
               {stats.remaining <= 0 ? (
                 <Badge className="bg-red-100 text-red-700 border-red-200 gap-1"><AlertCircle className="w-3 h-3" />Penuh</Badge>
               ) : stats.remaining <= 20 ? (
@@ -210,7 +210,7 @@ export default function AdminDashboard() {
         <Card className="bg-primary text-primary-foreground col-span-2 sm:col-span-1">
           <CardContent className="p-5">
             <p className="text-xs font-medium text-primary-foreground/70">Terdaftar</p>
-            <p className="text-3xl font-black mt-1">{participants.length} <span className="text-lg font-normal text-primary-foreground/50">/ {eventMaxParticipants}</span></p>
+            <p className="text-3xl font-black mt-1">{participants.length} <span className="text-lg font-normal text-primary-foreground/50">/ {totalQuota}</span></p>
             <p className="text-xs text-primary-foreground/60 mt-1">total peserta</p>
           </CardContent>
         </Card>
