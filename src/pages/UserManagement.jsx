@@ -102,7 +102,7 @@ export default function UserManagement() {
     }
     setCreating(true);
     try {
-      const res = await base44.functions.invoke("adminCreateUser", {
+      const res = await base44.functions.invoke("createAppUser", {
         email: createForm.email.trim(),
         full_name: createForm.full_name.trim(),
         role: createForm.role,
