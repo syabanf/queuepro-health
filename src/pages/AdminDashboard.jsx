@@ -32,6 +32,7 @@ export default function AdminDashboard() {
   const { data: services = [] } = useQuery({
     queryKey: ["services"],
     queryFn: () => base44.entities.Service.list(),
+    refetchInterval: 15000,
   });
 
   const { data: eventSettings = [] } = useQuery({
@@ -39,10 +40,24 @@ export default function AdminDashboard() {
     queryFn: () => base44.entities.EventSetting.list(),
   });
 
+  const { data: participants = [] } = useQuery({
+    queryKey: ["participants"],
+    queryFn: () => base44.entities.Participant.list(),
+    refetchInterval: 15000,
+  });
+
+  const { data: queues = [] } = useQuery({
+    queryKey: ["queues"],
+    queryFn: () => base44.entities.Queue.list(),
+    refetchInterval: 15000,
+  });
+
   const event = eventSettings[0];
-  const activeServices = services.filter(s => s.is_active);
   const medicalServices = services.filter(s => s.service_group === "MEDICAL");
   const eyeServices = services.filter(s => s.service_group === "EYE_CHECK");
+  const waitingQueues = queues.filter(q => q.status === "WAITING").length;
+  const servingQueues = queues.filter(q => q.status === "SERVING" || q.status === "CALLED").length;
+  const doneQueues = queues.filter(q => q.status === "DONE").length;
 
   return (
     <div>
@@ -56,28 +71,28 @@ export default function AdminDashboard() {
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
         <StatCard 
           title="Peserta Terdaftar" 
-          value="0" 
+          value={participants.length} 
           icon={Users} 
           color="bg-primary/10 text-primary" 
           subtitle={`Maks. ${event?.max_participants || 200} peserta`}
         />
         <StatCard 
           title="Dalam Antrian" 
-          value="0" 
+          value={waitingQueues} 
           icon={Clock} 
           color="bg-accent/10 text-accent"
           subtitle="Menunggu dipanggil"
         />
         <StatCard 
           title="Sedang Dilayani" 
-          value="0" 
+          value={servingQueues} 
           icon={Monitor} 
           color="bg-warning/10 text-warning"
           subtitle="Di semua booth"
         />
         <StatCard 
           title="Selesai" 
-          value="0" 
+          value={doneQueues} 
           icon={CheckCircle2} 
           color="bg-success/10 text-success"
           subtitle="Hari ini"

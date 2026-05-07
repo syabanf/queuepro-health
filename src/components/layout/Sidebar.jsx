@@ -19,10 +19,12 @@ const adminMenuItems = [
   { label: "Pengaturan", icon: Settings, path: "/settings" },
 ];
 
-const nakesMenuItems = [
+const nakesMenuItemsList = [
   { label: "Booth Operasi", icon: Monitor, path: "/booth" },
   { label: "Antrian Real-time", icon: Monitor, path: "/queue-monitor" },
 ];
+
+
 
 export default function Sidebar({ user }) {
   const location = useLocation();
@@ -30,7 +32,7 @@ export default function Sidebar({ user }) {
   const [mobileOpen, setMobileOpen] = useState(false);
 
   const isAdmin = user?.role === "admin";
-  const menuItems = isAdmin ? adminMenuItems : nakesMenuItems;
+  const menuItems = isAdmin ? adminMenuItems : nakesMenuItemsList;
 
   const handleLogout = () => {
     base44.auth.logout("/");
