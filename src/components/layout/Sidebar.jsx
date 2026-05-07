@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button";
 const adminMenuItems = [
   { label: "Dashboard", icon: LayoutDashboard, path: "/" },
   { label: "Registrasi Peserta", icon: UserPlus, path: "/registration" },
+  { label: "Panel Booth", icon: Monitor, path: "/booth" },
   { label: "Antrian Real-time", icon: Monitor, path: "/queue-monitor" },
   { label: "Dashboard Kuota", icon: Activity, path: "/quota-dashboard" },
   { label: "Data Peserta", icon: Users, path: "/participants" },

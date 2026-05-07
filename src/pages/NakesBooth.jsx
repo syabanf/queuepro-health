@@ -435,32 +435,18 @@ export default function NakesBooth() {
                       )}
 
                       {/* Action Buttons */}
-                      <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 pt-2 border-t border-border">
-                        {/* Scan QR — visible when CALLED or QR_VERIFIED */}
-                        {(activeQueue.status === "CALLED" || activeQueue.status === "QR_VERIFIED") && (
-                          <Button
-                            variant={isQrVerified(activeQueue) ? "outline" : "default"}
-                            className={`gap-1.5 ${isQrVerified(activeQueue) ? "border-green-300 text-green-700 hover:bg-green-50" : ""}`}
-                            onClick={() => setScannerOpen(true)}
-                            disabled={updateQueue.isPending}
-                          >
-                            <QrCode className="w-4 h-4" />
-                            {isQrVerified(activeQueue) ? "Scan Ulang" : "Scan QR"}
-                          </Button>
-                        )}
-
-                        {/* Start Service — locked until QR_VERIFIED */}
-                        {(activeQueue.status === "CALLED" || activeQueue.status === "QR_VERIFIED") && (
-                          <Button
-                            className="gap-1.5"
-                            onClick={() => handleAction(activeQueue, "SERVING", "SERVICE_STARTED")}
-                            disabled={!isQrVerified(activeQueue) || updateQueue.isPending}
-                            title={!isQrVerified(activeQueue) ? "Scan QR terlebih dahulu" : ""}
-                          >
-                            <PlayCircle className="w-4 h-4" />
-                            Mulai Layanan
-                          </Button>
-                        )}
+                                      <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 pt-2 border-t border-border">
+                                        {/* Start Service — available from CALLED */}
+                                        {(activeQueue.status === "CALLED") && (
+                                          <Button
+                                            className="gap-1.5"
+                                            onClick={() => handleAction(activeQueue, "SERVING", "SERVICE_STARTED")}
+                                            disabled={updateQueue.isPending}
+                                          >
+                                            <PlayCircle className="w-4 h-4" />
+                                            Mulai Layanan
+                                          </Button>
+                                        )}
 
                         {/* Mark Done — locked until SERVING */}
                         {activeQueue.status === "SERVING" && (
@@ -474,7 +460,7 @@ export default function NakesBooth() {
                         )}
 
                         {/* Skip */}
-                        {(activeQueue.status === "CALLED" || activeQueue.status === "QR_VERIFIED" || activeQueue.status === "SERVING") && (
+                        {(activeQueue.status === "CALLED" || activeQueue.status === "SERVING") && (
                           <Button variant="outline" className="gap-1.5 text-orange-600 border-orange-300 hover:bg-orange-50"
                             onClick={() => handleAction(activeQueue, "SKIPPED", "SKIPPED")}
                             disabled={updateQueue.isPending}>
@@ -499,13 +485,7 @@ export default function NakesBooth() {
                         </Button>
                       </div>
 
-                      {/* QR hint when not scanned */}
-                      {(activeQueue.status === "CALLED") && !isQrVerified(activeQueue) && (
-                        <div className="flex items-center gap-2 p-3 rounded-lg bg-amber-50 border border-amber-200 text-xs text-amber-800">
-                          <QrCode className="w-4 h-4 flex-shrink-0" />
-                          <span>Scan QR pada kupon peserta sebelum memulai layanan.</span>
-                        </div>
-                      )}
+
                     </div>
                   ) : (
                     <div className="text-center py-8">
