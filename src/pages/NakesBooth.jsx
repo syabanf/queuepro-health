@@ -434,12 +434,12 @@ export default function NakesBooth() {
                         <QrVerificationCard result={verificationResult} />
                       )}
 
-                      {/* Action Buttons */}
-                                      <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 pt-2 border-t border-border">
-                                        {/* Start Service — available from CALLED */}
-                                        {(activeQueue.status === "CALLED") && (
+                      {/* Action Buttons - Simplified Flow */}
+                                      <div className="grid grid-cols-2 gap-2 pt-2 border-t border-border">
+                                        {/* Primary: Next Action */}
+                                        {activeQueue.status === "CALLED" && (
                                           <Button
-                                            className="gap-1.5"
+                                            className="gap-1.5 col-span-2 sm:col-span-1 bg-green-600 hover:bg-green-700"
                                             onClick={() => handleAction(activeQueue, "SERVING", "SERVICE_STARTED")}
                                             disabled={updateQueue.isPending}
                                           >
@@ -448,41 +448,34 @@ export default function NakesBooth() {
                                           </Button>
                                         )}
 
-                        {/* Mark Done — locked until SERVING */}
-                        {activeQueue.status === "SERVING" && (
-                          <Button
-                            className="gap-1.5 bg-green-600 hover:bg-green-700"
-                            onClick={() => handleAction(activeQueue, "DONE", "SERVICE_DONE")}
-                            disabled={updateQueue.isPending}
-                          >
-                            <CheckCircle2 className="w-4 h-4" /> Selesai
-                          </Button>
-                        )}
+                       {activeQueue.status === "SERVING" && (
+                         <Button
+                           className="gap-1.5 col-span-2 sm:col-span-1 bg-green-600 hover:bg-green-700"
+                           onClick={() => handleAction(activeQueue, "DONE", "SERVICE_DONE")}
+                           disabled={updateQueue.isPending}
+                         >
+                           <CheckCircle2 className="w-4 h-4" /> Selesai
+                         </Button>
+                       )}
 
-                        {/* Skip */}
-                        {(activeQueue.status === "CALLED" || activeQueue.status === "SERVING") && (
-                          <Button variant="outline" className="gap-1.5 text-orange-600 border-orange-300 hover:bg-orange-50"
-                            onClick={() => handleAction(activeQueue, "SKIPPED", "SKIPPED")}
-                            disabled={updateQueue.isPending}>
-                            <SkipForward className="w-4 h-4" /> Lewati
-                          </Button>
-                        )}
+                       {/* Secondary: Skip/Cancel */}
+                       {(activeQueue.status === "CALLED" || activeQueue.status === "SERVING") && (
+                         <Button 
+                           variant="outline" 
+                           className="gap-1.5 text-orange-600 border-orange-300 hover:bg-orange-50"
+                           onClick={() => handleAction(activeQueue, "SKIPPED", "SKIPPED")}
+                           disabled={updateQueue.isPending}>
+                           <SkipForward className="w-4 h-4" /> Lewati
+                         </Button>
+                       )}
 
-                        {/* Recall */}
-                        {activeQueue.status === "CALLED" && (
-                          <Button variant="outline" className="gap-1.5 text-amber-600 border-amber-300 hover:bg-amber-50"
-                            onClick={() => handleAction(activeQueue, "CALLED", "RECALLED")}
-                            disabled={updateQueue.isPending}>
-                            <PhoneCall className="w-4 h-4" /> Panggil Ulang
-                          </Button>
-                        )}
-
-                        {/* Cancel */}
-                        <Button variant="outline" className="gap-1.5 text-red-600 border-red-300 hover:bg-red-50"
-                          onClick={() => handleAction(activeQueue, "CANCELLED", "CANCELLED")}
-                          disabled={updateQueue.isPending}>
-                          <XCircle className="w-4 h-4" /> Batalkan
-                        </Button>
+                       <Button 
+                         variant="outline" 
+                         className="gap-1.5 text-red-600 border-red-300 hover:bg-red-50"
+                         onClick={() => handleAction(activeQueue, "CANCELLED", "CANCELLED")}
+                         disabled={updateQueue.isPending}>
+                         <XCircle className="w-4 h-4" /> Batalkan
+                       </Button>
                       </div>
 
 

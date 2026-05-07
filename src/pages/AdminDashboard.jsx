@@ -1,17 +1,19 @@
-import React, { useMemo, useEffect } from "react";
+import React, { useMemo, useEffect, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import {
   Users, Activity, Monitor, CheckCircle2, Clock,
   Stethoscope, Eye, AlertCircle, TrendingUp, SkipForward,
-  XCircle, CreditCard, Gift, ChevronRight
+  XCircle, CreditCard, Gift, ChevronRight, TestTube
 } from "lucide-react";
 import PageHeader from "@/components/layout/PageHeader";
 import { format } from "date-fns";
 import { PARTICIPANT_STATUS_LABELS, PARTICIPANT_STATUS_COLORS } from "@/lib/registrationUtils";
 import { Link } from "react-router-dom";
+import TestFlowWizard from "@/components/TestFlowWizard";
 
 function StatCard({ title, value, icon: Icon, bgClass, textClass, subtitle }) {
   return (
@@ -74,6 +76,7 @@ function ServiceQueueRow({ service, queues }) {
 }
 
 export default function AdminDashboard() {
+  const [showTestWizard, setShowTestWizard] = useState(false);
   const queryClient = useQueryClient();
   const { data: services = [] } = useQuery({
     queryKey: ["services"],
@@ -132,11 +135,23 @@ export default function AdminDashboard() {
 
   return (
     <div className="space-y-6">
-      <PageHeader
-        title="Dashboard"
-        subtitle={event ? `${event.event_name} · ${event.location}` : "Memuat data..."}
-        icon={Activity}
-      />
+      <div className="flex items-center justify-between">
+        <PageHeader
+          title="Dashboard"
+          subtitle={event ? `${event.event_name} · ${event.location}` : "Memuat data..."}
+          icon={Activity}
+        />
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => setShowTestWizard(true)}
+          className="gap-2"
+        >
+          <TestTube className="w-4 h-4" /> Test Flow
+        </Button>
+      </div>
+
+      <TestFlowWizard isOpen={showTestWizard} onClose={() => setShowTestWizard(false)} />
 
       {/* Capacity Bar */}
       <Card className={`border-2 ${fillPct >= 100 ? "border-destructive/40" : fillPct >= 80 ? "border-warning/40" : "border-success/30"}`}>
