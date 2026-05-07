@@ -89,12 +89,14 @@ export default function SettingsPage() {
     servicesForm.forEach(s => {
       const errsRow = {};
       if (!s.booth_number) errsRow.booth_number = "Wajib diisi.";
-      if ((s.free_quota || 0) < 0) errsRow.free_quota = "Tidak boleh negatif.";
-      if ((s.paid_quota || 0) < 0) errsRow.paid_quota = "Tidak boleh negatif.";
-      if ((s.free_quota || 0) < (s.used_free_quota || 0))
-        errsRow.free_quota = `Tidak boleh kurang dari terpakai (${s.used_free_quota}).`;
-      if ((s.paid_quota || 0) < (s.used_paid_quota || 0))
-        errsRow.paid_quota = `Tidak boleh kurang dari terpakai (${s.used_paid_quota}).`;
+      if (!s.is_unlimited) {
+        if ((s.full_free_quota || 0) < (s.used_full_free || 0))
+          errsRow.full_free_quota = `Tidak boleh kurang dari terpakai (${s.used_full_free}).`;
+        if ((s.cc_rp1_quota || 0) < (s.used_cc_rp1 || 0))
+          errsRow.cc_rp1_quota = `Tidak boleh kurang dari terpakai (${s.used_cc_rp1}).`;
+        if ((s.full_paid_quota || 0) < (s.used_full_paid || 0))
+          errsRow.full_paid_quota = `Tidak boleh kurang dari terpakai (${s.used_full_paid}).`;
+      }
       if (Object.keys(errsRow).length > 0) svcErrs[s.id] = errsRow;
     });
 
@@ -119,8 +121,11 @@ export default function SettingsPage() {
         servicesForm.map(s =>
           base44.entities.Service.update(s.id, {
             booth_number: s.booth_number,
-            free_quota: s.free_quota || 0,
-            paid_quota: s.paid_quota || 0,
+            full_free_quota: s.full_free_quota || 0,
+            cc_rp1_quota: s.cc_rp1_quota || 0,
+            full_paid_quota: s.full_paid_quota || 0,
+            total_slot: s.is_unlimited ? 0 : ((s.full_free_quota || 0) + (s.cc_rp1_quota || 0) + (s.full_paid_quota || 0)),
+            is_unlimited: !!s.is_unlimited,
             is_active: s.is_active,
           })
         )
