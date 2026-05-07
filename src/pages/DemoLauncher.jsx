@@ -34,8 +34,9 @@ export default function DemoLauncher() {
         timeoutPromise
       ]);
       
-      if (response.data?.token) {
-        localStorage.setItem('token', response.data.token);
+      const token = response.data?.token || response.data;
+      if (token) {
+        localStorage.setItem('token', token);
         setTimeout(() => {
           window.location.href = redirectTo;
         }, 500);
