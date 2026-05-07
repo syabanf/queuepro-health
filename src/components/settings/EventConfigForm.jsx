@@ -117,42 +117,18 @@ export default function EventConfigForm({ form, onChange, errors, totalParticipa
         </div>
 
         <div className="border-t border-border pt-3">
-          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-3">Kuota Peserta</p>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-            <div>
-              <Label className="text-xs font-medium">Maks. Total Peserta <span className="text-destructive">*</span></Label>
-              <Input
-                type="number"
-                min={totalParticipants}
-                className={`mt-1 ${errors?.max_participants ? "border-destructive" : ""}`}
-                value={form.max_participants || 200}
-                onChange={e => set("max_participants", parseInt(e.target.value) || 0)}
-              />
-              {errors?.max_participants && <p className="text-xs text-destructive mt-1">{errors.max_participants}</p>}
-              <p className="text-[10px] text-muted-foreground mt-1">Terdaftar: {totalParticipants}</p>
-            </div>
-            <div>
-              <Label className="text-xs font-medium">Kuota FREE CHECK</Label>
-              <Input
-                type="number"
-                min={0}
-                className="mt-1"
-                value={form.free_check_quota ?? 100}
-                onChange={e => set("free_check_quota", parseInt(e.target.value) || 0)}
-              />
-              <p className="text-[10px] text-muted-foreground mt-1">Kategori gratis</p>
-            </div>
-            <div>
-              <Label className="text-xs font-medium">Kuota PAYMENT</Label>
-              <Input
-                type="number"
-                min={0}
-                className="mt-1"
-                value={form.payment_quota ?? 100}
-                onChange={e => set("payment_quota", parseInt(e.target.value) || 0)}
-              />
-              <p className="text-[10px] text-muted-foreground mt-1">Kategori berbayar</p>
-            </div>
+          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-3">Kapasitas Event</p>
+          <div>
+            <Label className="text-xs font-medium">Maks. Total Peserta <span className="text-destructive">*</span></Label>
+            <Input
+              type="number"
+              min={totalParticipants}
+              className={`mt-1 ${errors?.max_participants ? "border-destructive" : ""}`}
+              value={form.max_participants || 200}
+              onChange={e => set("max_participants", parseInt(e.target.value) || 0)}
+            />
+            {errors?.max_participants && <p className="text-xs text-destructive mt-1">{errors.max_participants}</p>}
+            <p className="text-[10px] text-muted-foreground mt-1">Terdaftar: {totalParticipants}</p>
           </div>
         </div>
 
