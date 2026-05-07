@@ -8,8 +8,8 @@ import { Badge } from "@/components/ui/badge";
 import { Activity, Eye, EyeOff, Loader2, AlertCircle, Shield, Stethoscope, Monitor } from "lucide-react";
 
 const DEMO_USERS = {
-  admin: { email: "admin@brilianhealth.demo", password: "admin123", label: "Admin Pusat", redirectTo: "/" },
-  nakes: { email: "nakes@brilianhealth.demo", password: "nakes123", label: "Nakes / Petugas Pelayanan", redirectTo: "/booth" },
+  admin: { email: "admin@brilianhealth.demo", password: "Demo@Admin123", label: "Admin Pusat", redirectTo: "/" },
+  nakes: { email: "nakes@brilianhealth.demo", password: "Demo@Nakes123", label: "Nakes / Petugas Pelayanan", redirectTo: "/booth" },
 };
 
 export default function DemoLauncher() {
@@ -35,12 +35,8 @@ export default function DemoLauncher() {
         || err?.response?.data?.detail
         || err?.data?.message
         || err?.message
-        || "Login gagal. Periksa email dan password.";
-      const isDemoUser = demoKey != null;
-      setError(isDemoUser
-        ? `Demo user belum tersedia. Buat dulu via Settings → "Buat Demo Users", lalu set password melalui dashboard Base44.\n\nDetail: ${msg}`
-        : msg
-      );
+        || "Login gagal.";
+      setError(msg);
       if (demoKey) setDemoLoading(null); else setLoading(false);
     }
   };
@@ -133,7 +129,7 @@ export default function DemoLauncher() {
             {/* Divider */}
             <div className="flex items-center gap-3">
               <div className="flex-1 h-px bg-border" />
-              <span className="text-xs text-muted-foreground font-medium uppercase tracking-wider">Demo Login</span>
+              <span className="text-xs text-muted-foreground font-medium uppercase tracking-wider">Akses Cepat</span>
               <div className="flex-1 h-px bg-border" />
             </div>
 
@@ -154,9 +150,9 @@ export default function DemoLauncher() {
                     <span className="text-sm font-semibold text-foreground">Demo Admin Pusat</span>
                     <Badge className="bg-primary/10 text-primary border-primary/20 text-[10px] border">ADMIN</Badge>
                   </div>
-                  <p className="text-xs text-muted-foreground truncate">{DEMO_USERS.admin.email}</p>
+                  <p className="text-[11px] text-muted-foreground font-mono">{DEMO_USERS.admin.email} · {DEMO_USERS.admin.password}</p>
                 </div>
-                {demoLoading === "admin" && <Loader2 className="w-4 h-4 animate-spin text-primary flex-shrink-0" />}
+                {demoLoading === "admin" ? <Loader2 className="w-4 h-4 animate-spin text-primary flex-shrink-0" /> : null}
               </button>
 
               {/* Demo Nakes */}
@@ -171,12 +167,12 @@ export default function DemoLauncher() {
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2">
-                    <span className="text-sm font-semibold text-foreground">Demo Nakes / Petugas Pelayanan</span>
+                    <span className="text-sm font-semibold text-foreground">Demo Nakes</span>
                     <Badge className="bg-accent/10 text-accent border-accent/20 text-[10px] border">NAKES</Badge>
                   </div>
-                  <p className="text-xs text-muted-foreground truncate">{DEMO_USERS.nakes.email}</p>
+                  <p className="text-[11px] text-muted-foreground font-mono">{DEMO_USERS.nakes.email} · {DEMO_USERS.nakes.password}</p>
                 </div>
-                {demoLoading === "nakes" && <Loader2 className="w-4 h-4 animate-spin text-accent flex-shrink-0" />}
+                {demoLoading === "nakes" ? <Loader2 className="w-4 h-4 animate-spin text-accent flex-shrink-0" /> : null}
               </button>
 
               {/* Public Monitor */}
@@ -199,7 +195,7 @@ export default function DemoLauncher() {
             </div>
 
             <p className="text-[10px] text-muted-foreground text-center pt-1">
-              Demo credentials hanya untuk keperluan testing & prototype.
+              Klik tombol di atas untuk login otomatis dengan akun demo.
             </p>
           </CardContent>
         </Card>
