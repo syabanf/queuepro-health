@@ -18,29 +18,21 @@
       "type": "string",
       "description": "Unit or division of participant"
     },
+    "participant_category": {
+      "type": "string",
+      "enum": [
+        "FREE_CHECK",
+        "PAYMENT"
+      ],
+      "description": "Participant category: FREE CHECK or PAYMENT"
+    },
     "medical_service_id": {
       "type": "string",
       "description": "ID of selected medical service"
     },
-    "medical_slot_type": {
-      "type": "string",
-      "enum": [
-        "FREE",
-        "PAID"
-      ],
-      "description": "Slot type for medical service"
-    },
     "eye_service_id": {
       "type": "string",
       "description": "ID of selected eye check service"
-    },
-    "eye_slot_type": {
-      "type": "string",
-      "enum": [
-        "FREE",
-        "PAID"
-      ],
-      "description": "Slot type for eye check service"
     },
     "payment_status": {
       "type": "string",
@@ -77,9 +69,8 @@
     "full_name",
     "phone_number",
     "unit_division",
+    "participant_category",
     "medical_service_id",
-    "medical_slot_type",
-    "eye_service_id",
-    "eye_slot_type"
+    "eye_service_id"
   ]
 }

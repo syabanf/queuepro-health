@@ -53,3 +53,13 @@ export const SLOT_TYPE_COLORS = {
   FREE: "bg-green-100 text-green-700 border-green-200",
   PAID: "bg-orange-100 text-orange-700 border-orange-200",
 };
+
+export const PARTICIPANT_CATEGORY_LABELS = {
+  FREE_CHECK: "FREE CHECK",
+  PAYMENT: "PAYMENT",
+};
+
+export const PARTICIPANT_CATEGORY_COLORS = {
+  FREE_CHECK: "bg-green-100 text-green-700 border-green-200",
+  PAYMENT: "bg-orange-100 text-orange-700 border-orange-200",
+};

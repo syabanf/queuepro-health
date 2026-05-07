@@ -125,7 +125,8 @@ export default function Registration() {
         <div className="min-w-0">
           <RegistrationForm
             services={services}
-            totalParticipants={usedSlots}
+            participants={participants}
+            eventSetting={event}
             onSuccess={handleSuccess}
           />
         </div>
