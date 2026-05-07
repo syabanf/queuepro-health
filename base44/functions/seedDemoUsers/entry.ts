@@ -25,5 +25,13 @@ Deno.serve(async (req) => {
     results.push({ email: 'nakes@brilianhealth.demo', status: 'skipped', reason: e.message });
   }
 
+  // Invite user demo user
+  try {
+    await base44.asServiceRole.users.inviteUser('user@brilianhealth.demo', 'user');
+    results.push({ email: 'user@brilianhealth.demo', status: 'invited', role: 'user' });
+  } catch (e) {
+    results.push({ email: 'user@brilianhealth.demo', status: 'skipped', reason: e.message });
+  }
+
   return Response.json({ results });
 });

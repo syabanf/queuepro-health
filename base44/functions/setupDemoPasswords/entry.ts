@@ -3,6 +3,7 @@ import { createClientFromRequest } from 'npm:@base44/sdk@0.8.25';
 const DEMO_USERS = [
   { email: "admin@brilianhealth.demo", password: "Demo@Admin123", role: "admin" },
   { email: "nakes@brilianhealth.demo", password: "Demo@Nakes123", role: "user" },
+  { email: "user@brilianhealth.demo", password: "Demo@User123", role: "user" },
 ];
 
 Deno.serve(async (req) => {
