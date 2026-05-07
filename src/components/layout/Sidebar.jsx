@@ -16,6 +16,7 @@ const adminMenuItems = [
   { label: "Data Peserta", icon: Users, path: "/participants" },
   { label: "Riwayat Antrian", icon: Clock, path: "/queue-history" },
   { label: "Laporan", icon: FileText, path: "/reports" },
+  { label: "Manajemen Pengguna", icon: Users, path: "/user-management" },
   { label: "Pengaturan", icon: Settings, path: "/settings" },
 ];
 
