@@ -375,16 +375,17 @@ export default function RegistrationForm({ services, participants = [], eventSet
                       <SelectValue placeholder="Pilih layanan medis..." />
                     </SelectTrigger>
                     <SelectContent>
-                      {medicalServices.map(s => (
-                        <SelectItem key={s.id} value={s.id} disabled={isServiceFull(s)}>
-                          <div className="flex items-center gap-2">
-                            <span className="w-5 h-5 rounded bg-primary/10 text-primary text-[10px] font-bold flex items-center justify-center">{s.service_code}</span>
-                            <span>{s.service_name}</span>
-                            {isServiceFull(s) && <Badge variant="outline" className="text-[10px] ml-1">Penuh</Badge>}
-                          </div>
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
+                       <SelectItem value={null}>NONE</SelectItem>
+                       {medicalServices.map(s => (
+                         <SelectItem key={s.id} value={s.id} disabled={isServiceFull(s)}>
+                           <div className="flex items-center gap-2">
+                             <span className="w-5 h-5 rounded bg-primary/10 text-primary text-[10px] font-bold flex items-center justify-center">{s.service_code}</span>
+                             <span>{s.service_name}</span>
+                             {isServiceFull(s) && <Badge variant="outline" className="text-[10px] ml-1">Penuh</Badge>}
+                           </div>
+                         </SelectItem>
+                       ))}
+                     </SelectContent>
                   </Select>
                   {errors.medical_service_id && <p className="text-xs text-destructive mt-1">{errors.medical_service_id}</p>}
                 </div>
@@ -401,16 +402,17 @@ export default function RegistrationForm({ services, participants = [], eventSet
                       <SelectValue placeholder="Pilih layanan pemeriksaan mata..." />
                     </SelectTrigger>
                     <SelectContent>
-                      {eyeServices.map(s => (
-                        <SelectItem key={s.id} value={s.id} disabled={isServiceFull(s)}>
-                          <div className="flex items-center gap-2">
-                            <span className="w-5 h-5 rounded bg-accent/10 text-accent text-[10px] font-bold flex items-center justify-center">{s.service_code}</span>
-                            <span>{s.service_name}</span>
-                            {isServiceFull(s) && <Badge variant="outline" className="text-[10px] ml-1">Penuh</Badge>}
-                          </div>
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
+                       <SelectItem value={null}>NONE</SelectItem>
+                       {eyeServices.map(s => (
+                         <SelectItem key={s.id} value={s.id} disabled={isServiceFull(s)}>
+                           <div className="flex items-center gap-2">
+                             <span className="w-5 h-5 rounded bg-accent/10 text-accent text-[10px] font-bold flex items-center justify-center">{s.service_code}</span>
+                             <span>{s.service_name}</span>
+                             {isServiceFull(s) && <Badge variant="outline" className="text-[10px] ml-1">Penuh</Badge>}
+                           </div>
+                         </SelectItem>
+                       ))}
+                     </SelectContent>
                   </Select>
                   {errors.eye_service_id && <p className="text-xs text-destructive mt-1">{errors.eye_service_id}</p>}
                 </div>
