@@ -8,8 +8,8 @@ import { Badge } from "@/components/ui/badge";
 import { Activity, Eye, EyeOff, Loader2, AlertCircle, Shield, Stethoscope, Monitor, Users } from "lucide-react";
 
 const DEMO_USERS = {
-  admin: { email: "admin@brilianhealth.demo", password: "Demo@Admin123", label: "Admin Pusat", redirectTo: "/" },
-  nakes: { email: "nakes@brilianhealth.demo", password: "Demo@Nakes123", label: "Nakes / Petugas Pelayanan", redirectTo: "/booth" },
+  admin: { username: "admin", password: "admin123", label: "Admin Pusat", redirectTo: "/" },
+  nakes: { username: "nakes", password: "nakes", label: "Nakes / Petugas Pelayanan", redirectTo: "/booth" },
 };
 
 export default function DemoLauncher() {
@@ -20,28 +20,19 @@ export default function DemoLauncher() {
   const [demoLoading, setDemoLoading] = useState(null);
   const [error, setError] = useState("");
 
-  const doLogin = async (em, pw, redirectTo = "/", demoKey = null) => {
+  const doLogin = async (username, pass, redirectTo = "/", demoKey = null) => {
     if (demoKey) setDemoLoading(demoKey); else setLoading(true);
     setError("");
     try {
-      // Mock login - determine role based on email
-      const role = em.includes("nakes") ? "user" : "admin";
-      const mockUser = {
-        id: `mock-${role}-id`,
-        email: em,
-        full_name: em.includes("nakes") ? "Nakes Demo" : "Admin Demo",
-        role: role
-      };
-      
-      // Store mock user in session storage for AuthContext to pick up
-      sessionStorage.setItem("mockUser", JSON.stringify(mockUser));
-      
-      // Use setTimeout to ensure state is set before redirect
+      // Real login attempt
+      const response = await base44.auth.login(username, pass);
+      // If login succeeds, redirect
       setTimeout(() => {
         window.location.href = redirectTo;
-      }, 100);
+      }, 500);
     } catch (err) {
-      setError("Login gagal — coba lagi.");
+      console.error("Login error:", err);
+      setError("Username atau password salah.");
       if (demoKey) setDemoLoading(null); else setLoading(false);
     }
   };
@@ -54,7 +45,7 @@ export default function DemoLauncher() {
 
   const handleDemo = (key) => {
     const u = DEMO_USERS[key];
-    doLogin(u.email, u.password, u.redirectTo, key);
+    doLogin(u.username, u.password, u.redirectTo, key);
   };
 
   const openPublicMonitor = () => { window.location.href = "/mobile-monitor"; };
@@ -155,7 +146,7 @@ export default function DemoLauncher() {
                     <span className="text-sm font-semibold text-foreground">Demo Admin Pusat</span>
                     <Badge className="bg-primary/10 text-primary border-primary/20 text-[10px] border">ADMIN</Badge>
                   </div>
-                  <p className="text-[11px] text-muted-foreground font-mono">{DEMO_USERS.admin.email} · {DEMO_USERS.admin.password}</p>
+                  <p className="text-[11px] text-muted-foreground font-mono">{DEMO_USERS.admin.username} · {DEMO_USERS.admin.password}</p>
                 </div>
                 {demoLoading === "admin" ? <Loader2 className="w-4 h-4 animate-spin text-primary flex-shrink-0" /> : null}
               </button>
@@ -175,7 +166,7 @@ export default function DemoLauncher() {
                     <span className="text-sm font-semibold text-foreground">Demo Nakes</span>
                     <Badge className="bg-accent/10 text-accent border-accent/20 text-[10px] border">NAKES</Badge>
                   </div>
-                  <p className="text-[11px] text-muted-foreground font-mono">{DEMO_USERS.nakes.email} · {DEMO_USERS.nakes.password}</p>
+                  <p className="text-[11px] text-muted-foreground font-mono">{DEMO_USERS.nakes.username} · {DEMO_USERS.nakes.password}</p>
                 </div>
                 {demoLoading === "nakes" ? <Loader2 className="w-4 h-4 animate-spin text-accent flex-shrink-0" /> : null}
               </button>

@@ -187,6 +187,7 @@ export default function NakesBooth() {
   });
 
   const handleAction = (queue, newStatus, eventType, notes, extraFields) => {
+    if (!queue) return;
     updateQueue.mutate({ queue, newStatus, eventType, notes, extraFields });
   };
 
@@ -581,7 +582,11 @@ export default function NakesBooth() {
                       <Button
                         size="lg"
                         disabled={!nextWaiting || !!called || !!qrVerified || !!serving || updateQueue.isPending}
-                        onClick={() => handleAction(nextWaiting, "CALLED", "CALLED")}
+                        onClick={() => {
+                          if (nextWaiting) {
+                            handleAction(nextWaiting, "CALLED", "CALLED", "");
+                          }
+                        }}
                         className="gap-2"
                       >
                         <PhoneCall className="w-5 h-5" /> Panggil Berikutnya

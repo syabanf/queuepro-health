@@ -15,23 +15,6 @@ export const AuthProvider = ({ children }) => {
   const [appPublicSettings, setAppPublicSettings] = useState(null); // Contains only { id, public_settings }
 
   useEffect(() => {
-    // Check if we have a mock user from DemoLauncher
-    const mockUserStr = sessionStorage.getItem("mockUser");
-    if (mockUserStr) {
-      try {
-        const mockUser = JSON.parse(mockUserStr);
-        setUser(mockUser);
-        setIsAuthenticated(true);
-        setIsLoadingAuth(false);
-        setIsLoadingPublicSettings(false);
-        setAuthChecked(true);
-        return;
-      } catch (e) {
-        console.error("Failed to parse mock user:", e);
-        sessionStorage.removeItem("mockUser");
-      }
-    }
-    
     checkAppState();
   }, []);
 
@@ -108,24 +91,15 @@ export const AuthProvider = ({ children }) => {
   const autoLoginDemo = async () => {
     try {
       setIsLoadingAuth(true);
-      // Mock login - simulate successful admin authentication without real backend call
-      const mockUser = {
-        id: "mock-admin-id",
-        email: "admin@brilianhealth.demo",
-        full_name: "Admin Demo",
-        role: "admin"
-      };
-      setUser(mockUser);
-      setIsAuthenticated(true);
-      setIsLoadingAuth(false);
-      setAuthChecked(true);
+      // Redirect to demo launcher for login
+      window.location.href = '/demo';
     } catch (err) {
-      console.error("Mock login failed:", err);
+      console.error("Login redirect failed:", err);
       setIsLoadingAuth(false);
       setAuthChecked(true);
       setAuthError({
         type: 'auth_required',
-        message: 'Failed to auto-login'
+        message: 'Please login'
       });
     }
   };
