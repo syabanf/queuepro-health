@@ -3,7 +3,7 @@ import { Link, useLocation } from "react-router-dom";
 import { 
   UserPlus, Monitor, LayoutDashboard, Users, Clock, 
   FileText, Settings, LogOut, Menu, X, ChevronRight,
-  Activity
+  Activity, Shield, Stethoscope
 } from "lucide-react";
 import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
@@ -57,6 +57,28 @@ export default function Sidebar({ user }) {
     base44.auth.logout("/demo");
   };
 
+  const handleRoleSwitch = async (newRole) => {
+    try {
+      // Switch role by reloading as the other demo account
+      const demoAccounts = {
+        admin: { email: "admin@brilianhealth.demo", password: "Demo@Admin123" },
+        user: { email: "nakes@brilianhealth.demo", password: "Demo@Nakes123" }
+      };
+      
+      const account = demoAccounts[newRole];
+      if (account) {
+        const result = await base44.auth.loginViaEmailPassword(account.email, account.password);
+        const token = result?.access_token || result?.token || result;
+        if (token && typeof token === "string") {
+          base44.auth.setToken(token);
+          window.location.reload();
+        }
+      }
+    } catch (err) {
+      console.error("Role switch failed:", err);
+    }
+  };
+
   const NavContent = () => (
     <div className="flex flex-col h-full">
       {/* Logo */}
@@ -74,9 +96,9 @@ export default function Sidebar({ user }) {
         </div>
       </div>
 
-      {/* User Info */}
+      {/* User Info & Role Switcher */}
       {!collapsed && (
-        <div className="px-5 py-4 border-b border-sidebar-border">
+        <div className="px-5 py-3 border-b border-sidebar-border space-y-3">
           <div className="flex items-center gap-3">
             <div className="w-9 h-9 rounded-full bg-sidebar-accent flex items-center justify-center flex-shrink-0">
               <span className="text-xs font-semibold text-sidebar-foreground">
@@ -87,6 +109,36 @@ export default function Sidebar({ user }) {
               <p className="text-sm font-medium text-sidebar-foreground truncate">{user?.full_name || "User"}</p>
               <p className="text-xs text-sidebar-foreground/60">{isAdmin ? "Admin Pusat" : "Petugas Pelayanan"}</p>
             </div>
+          </div>
+          
+          {/* Role Switcher */}
+          <div className="flex gap-2">
+            <button
+              onClick={() => !isAdmin && handleRoleSwitch("admin")}
+              disabled={isAdmin}
+              className={`flex-1 flex items-center justify-center gap-1.5 px-2 py-1.5 rounded-lg text-xs font-medium transition-all ${
+                isAdmin 
+                  ? "bg-sidebar-primary text-sidebar-primary-foreground" 
+                  : "bg-sidebar-accent/30 text-sidebar-foreground/60 hover:bg-sidebar-accent/50 cursor-pointer"
+              }`}
+              title="Switch to Admin role"
+            >
+              <Shield className="w-3.5 h-3.5" />
+              <span>Admin</span>
+            </button>
+            <button
+              onClick={() => isAdmin && handleRoleSwitch("user")}
+              disabled={!isAdmin}
+              className={`flex-1 flex items-center justify-center gap-1.5 px-2 py-1.5 rounded-lg text-xs font-medium transition-all ${
+                !isAdmin 
+                  ? "bg-sidebar-primary text-sidebar-primary-foreground" 
+                  : "bg-sidebar-accent/30 text-sidebar-foreground/60 hover:bg-sidebar-accent/50 cursor-pointer"
+              }`}
+              title="Switch to Nakes role"
+            >
+              <Stethoscope className="w-3.5 h-3.5" />
+              <span>Nakes</span>
+            </button>
           </div>
         </div>
       )}
