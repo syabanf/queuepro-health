@@ -80,12 +80,28 @@ function ServiceQueueRow({ service, queues }) {
 export default function AdminDashboard() {
   const [showTestWizard, setShowTestWizard] = useState(false);
   const [showDataChecker, setShowDataChecker] = useState(false);
-  const { logout } = useAuth();
+  const { user } = useAuth();
   const queryClient = useQueryClient();
+  const [switching, setSwitching] = useState(false);
 
   const switchRole = async () => {
-    localStorage.removeItem('token');
-    window.location.href = '/demo';
+    setSwitching(true);
+    try {
+      const newRole = user?.role === 'admin' ? 'nakes' : 'admin';
+      const response = await base44.functions.invoke('getDemoToken', { 
+        username: newRole,
+        password: newRole === 'admin' ? 'admin123' : 'nakes'
+      });
+      
+      const token = response.data?.token || response.data;
+      if (token) {
+        localStorage.setItem('token', token);
+        window.location.reload();
+      }
+    } catch (err) {
+      console.error('Role switch failed:', err);
+      setSwitching(false);
+    }
   };
   const { data: services = [] } = useQuery({
     queryKey: ["services"],
@@ -180,9 +196,11 @@ export default function AdminDashboard() {
              variant="destructive"
              size="sm"
              onClick={switchRole}
+             disabled={switching}
              className="gap-2"
            >
-             <LogOut className="w-4 h-4" /> Ganti Role
+             <LogOut className="w-4 h-4" /> 
+             {switching ? 'Mengganti...' : `Ganti ke ${user?.role === 'admin' ? 'Nakes' : 'Admin'}`}
            </Button>
          </div>
        </div>
