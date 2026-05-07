@@ -34,7 +34,7 @@ Deno.serve(async (req) => {
         if (password.length < 6) {
           return Response.json({ error: "Password minimal 6 karakter" }, { status: 400 });
         }
-        await base44.asServiceRole.auth.setUserPassword(existing.id, password);
+        await base44.asServiceRole.entities.User.update(existing.id, { password });
       }
 
       return Response.json({ success: true, userId: existing.id, note: "updated" });
