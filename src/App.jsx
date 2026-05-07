@@ -60,11 +60,9 @@ const AuthenticatedApp = () => {
         <Route path="/settings" element={isAdmin ? <SettingsPage /> : <Navigate to="/booth" replace />} />
 
         {/* Shared Routes */}
+        <Route path="/booth" element={<NakesBooth />} />
         <Route path="/queue-monitor" element={<QueueMonitor />} />
       </Route>
-
-      {/* Booth Route - No Sidebar */}
-      <Route path="/booth" element={!isAdmin ? <NakesBooth /> : <Navigate to="/" replace />} />
       <Route path="*" element={<PageNotFound />} />
     </Routes>
   );

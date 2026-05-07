@@ -13,6 +13,7 @@ const adminMenuSections = [
     section: "Umum",
     items: [
       { label: "Dashboard", icon: LayoutDashboard, path: "/" },
+      { label: "Booth Operasi", icon: Stethoscope, path: "/booth" },
     ]
   },
   {
@@ -37,9 +38,14 @@ const adminMenuSections = [
   }
 ];
 
-const nakesMenuItemsList = [
-  { label: "Booth Operasi", icon: Monitor, path: "/booth" },
-  { label: "Monitor Antrian", icon: Monitor, path: "/queue-monitor" },
+const nakesMenuSections = [
+  {
+    section: "Layanan",
+    items: [
+      { label: "Booth Operasi", icon: Stethoscope, path: "/booth" },
+      { label: "Monitor Antrian", icon: Monitor, path: "/queue-monitor" },
+    ]
+  }
 ];
 
 
@@ -50,8 +56,7 @@ export default function Sidebar({ user }) {
   const [mobileOpen, setMobileOpen] = useState(false);
 
   const isAdmin = user?.role === "admin";
-  const adminMenuItems = isAdmin ? adminMenuSections : null;
-  const menuItems = !isAdmin ? nakesMenuItemsList : [];
+  const menuSections = isAdmin ? adminMenuSections : nakesMenuSections;
 
   const handleLogout = () => {
     try {
@@ -127,57 +132,35 @@ export default function Sidebar({ user }) {
 
       {/* Menu */}
       <nav className="flex-1 px-2 py-4 space-y-3 overflow-y-auto">
-        {isAdmin && adminMenuItems ? (
-          adminMenuItems.map((group) => (
-            <div key={group.section} className="space-y-1">
-              {!collapsed && (
-                <p className="px-3 py-1.5 text-xs font-semibold text-sidebar-foreground/50 uppercase tracking-wider">
-                  {group.section}
-                </p>
-              )}
-              {group.items.map((item) => {
-                const isActive = location.pathname === item.path;
-                return (
-                  <Link
-                    key={item.path}
-                    to={item.path}
-                    onClick={() => setMobileOpen(false)}
-                    className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 group
-                      ${isActive 
-                        ? "bg-sidebar-primary text-sidebar-primary-foreground shadow-lg shadow-sidebar-primary/20" 
-                        : "text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-foreground"
-                      }`}
-                    title={collapsed ? item.label : ""}
-                  >
-                    <item.icon className={`w-5 h-5 flex-shrink-0 ${isActive ? "" : "group-hover:scale-110 transition-transform"}`} />
-                    {!collapsed && <span>{item.label}</span>}
-                    {!collapsed && isActive && <ChevronRight className="w-4 h-4 ml-auto" />}
-                  </Link>
-                );
-              })}
-            </div>
-          ))
-        ) : (
-          menuItems.map((item) => {
-            const isActive = location.pathname === item.path;
-            return (
-              <Link
-                key={item.path}
-                to={item.path}
-                onClick={() => setMobileOpen(false)}
-                className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 group
-                  ${isActive 
-                    ? "bg-sidebar-primary text-sidebar-primary-foreground shadow-lg shadow-sidebar-primary/20" 
-                    : "text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-foreground"
-                  }`}
-              >
-                <item.icon className={`w-5 h-5 flex-shrink-0 ${isActive ? "" : "group-hover:scale-110 transition-transform"}`} />
-                {!collapsed && <span>{item.label}</span>}
-                {!collapsed && isActive && <ChevronRight className="w-4 h-4 ml-auto" />}
-              </Link>
-            );
-          })
-        )}
+        {menuSections.map((group) => (
+          <div key={group.section} className="space-y-1">
+            {!collapsed && (
+              <p className="px-3 py-1.5 text-xs font-semibold text-sidebar-foreground/50 uppercase tracking-wider">
+                {group.section}
+              </p>
+            )}
+            {group.items.map((item) => {
+              const isActive = location.pathname === item.path;
+              return (
+                <Link
+                  key={item.path}
+                  to={item.path}
+                  onClick={() => setMobileOpen(false)}
+                  className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 group
+                    ${isActive 
+                      ? "bg-sidebar-primary text-sidebar-primary-foreground shadow-lg shadow-sidebar-primary/20" 
+                      : "text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-foreground"
+                    }`}
+                  title={collapsed ? item.label : ""}
+                >
+                  <item.icon className={`w-5 h-5 flex-shrink-0 ${isActive ? "" : "group-hover:scale-110 transition-transform"}`} />
+                  {!collapsed && <span>{item.label}</span>}
+                  {!collapsed && isActive && <ChevronRight className="w-4 h-4 ml-auto" />}
+                </Link>
+              );
+            })}
+          </div>
+        ))}
       </nav>
 
       {/* Logout */}
