@@ -29,10 +29,19 @@ export default function DemoLauncher() {
     );
     
     try {
-      await Promise.race([base44.auth.login(username, pass), timeoutPromise]);
-      setTimeout(() => {
-        window.location.href = redirectTo;
-      }, 500);
+      const response = await Promise.race([
+        base44.functions.invoke('getDemoToken', { username, password: pass }),
+        timeoutPromise
+      ]);
+      
+      if (response.data?.token) {
+        localStorage.setItem('token', response.data.token);
+        setTimeout(() => {
+          window.location.href = redirectTo;
+        }, 500);
+      } else {
+        throw new Error("Token tidak diterima");
+      }
     } catch (err) {
       console.error("Login error:", err);
       setError(err?.message || "Username atau password salah.");
