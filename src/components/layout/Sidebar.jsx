@@ -25,7 +25,6 @@ const adminMenuSections = [
   {
     section: "Antrian",
     items: [
-      { label: "Panel Booth", icon: Monitor, path: "/booth" },
       { label: "Monitor Real-time", icon: Monitor, path: "/queue-monitor" },
     ]
   },
