@@ -41,33 +41,7 @@ const AuthenticatedApp = () => {
     }
   }
 
-  // Not authenticated — auto-login as admin demo account
-  if (!isLoadingAuth && !user && authError?.type === "auth_required") {
-    // Trigger auto-login
-    const autoLogin = async () => {
-      try {
-        const result = await base44.auth.loginViaEmailPassword("admin@brilianhealth.demo", "Demo@Admin123");
-        const token = result?.access_token || result?.token || result;
-        if (token && typeof token === "string") {
-          base44.auth.setToken(token);
-          window.location.reload();
-        }
-      } catch (err) {
-        console.error("Auto-login failed:", err);
-      }
-    };
-    
-    autoLogin();
-    
-    return (
-      <div className="fixed inset-0 flex items-center justify-center bg-background">
-        <div className="flex flex-col items-center gap-4">
-          <div className="w-10 h-10 border-4 border-primary/20 border-t-primary rounded-full animate-spin" />
-          <p className="text-sm text-muted-foreground">Masuk ke sistem...</p>
-        </div>
-      </div>
-    );
-  }
+
 
   const isAdmin = user?.role === "admin";
 

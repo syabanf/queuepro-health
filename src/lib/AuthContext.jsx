@@ -42,9 +42,8 @@ export const AuthProvider = ({ children }) => {
         if (appParams.token) {
           await checkUserAuth();
         } else {
-          setIsLoadingAuth(false);
-          setIsAuthenticated(false);
-          setAuthChecked(true);
+          // Try auto-login as admin demo account
+          await autoLoginDemo();
         }
         setIsLoadingPublicSettings(false);
       } catch (appError) {
@@ -54,29 +53,29 @@ export const AuthProvider = ({ children }) => {
         if (appError.status === 403 && appError.data?.extra_data?.reason) {
           const reason = appError.data.extra_data.reason;
           if (reason === 'auth_required') {
-            setAuthError({
-              type: 'auth_required',
-              message: 'Authentication required'
-            });
+            // Try auto-login instead of showing error
+            await autoLoginDemo();
           } else if (reason === 'user_not_registered') {
             setAuthError({
               type: 'user_not_registered',
               message: 'User not registered for this app'
             });
+            setIsLoadingAuth(false);
           } else {
             setAuthError({
               type: reason,
               message: appError.message
             });
+            setIsLoadingAuth(false);
           }
         } else {
           setAuthError({
             type: 'unknown',
             message: appError.message || 'Failed to load app'
           });
+          setIsLoadingAuth(false);
         }
         setIsLoadingPublicSettings(false);
-        setIsLoadingAuth(false);
       }
     } catch (error) {
       console.error('Unexpected error:', error);
@@ -86,6 +85,26 @@ export const AuthProvider = ({ children }) => {
       });
       setIsLoadingPublicSettings(false);
       setIsLoadingAuth(false);
+    }
+  };
+
+  const autoLoginDemo = async () => {
+    try {
+      setIsLoadingAuth(true);
+      const result = await base44.auth.loginViaEmailPassword("admin@brilianhealth.demo", "Demo@Admin123");
+      const token = result?.access_token || result?.token || result;
+      if (token && typeof token === "string") {
+        base44.auth.setToken(token);
+        await checkUserAuth();
+      }
+    } catch (err) {
+      console.error("Auto-login failed:", err);
+      setIsLoadingAuth(false);
+      setAuthChecked(true);
+      setAuthError({
+        type: 'auth_required',
+        message: 'Failed to auto-login'
+      });
     }
   };
 
