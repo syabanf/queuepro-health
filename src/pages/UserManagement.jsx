@@ -1,15 +1,16 @@
 import React, { useState } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/components/ui/use-toast";
 import {
   Users, UserPlus, Search, Shield, Stethoscope,
-  Mail, Loader2, RefreshCw, Pencil, Check, X
+  Loader2, RefreshCw, Pencil, Check, X, KeyRound, Eye, EyeOff
 } from "lucide-react";
 
 const ROLE_CONFIG = {
@@ -36,25 +37,24 @@ function RoleBadge({ role }) {
   );
 }
 
-function InlineRoleEditor({ user, onSave, onCancel, saving }) {
-  const [role, setRole] = useState(user.role || "user");
+function PasswordInput({ value, onChange, placeholder = "Password..." }) {
+  const [show, setShow] = useState(false);
   return (
-    <div className="flex items-center gap-2">
-      <Select value={role} onValueChange={setRole}>
-        <SelectTrigger className="h-8 w-44 text-xs">
-          <SelectValue />
-        </SelectTrigger>
-        <SelectContent>
-          <SelectItem value="admin">Admin Pusat</SelectItem>
-          <SelectItem value="user">Nakes / Pelayanan</SelectItem>
-        </SelectContent>
-      </Select>
-      <Button size="icon" className="h-8 w-8" onClick={() => onSave(role)} disabled={saving}>
-        {saving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5" />}
-      </Button>
-      <Button size="icon" variant="ghost" className="h-8 w-8" onClick={onCancel} disabled={saving}>
-        <X className="w-3.5 h-3.5" />
-      </Button>
+    <div className="relative">
+      <Input
+        type={show ? "text" : "password"}
+        value={value}
+        onChange={onChange}
+        placeholder={placeholder}
+        className="pr-9"
+      />
+      <button
+        type="button"
+        className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+        onClick={() => setShow(v => !v)}
+      >
+        {show ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+      </button>
     </div>
   );
 }
@@ -63,11 +63,20 @@ export default function UserManagement() {
   const queryClient = useQueryClient();
   const { toast } = useToast();
   const [search, setSearch] = useState("");
-  const [inviteEmail, setInviteEmail] = useState("");
-  const [inviteRole, setInviteRole] = useState("user");
-  const [inviting, setInviting] = useState(false);
-  const [editingUserId, setEditingUserId] = useState(null);
+
+  // Create user form
+  const [createForm, setCreateForm] = useState({ email: "", full_name: "", role: "user", password: "" });
+  const [creating, setCreating] = useState(false);
+  const [createError, setCreateError] = useState("");
+
+  // Inline edit states
+  const [editingRoleId, setEditingRoleId] = useState(null);
+  const [editingRoleValue, setEditingRoleValue] = useState("");
   const [savingRole, setSavingRole] = useState(false);
+
+  const [editingPwId, setEditingPwId] = useState(null);
+  const [editingPwValue, setEditingPwValue] = useState("");
+  const [savingPw, setSavingPw] = useState(false);
 
   const { data: users = [], isLoading, refetch } = useQuery({
     queryKey: ["users"],
@@ -79,35 +88,72 @@ export default function UserManagement() {
     (u.email || "").toLowerCase().includes(search.toLowerCase())
   );
 
-  const handleInvite = async (e) => {
+  // Create user
+  const handleCreate = async (e) => {
     e.preventDefault();
-    if (!inviteEmail.trim()) return;
-    setInviting(true);
+    setCreateError("");
+    if (!createForm.email || !createForm.password) {
+      setCreateError("Email dan password wajib diisi.");
+      return;
+    }
+    if (createForm.password.length < 6) {
+      setCreateError("Password minimal 6 karakter.");
+      return;
+    }
+    setCreating(true);
     try {
-      await base44.users.inviteUser(inviteEmail.trim(), inviteRole);
-      toast({ title: "Undangan Terkirim", description: `${inviteEmail} telah diundang sebagai ${ROLE_CONFIG[inviteRole]?.label}.` });
-      setInviteEmail("");
+      const res = await base44.functions.invoke("adminCreateUser", {
+        email: createForm.email.trim(),
+        full_name: createForm.full_name.trim(),
+        role: createForm.role,
+        password: createForm.password,
+      });
+      if (res.data?.error) throw new Error(res.data.error);
+      toast({ title: "Pengguna Dibuat", description: `${createForm.email} berhasil dibuat dengan password yang ditentukan.` });
+      setCreateForm({ email: "", full_name: "", role: "user", password: "" });
       refetch();
     } catch (err) {
-      const msg = err?.response?.data?.message || err?.message || "Gagal mengirim undangan.";
-      toast({ title: "Gagal", description: msg, variant: "destructive" });
+      setCreateError(err.message || "Gagal membuat pengguna.");
     } finally {
-      setInviting(false);
+      setCreating(false);
     }
   };
 
-  const handleSaveRole = async (user, newRole) => {
+  // Change role
+  const handleSaveRole = async (u) => {
     setSavingRole(true);
     try {
-      await base44.entities.User.update(user.id, { role: newRole });
-      toast({ title: "Role Diperbarui", description: `${user.full_name || user.email} sekarang sebagai ${ROLE_CONFIG[newRole]?.label}.` });
-      setEditingUserId(null);
+      await base44.entities.User.update(u.id, { role: editingRoleValue });
+      toast({ title: "Role Diperbarui", description: `${u.full_name || u.email} sekarang sebagai ${ROLE_CONFIG[editingRoleValue]?.label}.` });
+      setEditingRoleId(null);
       refetch();
     } catch (err) {
-      const msg = err?.response?.data?.message || err?.message || "Gagal memperbarui role.";
-      toast({ title: "Gagal", description: msg, variant: "destructive" });
+      toast({ title: "Gagal", description: err.message, variant: "destructive" });
     } finally {
       setSavingRole(false);
+    }
+  };
+
+  // Change password
+  const handleSavePassword = async (u) => {
+    if (!editingPwValue || editingPwValue.length < 6) {
+      toast({ title: "Gagal", description: "Password minimal 6 karakter.", variant: "destructive" });
+      return;
+    }
+    setSavingPw(true);
+    try {
+      const res = await base44.functions.invoke("adminSetUserPassword", {
+        userId: u.id,
+        password: editingPwValue,
+      });
+      if (res.data?.error) throw new Error(res.data.error);
+      toast({ title: "Password Diperbarui", description: `Password ${u.full_name || u.email} berhasil diubah.` });
+      setEditingPwId(null);
+      setEditingPwValue("");
+    } catch (err) {
+      toast({ title: "Gagal", description: err.message, variant: "destructive" });
+    } finally {
+      setSavingPw(false);
     }
   };
 
@@ -124,7 +170,7 @@ export default function UserManagement() {
           </div>
           <div>
             <h1 className="text-2xl font-bold">Manajemen Pengguna</h1>
-            <p className="text-sm text-muted-foreground">Kelola akun dan peran pengguna sistem</p>
+            <p className="text-sm text-muted-foreground">Buat akun, atur role, dan set password pengguna</p>
           </div>
         </div>
         <Button variant="outline" size="sm" className="sm:ml-auto gap-2" onClick={() => refetch()}>
@@ -169,39 +215,60 @@ export default function UserManagement() {
         </Card>
       </div>
 
-      {/* Invite User */}
+      {/* Create User */}
       <Card>
         <CardHeader className="pb-3">
           <CardTitle className="text-base flex items-center gap-2">
             <UserPlus className="w-5 h-5 text-primary" />
-            Undang Pengguna Baru
+            Buat Pengguna Baru
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <form onSubmit={handleInvite} className="flex flex-col sm:flex-row gap-3">
-            <div className="relative flex-1">
-              <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-              <Input
-                type="email"
-                placeholder="email@contoh.com"
-                value={inviteEmail}
-                onChange={e => setInviteEmail(e.target.value)}
-                className="pl-9"
-                required
-              />
+          <form onSubmit={handleCreate} className="space-y-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div className="space-y-1">
+                <Label className="text-xs">Email <span className="text-destructive">*</span></Label>
+                <Input
+                  type="email"
+                  placeholder="email@contoh.com"
+                  value={createForm.email}
+                  onChange={e => setCreateForm(p => ({ ...p, email: e.target.value }))}
+                  required
+                />
+              </div>
+              <div className="space-y-1">
+                <Label className="text-xs">Nama Lengkap</Label>
+                <Input
+                  placeholder="Nama lengkap (opsional)"
+                  value={createForm.full_name}
+                  onChange={e => setCreateForm(p => ({ ...p, full_name: e.target.value }))}
+                />
+              </div>
+              <div className="space-y-1">
+                <Label className="text-xs">Password <span className="text-destructive">*</span></Label>
+                <PasswordInput
+                  value={createForm.password}
+                  onChange={e => setCreateForm(p => ({ ...p, password: e.target.value }))}
+                  placeholder="Min. 6 karakter"
+                />
+              </div>
+              <div className="space-y-1">
+                <Label className="text-xs">Role</Label>
+                <Select value={createForm.role} onValueChange={v => setCreateForm(p => ({ ...p, role: v }))}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="admin">Admin Pusat</SelectItem>
+                    <SelectItem value="user">Nakes / Pelayanan</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
-            <Select value={inviteRole} onValueChange={setInviteRole}>
-              <SelectTrigger className="w-full sm:w-48">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="admin">Admin Pusat</SelectItem>
-                <SelectItem value="user">Nakes / Pelayanan</SelectItem>
-              </SelectContent>
-            </Select>
-            <Button type="submit" disabled={inviting || !inviteEmail.trim()} className="gap-2 whitespace-nowrap">
-              {inviting ? <Loader2 className="w-4 h-4 animate-spin" /> : <UserPlus className="w-4 h-4" />}
-              Kirim Undangan
+            {createError && <p className="text-xs text-destructive">{createError}</p>}
+            <Button type="submit" disabled={creating} className="gap-2">
+              {creating ? <Loader2 className="w-4 h-4 animate-spin" /> : <UserPlus className="w-4 h-4" />}
+              Buat Pengguna
             </Button>
           </form>
         </CardContent>
@@ -235,44 +302,80 @@ export default function UserManagement() {
           ) : (
             <div className="divide-y divide-border">
               {filtered.map(u => (
-                <div key={u.id} className="flex items-center gap-4 px-6 py-4 hover:bg-muted/30 transition-colors">
-                  {/* Avatar */}
-                  <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
-                    <span className="text-sm font-semibold text-primary">
-                      {(u.full_name || u.email || "?").charAt(0).toUpperCase()}
-                    </span>
+                <div key={u.id} className="px-6 py-4 hover:bg-muted/20 transition-colors">
+                  <div className="flex items-center gap-4">
+                    {/* Avatar */}
+                    <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
+                      <span className="text-sm font-semibold text-primary">
+                        {(u.full_name || u.email || "?").charAt(0).toUpperCase()}
+                      </span>
+                    </div>
+
+                    {/* Info */}
+                    <div className="flex-1 min-w-0">
+                      <p className="font-semibold text-sm truncate">{u.full_name || "(Belum diset)"}</p>
+                      <p className="text-xs text-muted-foreground truncate">{u.email}</p>
+                    </div>
+
+                    {/* Role + actions */}
+                    <div className="flex items-center gap-2 flex-shrink-0">
+                      {editingRoleId === u.id ? (
+                        <div className="flex items-center gap-2">
+                          <Select value={editingRoleValue} onValueChange={setEditingRoleValue}>
+                            <SelectTrigger className="h-8 w-44 text-xs">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="admin">Admin Pusat</SelectItem>
+                              <SelectItem value="user">Nakes / Pelayanan</SelectItem>
+                            </SelectContent>
+                          </Select>
+                          <Button size="icon" className="h-8 w-8" onClick={() => handleSaveRole(u)} disabled={savingRole}>
+                            {savingRole ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5" />}
+                          </Button>
+                          <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => setEditingRoleId(null)} disabled={savingRole}>
+                            <X className="w-3.5 h-3.5" />
+                          </Button>
+                        </div>
+                      ) : (
+                        <>
+                          <RoleBadge role={u.role} />
+                          <Button
+                            size="icon" variant="ghost" className="h-7 w-7 text-muted-foreground hover:text-foreground"
+                            title="Ubah role"
+                            onClick={() => { setEditingRoleId(u.id); setEditingRoleValue(u.role || "user"); setEditingPwId(null); }}
+                          >
+                            <Pencil className="w-3.5 h-3.5" />
+                          </Button>
+                          <Button
+                            size="icon" variant="ghost" className="h-7 w-7 text-muted-foreground hover:text-foreground"
+                            title="Ubah password"
+                            onClick={() => { setEditingPwId(u.id); setEditingPwValue(""); setEditingRoleId(null); }}
+                          >
+                            <KeyRound className="w-3.5 h-3.5" />
+                          </Button>
+                        </>
+                      )}
+                    </div>
                   </div>
 
-                  {/* Info */}
-                  <div className="flex-1 min-w-0">
-                    <p className="font-semibold text-sm truncate">{u.full_name || "(Belum diset)"}</p>
-                    <p className="text-xs text-muted-foreground truncate">{u.email}</p>
-                  </div>
-
-                  {/* Role */}
-                  <div className="flex-shrink-0">
-                    {editingUserId === u.id ? (
-                      <InlineRoleEditor
-                        user={u}
-                        onSave={(newRole) => handleSaveRole(u, newRole)}
-                        onCancel={() => setEditingUserId(null)}
-                        saving={savingRole}
+                  {/* Inline password editor */}
+                  {editingPwId === u.id && (
+                    <div className="mt-3 ml-14 flex items-center gap-2">
+                      <PasswordInput
+                        value={editingPwValue}
+                        onChange={e => setEditingPwValue(e.target.value)}
+                        placeholder="Password baru (min. 6 karakter)"
                       />
-                    ) : (
-                      <div className="flex items-center gap-2">
-                        <RoleBadge role={u.role} />
-                        <Button
-                          size="icon"
-                          variant="ghost"
-                          className="h-7 w-7 text-muted-foreground hover:text-foreground"
-                          onClick={() => setEditingUserId(u.id)}
-                          title="Ubah role"
-                        >
-                          <Pencil className="w-3.5 h-3.5" />
-                        </Button>
-                      </div>
-                    )}
-                  </div>
+                      <Button size="sm" className="gap-1 whitespace-nowrap" onClick={() => handleSavePassword(u)} disabled={savingPw}>
+                        {savingPw ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5" />}
+                        Simpan
+                      </Button>
+                      <Button size="sm" variant="ghost" onClick={() => setEditingPwId(null)} disabled={savingPw}>
+                        <X className="w-3.5 h-3.5" />
+                      </Button>
+                    </div>
+                  )}
                 </div>
               ))}
             </div>
