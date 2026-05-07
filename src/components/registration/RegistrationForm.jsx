@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { UserPlus, Loader2, AlertCircle, Gift, CreditCard } from "lucide-react";
 import { base44 } from "@/api/base44Client";
 import { getServicePrefix, formatQueueNumber, getNextQueueSequence, generateRegistrationNumber } from "@/lib/registrationUtils";
+import { generateQrToken, buildQrCodeUrl } from "@/lib/qrUtils";
 
 const PAYMENT_OPTIONS = [
   { value: "VERIFIED_OUTSIDE_SYSTEM", label: "Terverifikasi (Luar Sistem)" },
@@ -152,6 +153,12 @@ export default function RegistrationForm({ services, participants = [], eventSet
         registered_at: new Date().toISOString(),
       });
 
+      // Generate QR tokens for each queue
+      const medQrToken = generateQrToken();
+      const eyeQrToken = generateQrToken();
+      const medQrCodeUrl = buildQrCodeUrl(medQrToken, 120);
+      const eyeQrCodeUrl = buildQrCodeUrl(eyeQrToken, 120);
+
       // Create queues
       const medicalQueue = await base44.entities.Queue.create({
         participant_id: participant.id,
@@ -160,6 +167,9 @@ export default function RegistrationForm({ services, participants = [], eventSet
         queue_sequence: medSeq,
         slot_type: slotType,
         status: "WAITING",
+        qr_token: medQrToken,
+        qr_code_url: medQrCodeUrl,
+        qr_verification_status: "NOT_SCANNED",
       });
       const eyeQueue = await base44.entities.Queue.create({
         participant_id: participant.id,
@@ -168,6 +178,9 @@ export default function RegistrationForm({ services, participants = [], eventSet
         queue_sequence: eyeSeq,
         slot_type: slotType,
         status: "WAITING",
+        qr_token: eyeQrToken,
+        qr_code_url: eyeQrCodeUrl,
+        qr_verification_status: "NOT_SCANNED",
       });
 
       // Deduct service quotas (one slot per service based on category)

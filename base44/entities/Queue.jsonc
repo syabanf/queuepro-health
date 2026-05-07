@@ -26,11 +26,42 @@
       ],
       "description": "Whether this queue uses FREE or PAID slot"
     },
+    "qr_token": {
+      "type": "string",
+      "description": "Unique secure random token for QR verification"
+    },
+    "qr_code_url": {
+      "type": "string",
+      "description": "URL of the generated QR code image"
+    },
+    "qr_verified_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Timestamp when QR was verified"
+    },
+    "qr_verified_by": {
+      "type": "string",
+      "description": "Email of user who verified the QR"
+    },
+    "qr_verification_status": {
+      "type": "string",
+      "enum": [
+        "NOT_SCANNED",
+        "VERIFIED",
+        "INVALID",
+        "WRONG_SERVICE",
+        "ALREADY_COMPLETED",
+        "CANCELLED"
+      ],
+      "default": "NOT_SCANNED",
+      "description": "QR verification status"
+    },
     "status": {
       "type": "string",
       "enum": [
         "WAITING",
         "CALLED",
+        "QR_VERIFIED",
         "SERVING",
         "DONE",
         "SKIPPED",

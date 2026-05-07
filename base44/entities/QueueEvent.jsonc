@@ -11,6 +11,12 @@
       "enum": [
         "CALLED",
         "RECALLED",
+        "QR_SCANNED",
+        "QR_VERIFIED",
+        "QR_INVALID",
+        "WRONG_SERVICE_QR",
+        "SERVICE_STARTED",
+        "SERVICE_DONE",
         "SERVING",
         "DONE",
         "SKIPPED",

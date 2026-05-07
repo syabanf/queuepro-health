@@ -5,18 +5,32 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { useToast } from "@/components/ui/use-toast";
 import {
   Monitor, PhoneCall, PlayCircle, CheckCircle2,
-  SkipForward, XCircle, RotateCcw, Clock, Stethoscope, Eye, User
+  SkipForward, XCircle, RotateCcw, Clock, Stethoscope, Eye, User, QrCode,
+  ShieldCheck, ShieldX, Shield
 } from "lucide-react";
+import QrScannerModal from "@/components/booth/QrScannerModal";
+import QrVerificationCard from "@/components/booth/QrVerificationCard";
 
 const QUEUE_STATUS_CONFIG = {
-  WAITING:   { label: "Menunggu",   color: "bg-slate-100 text-slate-600 border-slate-200" },
-  CALLED:    { label: "Dipanggil", color: "bg-amber-100 text-amber-700 border-amber-200" },
-  SERVING:   { label: "Dilayani",  color: "bg-purple-100 text-purple-700 border-purple-200" },
-  DONE:      { label: "Selesai",   color: "bg-green-100 text-green-700 border-green-200" },
-  SKIPPED:   { label: "Dilewati", color: "bg-orange-100 text-orange-700 border-orange-200" },
-  CANCELLED: { label: "Batal",    color: "bg-red-100 text-red-700 border-red-200" },
+  WAITING:     { label: "Menunggu",       color: "bg-slate-100 text-slate-600 border-slate-200" },
+  CALLED:      { label: "Dipanggil",      color: "bg-amber-100 text-amber-700 border-amber-200" },
+  QR_VERIFIED: { label: "QR Terverifikasi", color: "bg-blue-100 text-blue-700 border-blue-200" },
+  SERVING:     { label: "Dilayani",       color: "bg-purple-100 text-purple-700 border-purple-200" },
+  DONE:        { label: "Selesai",        color: "bg-green-100 text-green-700 border-green-200" },
+  SKIPPED:     { label: "Dilewati",       color: "bg-orange-100 text-orange-700 border-orange-200" },
+  CANCELLED:   { label: "Batal",         color: "bg-red-100 text-red-700 border-red-200" },
+};
+
+const QR_BADGE_CONFIG = {
+  NOT_SCANNED: { label: "Belum Di-scan", color: "bg-slate-100 text-slate-500 border-slate-200", icon: Shield },
+  VERIFIED:    { label: "QR Terverifikasi", color: "bg-green-100 text-green-700 border-green-200", icon: ShieldCheck },
+  INVALID:     { label: "QR Tidak Valid", color: "bg-red-100 text-red-700 border-red-200", icon: ShieldX },
+  WRONG_SERVICE: { label: "Booth Salah", color: "bg-orange-100 text-orange-700 border-orange-200", icon: ShieldX },
+  ALREADY_COMPLETED: { label: "Sudah Selesai", color: "bg-purple-100 text-purple-700 border-purple-200", icon: ShieldX },
+  CANCELLED:   { label: "Dibatalkan", color: "bg-red-100 text-red-700 border-red-200", icon: ShieldX },
 };
 
 async function logQueueEvent({ queue_id, event_type, previous_status, new_status, performed_by, notes }) {
@@ -30,10 +44,13 @@ async function logQueueEvent({ queue_id, event_type, previous_status, new_status
 
 export default function NakesBooth() {
   const queryClient = useQueryClient();
+  const { toast } = useToast();
   const [selectedServiceId, setSelectedServiceId] = useState("");
   const [currentUser, setCurrentUser] = useState(null);
   const prevActiveRef = useRef(null);
   const [flashActive, setFlashActive] = useState(false);
+  const [scannerOpen, setScannerOpen] = useState(false);
+  const [verificationResult, setVerificationResult] = useState(null);
 
   useEffect(() => {
     base44.auth.me().then(u => setCurrentUser(u)).catch(() => {});
@@ -68,15 +85,17 @@ export default function NakesBooth() {
   }, [selectedServiceId, queryClient]);
 
   const sorted = [...queues].sort((a, b) => (a.queue_sequence || 0) - (b.queue_sequence || 0));
-  const waiting  = sorted.filter(q => q.status === "WAITING");
-  const called   = sorted.find(q => q.status === "CALLED");
-  const serving  = sorted.find(q => q.status === "SERVING");
-  const skipped  = sorted.filter(q => q.status === "SKIPPED");
-  const done     = sorted.filter(q => q.status === "DONE");
+  const waiting     = sorted.filter(q => q.status === "WAITING");
+  const called      = sorted.find(q => q.status === "CALLED");
+  const qrVerified  = sorted.find(q => q.status === "QR_VERIFIED");
+  const serving     = sorted.find(q => q.status === "SERVING");
+  const skipped     = sorted.filter(q => q.status === "SKIPPED");
+  const done        = sorted.filter(q => q.status === "DONE");
   const nextWaiting = waiting[0];
-  const activeQueue = serving || called;
+  // Active queue priority: serving > qrVerified > called
+  const activeQueue = serving || qrVerified || called;
 
-  // Flash animation when active queue number changes
+  // Flash animation on active queue change
   useEffect(() => {
     const current = activeQueue?.queue_number;
     if (current && current !== prevActiveRef.current) {
@@ -86,17 +105,22 @@ export default function NakesBooth() {
     }
   }, [activeQueue?.queue_number]);
 
+  // Clear verification result when active queue changes
+  useEffect(() => {
+    setVerificationResult(null);
+  }, [activeQueue?.id]);
+
   const getParticipant = (participantId) =>
     participants.find(p => p.id === participantId);
 
   const updateQueue = useMutation({
-    mutationFn: async ({ queue, newStatus, eventType, notes }) => {
+    mutationFn: async ({ queue, newStatus, eventType, notes, extraFields }) => {
       const now = new Date().toISOString();
       const timeField = {
-        CALLED: "called_at", SERVING: "serving_at", DONE: "done_at",
-        SKIPPED: "skipped_at", CANCELLED: "cancelled_at"
+        CALLED: "called_at", QR_VERIFIED: null, SERVING: "serving_at",
+        DONE: "done_at", SKIPPED: "skipped_at", CANCELLED: "cancelled_at"
       }[newStatus];
-      const update = { status: newStatus };
+      const update = { status: newStatus, ...extraFields };
       if (timeField) update[timeField] = now;
       await base44.entities.Queue.update(queue.id, update);
       await logQueueEvent({
@@ -116,16 +140,174 @@ export default function NakesBooth() {
         await base44.entities.Participant.update(queue.participant_id, { participant_status: newParticipantStatus });
       }
     },
-    onSuccess: () => {
+    onSuccess: (_, vars) => {
       queryClient.invalidateQueries({ queryKey: ["booth-queues", selectedServiceId] });
       queryClient.invalidateQueries({ queryKey: ["queues"] });
       queryClient.invalidateQueries({ queryKey: ["participants"] });
+      if (vars.newStatus === "DONE") {
+        setVerificationResult(null);
+      }
     },
   });
 
-  const handleAction = (queue, newStatus, eventType, notes) => {
-    updateQueue.mutate({ queue, newStatus, eventType, notes });
+  const handleAction = (queue, newStatus, eventType, notes, extraFields) => {
+    updateQueue.mutate({ queue, newStatus, eventType, notes, extraFields });
   };
+
+  // QR Scan verification logic
+  const handleQrScan = useCallback(async (token) => {
+    setScannerOpen(false);
+    if (!selectedServiceId || !selectedService) return;
+
+    // Search all queues for this token (not just current service)
+    let allQueues = [];
+    try {
+      allQueues = await base44.entities.Queue.list();
+    } catch {
+      allQueues = [];
+    }
+
+    const matchedQueue = allQueues.find(q => q.qr_token === token);
+
+    if (!matchedQueue) {
+      const result = {
+        status: "INVALID",
+        message: "QR code tidak valid. Token tidak ditemukan dalam sistem.",
+      };
+      setVerificationResult(result);
+      await logQueueEvent({
+        queue_id: "unknown",
+        event_type: "QR_INVALID",
+        previous_status: "-",
+        new_status: "-",
+        performed_by: currentUser?.email,
+        notes: `Token: ${token}`,
+      });
+      toast({ title: "QR Tidak Valid", description: "Token tidak ditemukan.", variant: "destructive" });
+      return;
+    }
+
+    const participant = participants.find(p => p.id === matchedQueue.participant_id);
+    const queueService = services.find(s => s.id === matchedQueue.service_id);
+
+    // Wrong service check
+    if (matchedQueue.service_id !== selectedServiceId) {
+      const result = {
+        status: "WRONG_SERVICE",
+        message: `QR valid, tetapi peserta ini terdaftar di booth lain (${queueService?.service_name || "layanan lain"} — Booth ${queueService?.booth_number || "?"}).`,
+        queue: matchedQueue,
+        participant,
+        service: queueService,
+      };
+      setVerificationResult(result);
+      await logQueueEvent({
+        queue_id: matchedQueue.id,
+        event_type: "WRONG_SERVICE_QR",
+        previous_status: matchedQueue.status,
+        new_status: matchedQueue.status,
+        performed_by: currentUser?.email,
+        notes: `Scanned at service ${selectedServiceId}, belongs to ${matchedQueue.service_id}`,
+      });
+      toast({ title: "Booth Salah", description: "Peserta ini bukan untuk booth ini.", variant: "destructive" });
+      return;
+    }
+
+    // Already completed
+    if (matchedQueue.status === "DONE") {
+      const result = {
+        status: "ALREADY_COMPLETED",
+        message: "Antrian ini sudah selesai dilayani.",
+        queue: matchedQueue,
+        participant,
+        service: queueService,
+      };
+      setVerificationResult(result);
+      toast({ title: "Sudah Selesai", description: "Antrian ini sudah selesai dilayani.", variant: "destructive" });
+      return;
+    }
+
+    // Cancelled
+    if (matchedQueue.status === "CANCELLED") {
+      const result = {
+        status: "CANCELLED",
+        message: "Antrian ini sudah dibatalkan.",
+        queue: matchedQueue,
+        participant,
+        service: queueService,
+      };
+      setVerificationResult(result);
+      toast({ title: "Dibatalkan", description: "Antrian ini sudah dibatalkan.", variant: "destructive" });
+      return;
+    }
+
+    // Not called yet
+    if (matchedQueue.status === "WAITING") {
+      const result = {
+        status: "INVALID",
+        message: `Antrian ${matchedQueue.queue_number} belum dipanggil. Silakan tunggu giliran Anda.`,
+        queue: matchedQueue,
+        participant,
+        service: queueService,
+      };
+      setVerificationResult(result);
+      toast({ title: "Belum Dipanggil", description: `Nomor ${matchedQueue.queue_number} masih dalam antrian.`, variant: "destructive" });
+      return;
+    }
+
+    // Already verified or serving
+    if (matchedQueue.status === "QR_VERIFIED" || matchedQueue.status === "SERVING") {
+      const result = {
+        status: "VERIFIED",
+        message: "Peserta sudah terverifikasi. Layanan dapat dilanjutkan.",
+        queue: matchedQueue,
+        participant,
+        service: queueService,
+      };
+      setVerificationResult(result);
+      toast({ title: "Sudah Terverifikasi", description: "Peserta ini sudah terverifikasi sebelumnya." });
+      return;
+    }
+
+    // Valid — status is CALLED
+    const now = new Date().toISOString();
+    await base44.entities.Queue.update(matchedQueue.id, {
+      status: "QR_VERIFIED",
+      qr_verification_status: "VERIFIED",
+      qr_verified_at: now,
+      qr_verified_by: currentUser?.email,
+    });
+    await logQueueEvent({
+      queue_id: matchedQueue.id,
+      event_type: "QR_VERIFIED",
+      previous_status: matchedQueue.status,
+      new_status: "QR_VERIFIED",
+      performed_by: currentUser?.email,
+      notes: "QR code verified successfully",
+    });
+
+    const verifiedQueue = { ...matchedQueue, status: "QR_VERIFIED", qr_verification_status: "VERIFIED" };
+    const result = {
+      status: "VERIFIED",
+      message: "QR terverifikasi. Identitas peserta valid. Layanan dapat dimulai.",
+      queue: verifiedQueue,
+      participant,
+      service: queueService,
+    };
+    setVerificationResult(result);
+    queryClient.invalidateQueries({ queryKey: ["booth-queues", selectedServiceId] });
+    toast({ title: "✓ QR Terverifikasi", description: "Peserta dapat dilayani." });
+  }, [selectedServiceId, selectedService, participants, services, currentUser, queryClient, toast]);
+
+  const qrBadgeCfg = (queue) => {
+    if (!queue) return null;
+    return QR_BADGE_CONFIG[queue.qr_verification_status || "NOT_SCANNED"];
+  };
+
+  const isQrVerified = (queue) =>
+    queue?.qr_verification_status === "VERIFIED" ||
+    queue?.status === "QR_VERIFIED" ||
+    queue?.status === "SERVING" ||
+    queue?.status === "DONE";
 
   return (
     <div className="space-y-6 max-w-5xl mx-auto">
@@ -141,7 +323,7 @@ export default function NakesBooth() {
           </div>
         </div>
         <div className="sm:ml-auto w-full sm:w-72">
-          <Select value={selectedServiceId} onValueChange={setSelectedServiceId}>
+          <Select value={selectedServiceId} onValueChange={(v) => { setSelectedServiceId(v); setVerificationResult(null); }}>
             <SelectTrigger>
               <SelectValue placeholder="Pilih booth layanan..." />
             </SelectTrigger>
@@ -197,12 +379,24 @@ export default function NakesBooth() {
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            {/* Left: Now Serving + Next */}
+            {/* Left: Now Serving */}
             <div className="lg:col-span-2 space-y-4">
-              {/* Now Serving */}
               <Card className={`border-2 transition-all ${flashActive ? "border-primary shadow-lg shadow-primary/20" : "border-primary/20"}`}>
                 <CardHeader className="pb-3">
-                  <CardTitle className="text-sm text-muted-foreground uppercase tracking-wider">Now Serving</CardTitle>
+                  <CardTitle className="text-sm text-muted-foreground uppercase tracking-wider flex items-center justify-between">
+                    Now Serving
+                    {activeQueue && (() => {
+                      const cfg = qrBadgeCfg(activeQueue);
+                      if (!cfg) return null;
+                      const Icon = cfg.icon;
+                      return (
+                        <Badge className={`text-xs px-2 py-0.5 border gap-1 ${cfg.color}`}>
+                          <Icon className="w-3 h-3" />
+                          {cfg.label}
+                        </Badge>
+                      );
+                    })()}
+                  </CardTitle>
                 </CardHeader>
                 <CardContent>
                   {activeQueue ? (
@@ -234,28 +428,61 @@ export default function NakesBooth() {
                           {QUEUE_STATUS_CONFIG[activeQueue.status]?.label}
                         </Badge>
                       </div>
+
+                      {/* QR Verification Result */}
+                      {verificationResult && (
+                        <QrVerificationCard result={verificationResult} />
+                      )}
+
                       {/* Action Buttons */}
-                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-2 border-t border-border">
-                        {activeQueue.status === "CALLED" && (
-                          <Button className="gap-1.5" onClick={() => handleAction(activeQueue, "SERVING", "SERVING")}
-                            disabled={updateQueue.isPending}>
-                            <PlayCircle className="w-4 h-4" /> Mulai Layanan
+                      <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 pt-2 border-t border-border">
+                        {/* Scan QR — visible when CALLED or QR_VERIFIED */}
+                        {(activeQueue.status === "CALLED" || activeQueue.status === "QR_VERIFIED") && (
+                          <Button
+                            variant={isQrVerified(activeQueue) ? "outline" : "default"}
+                            className={`gap-1.5 ${isQrVerified(activeQueue) ? "border-green-300 text-green-700 hover:bg-green-50" : ""}`}
+                            onClick={() => setScannerOpen(true)}
+                            disabled={updateQueue.isPending}
+                          >
+                            <QrCode className="w-4 h-4" />
+                            {isQrVerified(activeQueue) ? "Scan Ulang" : "Scan QR"}
                           </Button>
                         )}
+
+                        {/* Start Service — locked until QR_VERIFIED */}
+                        {(activeQueue.status === "CALLED" || activeQueue.status === "QR_VERIFIED") && (
+                          <Button
+                            className="gap-1.5"
+                            onClick={() => handleAction(activeQueue, "SERVING", "SERVICE_STARTED")}
+                            disabled={!isQrVerified(activeQueue) || updateQueue.isPending}
+                            title={!isQrVerified(activeQueue) ? "Scan QR terlebih dahulu" : ""}
+                          >
+                            <PlayCircle className="w-4 h-4" />
+                            Mulai Layanan
+                          </Button>
+                        )}
+
+                        {/* Mark Done — locked until SERVING */}
                         {activeQueue.status === "SERVING" && (
-                          <Button className="gap-1.5 bg-green-600 hover:bg-green-700"
-                            onClick={() => handleAction(activeQueue, "DONE", "DONE")}
-                            disabled={updateQueue.isPending}>
+                          <Button
+                            className="gap-1.5 bg-green-600 hover:bg-green-700"
+                            onClick={() => handleAction(activeQueue, "DONE", "SERVICE_DONE")}
+                            disabled={updateQueue.isPending}
+                          >
                             <CheckCircle2 className="w-4 h-4" /> Selesai
                           </Button>
                         )}
-                        {(activeQueue.status === "CALLED" || activeQueue.status === "SERVING") && (
+
+                        {/* Skip */}
+                        {(activeQueue.status === "CALLED" || activeQueue.status === "QR_VERIFIED" || activeQueue.status === "SERVING") && (
                           <Button variant="outline" className="gap-1.5 text-orange-600 border-orange-300 hover:bg-orange-50"
                             onClick={() => handleAction(activeQueue, "SKIPPED", "SKIPPED")}
                             disabled={updateQueue.isPending}>
                             <SkipForward className="w-4 h-4" /> Lewati
                           </Button>
                         )}
+
+                        {/* Recall */}
                         {activeQueue.status === "CALLED" && (
                           <Button variant="outline" className="gap-1.5 text-amber-600 border-amber-300 hover:bg-amber-50"
                             onClick={() => handleAction(activeQueue, "CALLED", "RECALLED")}
@@ -263,12 +490,22 @@ export default function NakesBooth() {
                             <PhoneCall className="w-4 h-4" /> Panggil Ulang
                           </Button>
                         )}
+
+                        {/* Cancel */}
                         <Button variant="outline" className="gap-1.5 text-red-600 border-red-300 hover:bg-red-50"
                           onClick={() => handleAction(activeQueue, "CANCELLED", "CANCELLED")}
                           disabled={updateQueue.isPending}>
                           <XCircle className="w-4 h-4" /> Batalkan
                         </Button>
                       </div>
+
+                      {/* QR hint when not scanned */}
+                      {(activeQueue.status === "CALLED") && !isQrVerified(activeQueue) && (
+                        <div className="flex items-center gap-2 p-3 rounded-lg bg-amber-50 border border-amber-200 text-xs text-amber-800">
+                          <QrCode className="w-4 h-4 flex-shrink-0" />
+                          <span>Scan QR pada kupon peserta sebelum memulai layanan.</span>
+                        </div>
+                      )}
                     </div>
                   ) : (
                     <div className="text-center py-8">
@@ -305,7 +542,7 @@ export default function NakesBooth() {
                     <div className="flex flex-col gap-2">
                       <Button
                         size="lg"
-                        disabled={!nextWaiting || !!called || !!serving || updateQueue.isPending}
+                        disabled={!nextWaiting || !!called || !!qrVerified || !!serving || updateQueue.isPending}
                         onClick={() => handleAction(nextWaiting, "CALLED", "CALLED")}
                         className="gap-2"
                       >
@@ -313,7 +550,7 @@ export default function NakesBooth() {
                       </Button>
                       {skipped.length > 0 && (
                         <Button variant="outline" size="sm" className="gap-2 text-orange-600 border-orange-300"
-                          disabled={!!called || !!serving || updateQueue.isPending}
+                          disabled={!!called || !!qrVerified || !!serving || updateQueue.isPending}
                           onClick={() => handleAction(skipped[0], "CALLED", "RECALLED")}>
                           <RotateCcw className="w-4 h-4" /> Panggil Ulang Dilewati ({skipped.length})
                         </Button>
@@ -372,7 +609,7 @@ export default function NakesBooth() {
                           <span className="font-mono font-bold text-orange-700 w-14 flex-shrink-0">{q.queue_number}</span>
                           <span className="text-xs text-muted-foreground truncate flex-1">{p?.full_name || "—"}</span>
                           <Button size="sm" variant="ghost" className="h-6 px-2 text-xs text-orange-600 flex-shrink-0"
-                            disabled={!!called || !!serving || updateQueue.isPending}
+                            disabled={!!called || !!qrVerified || !!serving || updateQueue.isPending}
                             onClick={() => handleAction(q, "CALLED", "RECALLED")}>
                             <RotateCcw className="w-3 h-3 mr-1" /> Panggil
                           </Button>
@@ -398,9 +635,14 @@ export default function NakesBooth() {
                     : done.slice(-10).reverse().map(q => (
                         <div key={q.id} className="flex items-center justify-between px-2 py-1.5 rounded-md bg-green-50 text-sm">
                           <span className="font-mono font-bold text-green-700">{q.queue_number}</span>
-                          <span className={`text-[10px] font-bold ${q.slot_type === "FREE" ? "text-green-600" : "text-orange-600"}`}>
-                            {q.slot_type === "FREE" ? "Gratis" : "Bayar"}
-                          </span>
+                          <div className="flex items-center gap-1.5">
+                            {q.qr_verification_status === "VERIFIED" && (
+                              <ShieldCheck className="w-3 h-3 text-green-500" title="QR Verified" />
+                            )}
+                            <span className={`text-[10px] font-bold ${q.slot_type === "FREE" ? "text-green-600" : "text-orange-600"}`}>
+                              {q.slot_type === "FREE" ? "Gratis" : "Bayar"}
+                            </span>
+                          </div>
                         </div>
                       ))
                   }
@@ -410,6 +652,13 @@ export default function NakesBooth() {
           </div>
         </>
       )}
+
+      {/* QR Scanner Modal */}
+      <QrScannerModal
+        open={scannerOpen}
+        onClose={() => setScannerOpen(false)}
+        onScan={handleQrScan}
+      />
     </div>
   );
 }
