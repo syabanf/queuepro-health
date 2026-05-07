@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import {
   Users, Activity, Monitor, CheckCircle2, Clock,
   Stethoscope, Eye, AlertCircle, TrendingUp, SkipForward,
-  XCircle, CreditCard, Gift, ChevronRight, TestTube, CheckCircle
+  XCircle, CreditCard, Gift, ChevronRight, TestTube, CheckCircle, LogOut
 } from "lucide-react";
 import PageHeader from "@/components/layout/PageHeader";
 import { format } from "date-fns";
@@ -15,6 +15,7 @@ import { PARTICIPANT_STATUS_LABELS, PARTICIPANT_STATUS_COLORS } from "@/lib/regi
 import { Link } from "react-router-dom";
 import TestFlowWizard from "@/components/TestFlowWizard";
 import DataConsistencyChecker from "@/components/DataConsistencyChecker";
+import { useAuth } from "@/lib/AuthContext";
 
 function StatCard({ title, value, icon: Icon, bgClass, textClass, subtitle }) {
   return (
@@ -79,7 +80,13 @@ function ServiceQueueRow({ service, queues }) {
 export default function AdminDashboard() {
   const [showTestWizard, setShowTestWizard] = useState(false);
   const [showDataChecker, setShowDataChecker] = useState(false);
+  const { logout } = useAuth();
   const queryClient = useQueryClient();
+
+  const switchRole = async () => {
+    localStorage.removeItem('token');
+    window.location.href = '/demo';
+  };
   const { data: services = [] } = useQuery({
     queryKey: ["services"],
     queryFn: () => base44.entities.Service.list(),
@@ -147,30 +154,38 @@ export default function AdminDashboard() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between gap-2">
-        <PageHeader
-          title="Dashboard"
-          subtitle={event ? `${event.event_name} · ${event.location}` : "Memuat data..."}
-          icon={Activity}
-        />
-        <div className="flex gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setShowDataChecker(true)}
-            className="gap-2"
-          >
-            <CheckCircle className="w-4 h-4" /> Data Check
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setShowTestWizard(true)}
-            className="gap-2"
-          >
-            <TestTube className="w-4 h-4" /> Test Flow
-          </Button>
-        </div>
-      </div>
+         <PageHeader
+           title="Dashboard"
+           subtitle={event ? `${event.event_name} · ${event.location}` : "Memuat data..."}
+           icon={Activity}
+         />
+         <div className="flex gap-2">
+           <Button
+             variant="outline"
+             size="sm"
+             onClick={() => setShowDataChecker(true)}
+             className="gap-2"
+           >
+             <CheckCircle className="w-4 h-4" /> Data Check
+           </Button>
+           <Button
+             variant="outline"
+             size="sm"
+             onClick={() => setShowTestWizard(true)}
+             className="gap-2"
+           >
+             <TestTube className="w-4 h-4" /> Test Flow
+           </Button>
+           <Button
+             variant="destructive"
+             size="sm"
+             onClick={switchRole}
+             className="gap-2"
+           >
+             <LogOut className="w-4 h-4" /> Ganti Role
+           </Button>
+         </div>
+       </div>
 
       <TestFlowWizard isOpen={showTestWizard} onClose={() => setShowTestWizard(false)} />
       <DataConsistencyChecker isOpen={showDataChecker} onClose={() => setShowDataChecker(false)} />
