@@ -24,12 +24,23 @@ export default function DemoLauncher() {
     if (demoKey) setDemoLoading(demoKey); else setLoading(true);
     setError("");
     try {
-      const { access_token } = await base44.auth.loginViaEmailPassword(em, pw);
-      base44.auth.setToken(access_token);
+      const result = await base44.auth.loginViaEmailPassword(em, pw);
+      const token = result?.access_token || result?.token || result;
+      if (token && typeof token === "string") {
+        base44.auth.setToken(token);
+      }
       window.location.href = redirectTo;
     } catch (err) {
-      const msg = err?.response?.data?.message || err?.message || "Login gagal. Periksa email dan password.";
-      setError(msg);
+      const msg = err?.response?.data?.message
+        || err?.response?.data?.detail
+        || err?.data?.message
+        || err?.message
+        || "Login gagal. Periksa email dan password.";
+      const isDemoUser = demoKey != null;
+      setError(isDemoUser
+        ? `Demo user belum tersedia. Buat dulu via Settings → "Buat Demo Users", lalu set password melalui dashboard Base44.\n\nDetail: ${msg}`
+        : msg
+      );
       if (demoKey) setDemoLoading(null); else setLoading(false);
     }
   };
@@ -106,9 +117,11 @@ export default function DemoLauncher() {
               </div>
 
               {error && (
-                <div className="flex items-center gap-2 text-sm text-destructive bg-destructive/10 border border-destructive/20 rounded-lg p-3">
-                  <AlertCircle className="w-4 h-4 flex-shrink-0" />
-                  {error}
+                <div className="flex flex-col gap-1 text-sm text-destructive bg-destructive/10 border border-destructive/20 rounded-lg p-3">
+                  <div className="flex items-start gap-2">
+                    <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5" />
+                    <span className="whitespace-pre-line">{error}</span>
+                  </div>
                 </div>
               )}
 
