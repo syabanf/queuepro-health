@@ -8,7 +8,8 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/components/ui/use-toast";
-import { Users, UserPlus, Search, Shield, Stethoscope, Loader2, RefreshCw, Eye, EyeOff, Trash2 } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Users, UserPlus, Search, Shield, Stethoscope, Loader2, RefreshCw, Eye, EyeOff, Pencil } from "lucide-react";
 
 function PasswordInput({ value, onChange, placeholder }) {
   const [show, setShow] = useState(false);
@@ -42,6 +43,12 @@ export default function UserManagement() {
   const [creating, setCreating] = useState(false);
   const [error, setError] = useState("");
 
+  // Edit state
+  const [editUser, setEditUser] = useState(null);
+  const [editForm, setEditForm] = useState({ full_name: "", role: "user", password: "" });
+  const [editSaving, setEditSaving] = useState(false);
+  const [editError, setEditError] = useState("");
+
   const { data: users = [], isLoading, refetch } = useQuery({
     queryKey: ["users"],
     queryFn: () => base44.entities.User.list(),
@@ -72,6 +79,37 @@ export default function UserManagement() {
       setError(err.message || "Gagal membuat pengguna.");
     } finally {
       setCreating(false);
+    }
+  };
+
+  const openEdit = (u) => {
+    setEditUser(u);
+    setEditForm({ full_name: u.full_name || "", role: u.role || "user", password: "" });
+    setEditError("");
+  };
+
+  const handleEdit = async (e) => {
+    e.preventDefault();
+    setEditError("");
+    if (editForm.password && editForm.password.length < 6) {
+      setEditError("Password minimal 6 karakter."); return;
+    }
+    setEditSaving(true);
+    try {
+      const payload = {
+        email: editUser.email,
+        role: editForm.role,
+        ...(editForm.password ? { password: editForm.password } : {}),
+      };
+      const res = await base44.functions.invoke("createAppUser", payload);
+      if (res.data?.error) throw new Error(res.data.error);
+      toast({ title: "Berhasil", description: "Data pengguna berhasil diperbarui." });
+      setEditUser(null);
+      refetch();
+    } catch (err) {
+      setEditError(err.message || "Gagal memperbarui pengguna.");
+    } finally {
+      setEditSaving(false);
     }
   };
 
@@ -179,12 +217,58 @@ export default function UserManagement() {
                     {u.role === "admin" ? <Shield className="w-3 h-3" /> : <Stethoscope className="w-3 h-3" />}
                     {ROLE_LABEL[u.role] || u.role}
                   </Badge>
+                  <Button variant="ghost" size="icon" className="w-8 h-8 flex-shrink-0" onClick={() => openEdit(u)}>
+                    <Pencil className="w-3.5 h-3.5" />
+                  </Button>
                 </div>
               ))}
             </div>
           )}
         </CardContent>
       </Card>
+
+      {/* Edit Dialog */}
+      <Dialog open={!!editUser} onOpenChange={open => !open && setEditUser(null)}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Edit Pengguna</DialogTitle>
+          </DialogHeader>
+          {editUser && (
+            <form onSubmit={handleEdit} className="space-y-4">
+              <div className="space-y-1">
+                <Label className="text-xs">Email</Label>
+                <Input value={editUser.email} disabled className="bg-muted text-muted-foreground" />
+              </div>
+              <div className="space-y-1">
+                <Label className="text-xs">Role</Label>
+                <Select value={editForm.role} onValueChange={v => setEditForm(p => ({ ...p, role: v }))}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="user">Nakes / Pelayanan</SelectItem>
+                    <SelectItem value="admin">Admin</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1">
+                <Label className="text-xs">Password Baru <span className="text-muted-foreground">(opsional)</span></Label>
+                <PasswordInput
+                  value={editForm.password}
+                  onChange={e => setEditForm(p => ({ ...p, password: e.target.value }))}
+                  placeholder="Kosongkan jika tidak diubah"
+                />
+              </div>
+              {editError && <p className="text-xs text-destructive">{editError}</p>}
+              <DialogFooter>
+                <Button type="button" variant="outline" onClick={() => setEditUser(null)}>Batal</Button>
+                <Button type="submit" disabled={editSaving} className="gap-2">
+                  {editSaving && <Loader2 className="w-4 h-4 animate-spin" />}
+                  Simpan
+                </Button>
+              </DialogFooter>
+            </form>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
