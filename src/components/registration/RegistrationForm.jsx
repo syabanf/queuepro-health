@@ -252,14 +252,6 @@ export default function RegistrationForm({ services, participants = [], eventSet
             {isFull && <Badge variant="outline" className="text-[10px]">Penuh</Badge>}
           </div>
           <p className="text-xs text-muted-foreground mt-0.5">{desc}</p>
-          <div className="flex gap-4 text-[10px] text-muted-foreground mt-2">
-            {fullFreeQuota > 0 && (
-              <span><span className="font-bold">{fullFreeRemaining}</span> / {fullFreeQuota}</span>
-            )}
-            {ccRp1Quota > 0 && (
-              <span><span className="font-bold">{ccRp1Remaining}</span> / {ccRp1Quota}</span>
-            )}
-          </div>
         </div>
       </div>
     );
