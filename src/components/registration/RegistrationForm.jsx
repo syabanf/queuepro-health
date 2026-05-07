@@ -225,37 +225,45 @@ export default function RegistrationForm({ services, participants = [], eventSet
     }
   };
 
-  const CategoryCard = ({ value, label, icon: CatIcon, desc, quota, used, isFull }) => (
-    <div
-      className={`flex items-start gap-3 px-4 py-3 rounded-xl border-2 cursor-pointer transition-all
-        ${isFull ? "opacity-50 cursor-not-allowed border-border bg-muted/20" :
-          form.participant_category === value
-            ? "border-primary bg-primary/5"
-            : "border-border hover:border-primary/40 bg-card"}`}
-      onClick={() => {
-        if (isFull) return;
-        setForm(p => ({ ...p, participant_category: value, medical_service_id: "", eye_service_id: "" }));
-        setErrors(p => ({ ...p, participant_category: undefined }));
-      }}
-    >
-      <RadioGroupItem value={value} id={`cat-${value}`} disabled={isFull} className="mt-0.5" />
-      <div className="flex-1 min-w-0">
-        <div className="flex items-center gap-2">
-          <CatIcon className="w-4 h-4 text-primary flex-shrink-0" />
-          <Label htmlFor={`cat-${value}`} className={`text-sm font-semibold ${isFull ? "cursor-not-allowed" : "cursor-pointer"}`}>
-            {label}
-          </Label>
-          {isFull && <Badge variant="outline" className="text-[10px]">Penuh</Badge>}
+  const CategoryCard = ({ value, label, icon: CatIcon, desc, fullFreeQuota, fullFreeUsed, ccRp1Quota, ccRp1Used, isFull }) => {
+    const fullFreeRemaining = Math.max(0, fullFreeQuota - fullFreeUsed);
+    const ccRp1Remaining = Math.max(0, ccRp1Quota - ccRp1Used);
+    
+    return (
+      <div
+        className={`flex items-start gap-3 px-4 py-3 rounded-xl border-2 cursor-pointer transition-all
+          ${isFull ? "opacity-50 cursor-not-allowed border-border bg-muted/20" :
+            form.participant_category === value
+              ? "border-primary bg-primary/5"
+              : "border-border hover:border-primary/40 bg-card"}`}
+        onClick={() => {
+          if (isFull) return;
+          setForm(p => ({ ...p, participant_category: value, medical_service_id: "", eye_service_id: "" }));
+          setErrors(p => ({ ...p, participant_category: undefined }));
+        }}
+      >
+        <RadioGroupItem value={value} id={`cat-${value}`} disabled={isFull} className="mt-0.5" />
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2">
+            <CatIcon className="w-4 h-4 text-primary flex-shrink-0" />
+            <Label htmlFor={`cat-${value}`} className={`text-sm font-semibold ${isFull ? "cursor-not-allowed" : "cursor-pointer"}`}>
+              {label}
+            </Label>
+            {isFull && <Badge variant="outline" className="text-[10px]">Penuh</Badge>}
+          </div>
+          <p className="text-xs text-muted-foreground mt-0.5">{desc}</p>
+          <div className="flex gap-4 text-[10px] text-muted-foreground mt-2">
+            {fullFreeQuota > 0 && (
+              <span>Sisa Gratis: <span className="font-bold">{fullFreeRemaining}</span> / {fullFreeQuota}</span>
+            )}
+            {ccRp1Quota > 0 && (
+              <span>Sisa Bayar: <span className="font-bold">{ccRp1Remaining}</span> / {ccRp1Quota}</span>
+            )}
+          </div>
         </div>
-        <p className="text-xs text-muted-foreground mt-0.5">{desc}</p>
-        {quota > 0 && (
-          <p className="text-[10px] text-muted-foreground mt-1">
-            Sisa: <span className="font-bold">{Math.max(0, quota - used)}</span> / {quota}
-          </p>
-        )}
       </div>
-    </div>
-  );
+    );
+  };
 
   const isEventBlocked = eventSetting?.event_status === "DRAFT" || eventSetting?.event_status === "CLOSED";
 
@@ -332,8 +340,10 @@ export default function RegistrationForm({ services, participants = [], eventSet
                    label="FREE CHECK"
                    icon={Gift}
                    desc="Pemeriksaan gratis — tidak dipungut biaya"
-                   quota={totalFullFreeQuota}
-                   used={usedFullFree}
+                   fullFreeQuota={totalFullFreeQuota}
+                   fullFreeUsed={usedFullFree}
+                   ccRp1Quota={0}
+                   ccRp1Used={0}
                    isFull={fullFreeFull}
                  />
                  <CategoryCard
@@ -341,8 +351,10 @@ export default function RegistrationForm({ services, participants = [], eventSet
                    label="PAYMENT"
                    icon={CreditCard}
                    desc="Pemeriksaan berbayar — diperlukan konfirmasi pembayaran"
-                   quota={totalCcRp1Quota}
-                   used={usedCcRp1}
+                   fullFreeQuota={0}
+                   fullFreeUsed={0}
+                   ccRp1Quota={totalCcRp1Quota}
+                   ccRp1Used={usedCcRp1}
                    isFull={ccRp1Full}
                  />
               </RadioGroup>
