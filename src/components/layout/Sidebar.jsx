@@ -8,17 +8,37 @@ import {
 import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
 
-const adminMenuItems = [
-  { label: "Dashboard", icon: LayoutDashboard, path: "/" },
-  { label: "Registrasi Peserta", icon: UserPlus, path: "/registration" },
-  { label: "Panel Booth", icon: Monitor, path: "/booth" },
-  { label: "Antrian Real-time", icon: Monitor, path: "/queue-monitor" },
-  { label: "Dashboard Kuota", icon: Activity, path: "/quota-dashboard" },
-  { label: "Data Peserta", icon: Users, path: "/participants" },
-  { label: "Riwayat Antrian", icon: Clock, path: "/queue-history" },
-  { label: "Laporan", icon: FileText, path: "/reports" },
-  { label: "Manajemen Pengguna", icon: Users, path: "/user-management" },
-  { label: "Pengaturan", icon: Settings, path: "/settings" },
+const adminMenuSections = [
+  {
+    section: "Umum",
+    items: [
+      { label: "Dashboard", icon: LayoutDashboard, path: "/" },
+    ]
+  },
+  {
+    section: "Registrasi",
+    items: [
+      { label: "Registrasi Peserta", icon: UserPlus, path: "/registration" },
+      { label: "Data Peserta", icon: Users, path: "/participants" },
+    ]
+  },
+  {
+    section: "Antrian",
+    items: [
+      { label: "Panel Booth", icon: Monitor, path: "/booth" },
+      { label: "Monitor Real-time", icon: Monitor, path: "/queue-monitor" },
+      { label: "Riwayat Antrian", icon: Clock, path: "/queue-history" },
+      { label: "Dashboard Kuota", icon: Activity, path: "/quota-dashboard" },
+    ]
+  },
+  {
+    section: "Laporan & Pengaturan",
+    items: [
+      { label: "Laporan", icon: FileText, path: "/reports" },
+      { label: "Manajemen Pengguna", icon: Users, path: "/user-management" },
+      { label: "Pengaturan", icon: Settings, path: "/settings" },
+    ]
+  }
 ];
 
 const nakesMenuItemsList = [
@@ -34,7 +54,8 @@ export default function Sidebar({ user }) {
   const [mobileOpen, setMobileOpen] = useState(false);
 
   const isAdmin = user?.role === "admin";
-  const menuItems = isAdmin ? adminMenuItems : nakesMenuItemsList;
+  const adminMenuItems = isAdmin ? adminMenuSections : null;
+  const menuItems = !isAdmin ? nakesMenuItemsList : [];
 
   const handleLogout = () => {
     base44.auth.logout("/demo");
@@ -75,26 +96,58 @@ export default function Sidebar({ user }) {
       )}
 
       {/* Menu */}
-      <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
-        {menuItems.map((item) => {
-          const isActive = location.pathname === item.path;
-          return (
-            <Link
-              key={item.path}
-              to={item.path}
-              onClick={() => setMobileOpen(false)}
-              className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 group
-                ${isActive 
-                  ? "bg-sidebar-primary text-sidebar-primary-foreground shadow-lg shadow-sidebar-primary/20" 
-                  : "text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-foreground"
-                }`}
-            >
-              <item.icon className={`w-5 h-5 flex-shrink-0 ${isActive ? "" : "group-hover:scale-110 transition-transform"}`} />
-              {!collapsed && <span>{item.label}</span>}
-              {!collapsed && isActive && <ChevronRight className="w-4 h-4 ml-auto" />}
-            </Link>
-          );
-        })}
+      <nav className="flex-1 px-2 py-4 space-y-3 overflow-y-auto">
+        {isAdmin && adminMenuItems ? (
+          adminMenuItems.map((group) => (
+            <div key={group.section} className="space-y-1">
+              {!collapsed && (
+                <p className="px-3 py-1.5 text-xs font-semibold text-sidebar-foreground/50 uppercase tracking-wider">
+                  {group.section}
+                </p>
+              )}
+              {group.items.map((item) => {
+                const isActive = location.pathname === item.path;
+                return (
+                  <Link
+                    key={item.path}
+                    to={item.path}
+                    onClick={() => setMobileOpen(false)}
+                    className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 group
+                      ${isActive 
+                        ? "bg-sidebar-primary text-sidebar-primary-foreground shadow-lg shadow-sidebar-primary/20" 
+                        : "text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-foreground"
+                      }`}
+                    title={collapsed ? item.label : ""}
+                  >
+                    <item.icon className={`w-5 h-5 flex-shrink-0 ${isActive ? "" : "group-hover:scale-110 transition-transform"}`} />
+                    {!collapsed && <span>{item.label}</span>}
+                    {!collapsed && isActive && <ChevronRight className="w-4 h-4 ml-auto" />}
+                  </Link>
+                );
+              })}
+            </div>
+          ))
+        ) : (
+          menuItems.map((item) => {
+            const isActive = location.pathname === item.path;
+            return (
+              <Link
+                key={item.path}
+                to={item.path}
+                onClick={() => setMobileOpen(false)}
+                className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 group
+                  ${isActive 
+                    ? "bg-sidebar-primary text-sidebar-primary-foreground shadow-lg shadow-sidebar-primary/20" 
+                    : "text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-foreground"
+                  }`}
+              >
+                <item.icon className={`w-5 h-5 flex-shrink-0 ${isActive ? "" : "group-hover:scale-110 transition-transform"}`} />
+                {!collapsed && <span>{item.label}</span>}
+                {!collapsed && isActive && <ChevronRight className="w-4 h-4 ml-auto" />}
+              </Link>
+            );
+          })
+        )}
       </nav>
 
       {/* Logout */}
