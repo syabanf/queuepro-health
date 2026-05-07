@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from "react";
+import React, { useEffect, useState, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import { useNavigate } from "react-router-dom";
@@ -82,6 +82,17 @@ export default function Participants() {
     queryKey: ["eventSettings"],
     queryFn: () => base44.entities.EventSetting.list(),
   });
+
+  // Real-time subscriptions
+  useEffect(() => {
+    const unsubP = base44.entities.Participant.subscribe(() => {
+      queryClient.invalidateQueries({ queryKey: ["participants"] });
+    });
+    const unsubQ = base44.entities.Queue.subscribe(() => {
+      queryClient.invalidateQueries({ queryKey: ["queues"] });
+    });
+    return () => { unsubP(); unsubQ(); };
+  }, [queryClient]);
 
   const serviceMap = useMemo(() => Object.fromEntries(services.map(s => [s.id, s])), [services]);
   const medicalServices = services.filter(s => s.service_group === "MEDICAL");
