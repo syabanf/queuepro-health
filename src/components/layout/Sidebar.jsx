@@ -27,8 +27,6 @@ const adminMenuSections = [
     items: [
       { label: "Panel Booth", icon: Monitor, path: "/booth" },
       { label: "Monitor Real-time", icon: Monitor, path: "/queue-monitor" },
-      { label: "Riwayat Antrian", icon: Clock, path: "/queue-history" },
-      { label: "Dashboard Kuota", icon: Activity, path: "/quota-dashboard" },
     ]
   },
   {
