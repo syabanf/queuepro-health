@@ -15,6 +15,23 @@ export const AuthProvider = ({ children }) => {
   const [appPublicSettings, setAppPublicSettings] = useState(null); // Contains only { id, public_settings }
 
   useEffect(() => {
+    // Check if we have a mock user from DemoLauncher
+    const mockUserStr = sessionStorage.getItem("mockUser");
+    if (mockUserStr) {
+      try {
+        const mockUser = JSON.parse(mockUserStr);
+        setUser(mockUser);
+        setIsAuthenticated(true);
+        setIsLoadingAuth(false);
+        setIsLoadingPublicSettings(false);
+        setAuthChecked(true);
+        return;
+      } catch (e) {
+        console.error("Failed to parse mock user:", e);
+        sessionStorage.removeItem("mockUser");
+      }
+    }
+    
     checkAppState();
   }, []);
 

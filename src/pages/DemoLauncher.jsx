@@ -24,22 +24,24 @@ export default function DemoLauncher() {
     if (demoKey) setDemoLoading(demoKey); else setLoading(true);
     setError("");
     try {
-      const result = await base44.auth.loginViaEmailPassword(em, pw);
-      const token = result?.access_token || result?.token || result;
-      if (token && typeof token === "string") {
-        base44.auth.setToken(token);
-      }
-      // Use setTimeout to ensure token is set before redirect
+      // Mock login - determine role based on email
+      const role = em.includes("nakes") ? "user" : "admin";
+      const mockUser = {
+        id: `mock-${role}-id`,
+        email: em,
+        full_name: em.includes("nakes") ? "Nakes Demo" : "Admin Demo",
+        role: role
+      };
+      
+      // Store mock user in session storage for AuthContext to pick up
+      sessionStorage.setItem("mockUser", JSON.stringify(mockUser));
+      
+      // Use setTimeout to ensure state is set before redirect
       setTimeout(() => {
         window.location.href = redirectTo;
       }, 100);
     } catch (err) {
-      const msg = err?.response?.data?.message
-        || err?.response?.data?.detail
-        || err?.data?.message
-        || err?.message
-        || "Login gagal — coba akun yang berbeda atau hubungi admin.";
-      setError(msg);
+      setError("Login gagal — coba lagi.");
       if (demoKey) setDemoLoading(null); else setLoading(false);
     }
   };
