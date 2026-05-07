@@ -81,10 +81,10 @@ const AuthenticatedApp = () => {
 
         {/* Shared Routes */}
         <Route path="/queue-monitor" element={<QueueMonitor />} />
-
-        {/* Nakes Routes */}
-        <Route path="/booth" element={!isAdmin ? <NakesBooth /> : <Navigate to="/" replace />} />
       </Route>
+
+      {/* Booth Route - No Sidebar */}
+      <Route path="/booth" element={!isAdmin ? <NakesBooth /> : <Navigate to="/" replace />} />
       <Route path="*" element={<PageNotFound />} />
     </Routes>
   );
