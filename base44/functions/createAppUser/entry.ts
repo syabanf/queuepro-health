@@ -12,14 +12,11 @@ Deno.serve(async (req) => {
     const body = await req.json();
     const email = body.email;
     const role = body.role || "user";
-    const password = body.password;
+    const password = body.password || "";
     const full_name = body.full_name || "";
 
-    if (!email || !password) {
-      return Response.json({ error: "email dan password wajib diisi" }, { status: 400 });
-    }
-    if (password.length < 6) {
-      return Response.json({ error: "Password minimal 6 karakter" }, { status: 400 });
+    if (!email) {
+      return Response.json({ error: "email wajib diisi" }, { status: 400 });
     }
 
     // Check if user already exists
@@ -27,12 +24,28 @@ Deno.serve(async (req) => {
     const existing = (allUsers || []).find(u => u.email === email);
 
     if (existing) {
-      // Update password, role, and name on existing user
-      await base44.asServiceRole.auth.setUserPassword(existing.id, password);
+      // Update role (and name if provided)
       const upd = { role };
       if (full_name) upd.full_name = full_name;
       await base44.asServiceRole.entities.User.update(existing.id, upd);
+
+      // Update password only if provided
+      if (password) {
+        if (password.length < 6) {
+          return Response.json({ error: "Password minimal 6 karakter" }, { status: 400 });
+        }
+        await base44.asServiceRole.auth.setUserPassword(existing.id, password);
+      }
+
       return Response.json({ success: true, userId: existing.id, note: "updated" });
+    }
+
+    // New user — password required
+    if (!password) {
+      return Response.json({ error: "password wajib diisi untuk pengguna baru" }, { status: 400 });
+    }
+    if (password.length < 6) {
+      return Response.json({ error: "Password minimal 6 karakter" }, { status: 400 });
     }
 
     // Register new user directly with email + password
