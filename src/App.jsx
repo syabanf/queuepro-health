@@ -19,6 +19,7 @@ import Reports from "@/pages/Reports";
 import SettingsPage from "@/pages/SettingsPage";
 import LEDMonitor from "@/pages/LEDMonitor";
 import MobileMonitor from "@/pages/MobileMonitor";
+import DemoLauncher from "@/pages/DemoLauncher";
 
 const AuthenticatedApp = () => {
   const { isLoadingAuth, isLoadingPublicSettings, authError, navigateToLogin, user } = useAuth();
@@ -38,9 +39,26 @@ const AuthenticatedApp = () => {
     if (authError.type === "user_not_registered") {
       return <UserNotRegisteredError />;
     } else if (authError.type === "auth_required") {
-      navigateToLogin();
-      return null;
+      // Show demo launcher instead of redirecting to platform login
+      return (
+        <Routes>
+          <Route path="/led-monitor" element={<LEDMonitor />} />
+          <Route path="/mobile-monitor" element={<MobileMonitor />} />
+          <Route path="*" element={<DemoLauncher />} />
+        </Routes>
+      );
     }
+  }
+
+  // Not authenticated — show demo launcher for protected routes
+  if (!isLoadingAuth && !user) {
+    return (
+      <Routes>
+        <Route path="/led-monitor" element={<LEDMonitor />} />
+        <Route path="/mobile-monitor" element={<MobileMonitor />} />
+        <Route path="*" element={<DemoLauncher />} />
+      </Routes>
+    );
   }
 
   const isAdmin = user?.role === "admin";
@@ -50,6 +68,7 @@ const AuthenticatedApp = () => {
       {/* Fullscreen public routes — no sidebar */}
       <Route path="/led-monitor" element={<LEDMonitor />} />
       <Route path="/mobile-monitor" element={<MobileMonitor />} />
+      <Route path="/demo" element={<DemoLauncher />} />
 
       <Route element={<AppLayout user={user} />}>
         {/* Admin Routes */}

@@ -35,7 +35,7 @@ export default function Sidebar({ user }) {
   const menuItems = isAdmin ? adminMenuItems : nakesMenuItemsList;
 
   const handleLogout = () => {
-    base44.auth.logout("/");
+    base44.auth.logout("/demo");
   };
 
   const NavContent = () => (
@@ -66,7 +66,7 @@ export default function Sidebar({ user }) {
             </div>
             <div className="overflow-hidden">
               <p className="text-sm font-medium text-sidebar-foreground truncate">{user?.full_name || "User"}</p>
-              <p className="text-xs text-sidebar-foreground/60 capitalize">{isAdmin ? "Admin Pusat" : "Nakes"}</p>
+              <p className="text-xs text-sidebar-foreground/60">{isAdmin ? "Admin Pusat" : "Petugas Pelayanan"}</p>
             </div>
           </div>
         </div>

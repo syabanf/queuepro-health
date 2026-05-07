@@ -3,6 +3,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
 import { Settings, Save, RotateCcw, Loader2, CheckCircle2, AlertCircle } from "lucide-react";
+import DemoUserSeeder from "@/components/settings/DemoUserSeeder";
 import PageHeader from "@/components/layout/PageHeader";
 import EventConfigForm from "@/components/settings/EventConfigForm";
 import ServiceQuotaConfig from "@/components/settings/ServiceQuotaConfig";
@@ -187,6 +188,8 @@ export default function SettingsPage() {
           </div>
         }
       />
+
+      <DemoUserSeeder />
 
       {errors.global && (
         <div className="flex items-center gap-2 p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700">

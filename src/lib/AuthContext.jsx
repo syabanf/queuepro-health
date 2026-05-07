@@ -128,8 +128,10 @@ export const AuthProvider = ({ children }) => {
   };
 
   const navigateToLogin = () => {
-    // Use the SDK's redirectToLogin method
-    base44.auth.redirectToLogin(window.location.href);
+    // Redirect to demo launcher instead of platform login
+    if (typeof window !== 'undefined') {
+      window.location.href = '/demo';
+    }
   };
 
   return (
