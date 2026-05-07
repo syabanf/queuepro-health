@@ -66,9 +66,9 @@ export default function UserManagement() {
     if (form.password.length < 6) { setError("Password minimal 6 karakter."); return; }
     setCreating(true);
     try {
-      await base44.users.inviteUser(form.email.trim(), form.role);
-      await base44.functions.invoke("adminSetUserPassword", {
+      await base44.functions.invoke("createAppUser", {
         email: form.email.trim(),
+        role: form.role,
         password: form.password,
       });
       toast({ title: "Berhasil", description: `Pengguna ${form.email} berhasil dibuat.` });
@@ -95,12 +95,12 @@ export default function UserManagement() {
     }
     setEditSaving(true);
     try {
-      if (editForm.password) {
-        await base44.functions.invoke("adminSetUserPassword", {
-          email: editUser.email,
-          password: editForm.password,
-        });
-      }
+      const payload = {
+        email: editUser.email,
+        role: editForm.role,
+        ...(editForm.password ? { password: editForm.password } : {}),
+      };
+      await base44.functions.invoke("createAppUser", payload);
       toast({ title: "Berhasil", description: "Data pengguna berhasil diperbarui." });
       setEditUser(null);
       refetch();
