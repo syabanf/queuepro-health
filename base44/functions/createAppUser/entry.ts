@@ -51,10 +51,13 @@ Deno.serve(async (req) => {
       return Response.json({ error: "Gagal menemukan user setelah dibuat." }, { status: 500 });
     }
 
-    // Set the correct role (register sets default role)
+    // Set the correct role and verify email so no verification needed
     const updates = { role };
     if (full_name) updates.full_name = full_name;
     await base44.asServiceRole.entities.User.update(foundUser.id, updates);
+
+    // Auto-verify email so user can login immediately
+    await base44.asServiceRole.auth.verifyUserEmail(foundUser.id);
 
     return Response.json({ success: true, userId: foundUser.id });
   } catch (error) {
