@@ -83,12 +83,12 @@ export default function DemoLauncher() {
                 <Label htmlFor="email" className="text-xs font-medium">Email</Label>
                 <Input
                   id="email"
-                  type="email"
-                  placeholder="email@contoh.com"
+                  type="text"
+                  placeholder="username atau email"
                   value={email}
                   onChange={e => { setEmail(e.target.value); setError(""); }}
                   className="mt-1"
-                  autoComplete="email"
+                  autoComplete="username"
                 />
               </div>
               <div>
