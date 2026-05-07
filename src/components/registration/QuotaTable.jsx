@@ -20,15 +20,16 @@ function QuotaBar({ used, total, color }) {
 }
 
 function StatusBadge({ service }) {
-  const freeRem = (service.free_quota || 0) - (service.used_free_quota || 0);
-  const paidRem = (service.paid_quota || 0) - (service.used_paid_quota || 0);
-  const totalFree = service.free_quota || 0;
-  const totalPaid = service.paid_quota || 0;
-  const hasQuota = totalFree > 0 || totalPaid > 0;
-
-  if (!hasQuota) return <Badge variant="outline" className="text-xs">Belum Diset</Badge>;
-  if (freeRem <= 0 && paidRem <= 0) return <Badge className="text-xs bg-red-100 text-red-700 border-red-200">Penuh</Badge>;
-  if ((freeRem / totalFree) < 0.2 || (paidRem / totalPaid) < 0.2) return <Badge className="text-xs bg-amber-100 text-amber-700 border-amber-200">Hampir Penuh</Badge>;
+  if (service.is_unlimited) {
+    return <Badge className="text-xs bg-purple-100 text-purple-700 border-purple-200">Unlimited</Badge>;
+  }
+  
+  const totalUsed = (service.used_full_free || 0) + (service.used_cc_rp1 || 0) + (service.used_full_paid || 0);
+  const totalSlot = service.total_slot || 0;
+  
+  if (totalSlot <= 0) return <Badge variant="outline" className="text-xs">Belum Diset</Badge>;
+  if (totalUsed >= totalSlot) return <Badge className="text-xs bg-red-100 text-red-700 border-red-200">Penuh</Badge>;
+  if ((totalSlot - totalUsed) / totalSlot < 0.2) return <Badge className="text-xs bg-amber-100 text-amber-700 border-amber-200">Hampir Penuh</Badge>;
   return <Badge className="text-xs bg-green-100 text-green-700 border-green-200">Tersedia</Badge>;
 }
 
@@ -38,8 +39,8 @@ export default function QuotaTable({ services }) {
 
   const renderRows = (list) =>
     list.map(s => {
-      const freeRem = (s.free_quota || 0) - (s.used_free_quota || 0);
-      const paidRem = (s.paid_quota || 0) - (s.used_paid_quota || 0);
+      const fullFreeRem = (s.full_free_quota || 0) - (s.used_full_free || 0);
+      const ccRp1Rem = (s.cc_rp1_quota || 0) - (s.used_cc_rp1 || 0);
       return (
         <tr key={s.id} className="border-b border-border last:border-0 hover:bg-muted/30 transition-colors">
           <td className="py-2.5 px-3">
@@ -51,12 +52,12 @@ export default function QuotaTable({ services }) {
             </div>
           </td>
           <td className="py-2.5 px-3 text-center">
-            <div className="text-xs font-semibold text-foreground">{freeRem}</div>
-            <QuotaBar used={s.used_free_quota || 0} total={s.free_quota || 0} color="bg-green-500" />
+            <div className="text-xs font-semibold text-foreground">{fullFreeRem}</div>
+            <QuotaBar used={s.used_full_free || 0} total={s.full_free_quota || 0} color="bg-green-500" />
           </td>
           <td className="py-2.5 px-3 text-center">
-            <div className="text-xs font-semibold text-foreground">{paidRem}</div>
-            <QuotaBar used={s.used_paid_quota || 0} total={s.paid_quota || 0} color="bg-orange-400" />
+            <div className="text-xs font-semibold text-foreground">{ccRp1Rem}</div>
+            <QuotaBar used={s.used_cc_rp1 || 0} total={s.cc_rp1_quota || 0} color="bg-blue-500" />
           </td>
           <td className="py-2.5 px-3 text-center">
             <StatusBadge service={s} />
