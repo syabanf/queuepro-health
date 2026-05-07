@@ -30,8 +30,8 @@ export default function RegistrationForm({ services, participants = [], eventSet
   const [errors, setErrors] = useState({});
   const [submitting, setSubmitting] = useState(false);
 
-  const medicalServices = services.filter(s => s.service_group === "MEDICAL" && s.is_active);
-  const eyeServices = services.filter(s => s.service_group === "EYE_CHECK" && s.is_active);
+  const medicalServices = services.filter(s => s.service_group === "MEDICAL" && s.is_active && s.service_code && s.service_name);
+  const eyeServices = services.filter(s => s.service_group === "EYE_CHECK" && s.is_active && s.service_code && s.service_name);
   const selectedMedical = services.find(s => s.id === form.medical_service_id);
   const selectedEye = services.find(s => s.id === form.eye_service_id);
 
