@@ -2,6 +2,7 @@ import React, { useState, useCallback } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import { UserPlus, Users, AlertCircle } from "lucide-react";
+import { useToast } from "@/components/ui/use-toast";
 import PageHeader from "@/components/layout/PageHeader";
 import RegistrationForm from "@/components/registration/RegistrationForm";
 import QueuePreviewCard from "@/components/registration/QueuePreviewCard";
@@ -14,6 +15,7 @@ import { Badge } from "@/components/ui/badge";
 export default function Registration() {
   const [lastResult, setLastResult] = useState(null);
   const queryClient = useQueryClient();
+  const { toast } = useToast();
 
   const { data: services = [], isLoading: loadingServices } = useQuery({
     queryKey: ["services"],
@@ -49,7 +51,11 @@ export default function Registration() {
     queryClient.invalidateQueries({ queryKey: ["participants"] });
     queryClient.invalidateQueries({ queryKey: ["queues"] });
     queryClient.invalidateQueries({ queryKey: ["services"] });
-  }, [queryClient]);
+    toast({
+      title: "Pendaftaran Berhasil!",
+      description: `${result.participant.full_name} — Antrian: ${result.medicalQueue.queue_number} & ${result.eyeQueue.queue_number}`,
+    });
+  }, [queryClient, toast]);
 
   const handleReset = useCallback(() => {
     setLastResult(null);
