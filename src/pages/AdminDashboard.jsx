@@ -7,13 +7,14 @@ import { Button } from "@/components/ui/button";
 import {
   Users, Activity, Monitor, CheckCircle2, Clock,
   Stethoscope, Eye, AlertCircle, TrendingUp, SkipForward,
-  XCircle, CreditCard, Gift, ChevronRight, TestTube
+  XCircle, CreditCard, Gift, ChevronRight, TestTube, CheckCircle
 } from "lucide-react";
 import PageHeader from "@/components/layout/PageHeader";
 import { format } from "date-fns";
 import { PARTICIPANT_STATUS_LABELS, PARTICIPANT_STATUS_COLORS } from "@/lib/registrationUtils";
 import { Link } from "react-router-dom";
 import TestFlowWizard from "@/components/TestFlowWizard";
+import DataConsistencyChecker from "@/components/DataConsistencyChecker";
 
 function StatCard({ title, value, icon: Icon, bgClass, textClass, subtitle }) {
   return (
@@ -77,6 +78,7 @@ function ServiceQueueRow({ service, queues }) {
 
 export default function AdminDashboard() {
   const [showTestWizard, setShowTestWizard] = useState(false);
+  const [showDataChecker, setShowDataChecker] = useState(false);
   const queryClient = useQueryClient();
   const { data: services = [] } = useQuery({
     queryKey: ["services"],
@@ -113,7 +115,16 @@ export default function AdminDashboard() {
   }, [queryClient]);
 
   const event = eventSettings[0];
-  const maxParticipants = event?.max_participants || 200;
+  const eventMaxParticipants = event?.max_participants || 200;
+
+  // Calculate quota from service definitions
+  const totalFullFreeQuota = services.reduce((sum, s) => sum + (s.full_free_quota || 0), 0);
+  const totalPaymentQuota = services.reduce((sum, s) => sum + (s.full_paid_quota || 0), 0);
+  const totalQuota = totalFullFreeQuota + totalPaymentQuota;
+
+  // Count actual by category
+  const freeCheckParticipants = participants.filter(p => p.participant_category === "FREE_CHECK").length;
+  const paymentParticipants = participants.filter(p => p.participant_category === "PAYMENT").length;
 
   const stats = useMemo(() => {
     const completed = participants.filter(p => p.participant_status === "COMPLETED").length;
@@ -122,36 +133,47 @@ export default function AdminDashboard() {
     const serving = queues.filter(q => q.status === "SERVING" || q.status === "CALLED").length;
     const skipped = queues.filter(q => q.status === "SKIPPED").length;
     const cancelled = queues.filter(q => q.status === "CANCELLED").length;
-    const freeUsed = queues.filter(q => q.slot_type === "FREE" && q.status !== "CANCELLED").length;
-    const paidUsed = queues.filter(q => q.slot_type === "PAID" && q.status !== "CANCELLED").length;
-    const remaining = maxParticipants - participants.length;
+    const freeUsed = freeCheckParticipants;
+    const paidUsed = paymentParticipants;
+    const remaining = eventMaxParticipants - participants.length;
     return { completed, partial, waiting, serving, skipped, cancelled, freeUsed, paidUsed, remaining };
-  }, [participants, queues, maxParticipants]);
+  }, [participants, queues, eventMaxParticipants, freeCheckParticipants, paymentParticipants]);
 
-  const fillPct = Math.min(100, Math.round((participants.length / maxParticipants) * 100));
+  const fillPct = Math.min(100, Math.round((participants.length / eventMaxParticipants) * 100));
   const medicalServices = services.filter(s => s.service_group === "MEDICAL");
   const eyeServices = services.filter(s => s.service_group === "EYE_CHECK");
   const latestParticipants = participants.slice(0, 5);
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between gap-2">
         <PageHeader
           title="Dashboard"
           subtitle={event ? `${event.event_name} · ${event.location}` : "Memuat data..."}
           icon={Activity}
         />
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => setShowTestWizard(true)}
-          className="gap-2"
-        >
-          <TestTube className="w-4 h-4" /> Test Flow
-        </Button>
+        <div className="flex gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setShowDataChecker(true)}
+            className="gap-2"
+          >
+            <CheckCircle className="w-4 h-4" /> Data Check
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setShowTestWizard(true)}
+            className="gap-2"
+          >
+            <TestTube className="w-4 h-4" /> Test Flow
+          </Button>
+        </div>
       </div>
 
       <TestFlowWizard isOpen={showTestWizard} onClose={() => setShowTestWizard(false)} />
+      <DataConsistencyChecker isOpen={showDataChecker} onClose={() => setShowDataChecker(false)} />
 
       {/* Capacity Bar */}
       <Card className={`border-2 ${fillPct >= 100 ? "border-destructive/40" : fillPct >= 80 ? "border-warning/40" : "border-success/30"}`}>
@@ -163,7 +185,7 @@ export default function AdminDashboard() {
             </div>
             <div className="flex items-center gap-2">
               <span className="text-sm font-black">{participants.length}</span>
-              <span className="text-muted-foreground text-sm">/ {maxParticipants}</span>
+              <span className="text-muted-foreground text-sm">/ {eventMaxParticipants}</span>
               {stats.remaining <= 0 ? (
                 <Badge className="bg-red-100 text-red-700 border-red-200 gap-1"><AlertCircle className="w-3 h-3" />Penuh</Badge>
               ) : stats.remaining <= 20 ? (
@@ -188,7 +210,7 @@ export default function AdminDashboard() {
         <Card className="bg-primary text-primary-foreground col-span-2 sm:col-span-1">
           <CardContent className="p-5">
             <p className="text-xs font-medium text-primary-foreground/70">Terdaftar</p>
-            <p className="text-3xl font-black mt-1">{participants.length} <span className="text-lg font-normal text-primary-foreground/50">/ {maxParticipants}</span></p>
+            <p className="text-3xl font-black mt-1">{participants.length} <span className="text-lg font-normal text-primary-foreground/50">/ {eventMaxParticipants}</span></p>
             <p className="text-xs text-primary-foreground/60 mt-1">total peserta</p>
           </CardContent>
         </Card>
@@ -236,16 +258,16 @@ export default function AdminDashboard() {
         </Card>
         <Card>
           <CardContent className="p-5">
-            <p className="text-xs text-muted-foreground font-medium">Slot Gratis</p>
+            <p className="text-xs text-muted-foreground font-medium">FREE CHECK</p>
             <p className="text-3xl font-black text-green-600 mt-1">{stats.freeUsed}</p>
-            <p className="text-xs text-muted-foreground mt-1">digunakan</p>
+            <p className="text-xs text-muted-foreground mt-1">dari {totalFullFreeQuota} kuota</p>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="p-5">
-            <p className="text-xs text-muted-foreground font-medium">Slot Berbayar</p>
+            <p className="text-xs text-muted-foreground font-medium">PAYMENT</p>
             <p className="text-3xl font-black text-orange-500 mt-1">{stats.paidUsed}</p>
-            <p className="text-xs text-muted-foreground mt-1">digunakan</p>
+            <p className="text-xs text-muted-foreground mt-1">dari {totalPaymentQuota} kuota</p>
           </CardContent>
         </Card>
       </div>

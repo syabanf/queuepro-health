@@ -41,10 +41,17 @@ export default function Registration() {
   });
 
   const event = eventSettings[0];
-  const maxParticipants = event?.max_participants || 200;
+  const eventMaxParticipants = event?.max_participants || 200;
+  
+  // Calculate quota from services
+  const totalFullFreeQuota = services.reduce((sum, s) => sum + (s.full_free_quota || 0), 0);
+  const totalPaymentQuota = services.reduce((sum, s) => sum + (s.full_paid_quota || 0), 0);
+  const totalServiceQuota = totalFullFreeQuota + totalPaymentQuota;
+  
   const usedSlots = participants.length;
-  const remainingSlots = maxParticipants - usedSlots;
-  const fillPct = Math.min(100, Math.round((usedSlots / maxParticipants) * 100));
+  const remainingSlots = Math.max(0, Math.min(eventMaxParticipants, totalServiceQuota) - usedSlots);
+  const maxDisplayQuota = Math.min(eventMaxParticipants, totalServiceQuota);
+  const fillPct = Math.min(100, Math.round((usedSlots / maxDisplayQuota) * 100));
 
   const handleSuccess = useCallback((result) => {
     setLastResult(result);
@@ -92,7 +99,7 @@ export default function Registration() {
               <div className="flex-1">
                 <div className="flex items-center justify-between mb-1">
                   <p className="text-sm font-medium">Kapasitas Peserta</p>
-                  <p className="text-sm font-bold">{usedSlots} / {maxParticipants}</p>
+                  <p className="text-sm font-bold">{usedSlots} / {maxDisplayQuota}</p>
                 </div>
                 <div className="h-2 bg-muted rounded-full overflow-hidden">
                   <div
