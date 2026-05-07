@@ -6,22 +6,44 @@ import { Badge } from "@/components/ui/badge";
 import { Activity, Stethoscope, Eye, RefreshCw } from "lucide-react";
 import PageHeader from "@/components/layout/PageHeader";
 
-function getQuotaStatus(freeRem, paidRem) {
-  if (freeRem > 0) return { label: "FREE TERSEDIA", color: "bg-green-100 text-green-700 border-green-200" };
-  if (freeRem <= 0 && paidRem > 0) return { label: "FREE HABIS · PAID TERSEDIA", color: "bg-blue-100 text-blue-700 border-blue-200" };
-  return { label: "KUOTA HABIS", color: "bg-gray-100 text-gray-600 border-gray-200" };
-}
-
 function QuotaTableRow({ service, isEye }) {
-  const freeTotal = service.free_quota || 0;
-  const freeUsed = service.used_free_quota || 0;
-  const freeRem = freeTotal - freeUsed;
-  const paidTotal = service.paid_quota || 0;
-  const paidUsed = service.used_paid_quota || 0;
-  const paidRem = paidTotal - paidUsed;
-  const status = getQuotaStatus(freeRem, paidRem);
-  const freePct = freeTotal > 0 ? Math.min(100, (freeUsed / freeTotal) * 100) : 0;
-  const paidPct = paidTotal > 0 ? Math.min(100, (paidUsed / paidTotal) * 100) : 0;
+  // Full Free tier
+  const fullFreeTotal = service.full_free_quota || 0;
+  const fullFreeUsed = service.used_full_free || 0;
+  const fullFreeRem = fullFreeTotal - fullFreeUsed;
+  const fullFreePct = fullFreeTotal > 0 ? Math.min(100, (fullFreeUsed / fullFreeTotal) * 100) : 0;
+
+  // CC Rp 1 tier
+  const ccRp1Total = service.cc_rp1_quota || 0;
+  const ccRp1Used = service.used_cc_rp1 || 0;
+  const ccRp1Rem = ccRp1Total - ccRp1Used;
+  const ccRp1Pct = ccRp1Total > 0 ? Math.min(100, (ccRp1Used / ccRp1Total) * 100) : 0;
+
+  // Full Paid tier
+  const fullPaidTotal = service.full_paid_quota || 0;
+  const fullPaidUsed = service.used_full_paid || 0;
+  const fullPaidRem = fullPaidTotal - fullPaidUsed;
+  const fullPaidPct = fullPaidTotal > 0 ? Math.min(100, (fullPaidUsed / fullPaidTotal) * 100) : 0;
+
+  const totalSlot = service.total_slot || 0;
+  const totalUsed = fullFreeUsed + ccRp1Used + fullPaidUsed;
+  const isUnlimited = service.is_unlimited;
+
+  const renderQuota = (total, used, pct) => {
+    if (total === 0 && !isUnlimited) return "-";
+    if (isUnlimited) return "Unlimited";
+    return (
+      <div className="flex items-center gap-2">
+        <div className="flex-1 h-2 bg-muted rounded-full overflow-hidden min-w-[50px]">
+          <div
+            className={`h-full rounded-full transition-all ${pct >= 100 ? "bg-destructive" : "bg-primary"}`}
+            style={{ width: `${pct}%` }}
+          />
+        </div>
+        <span className="text-xs font-bold w-8 text-right">{total - used}</span>
+      </div>
+    );
+  };
 
   return (
     <tr className="border-b border-border last:border-0 hover:bg-muted/30 transition-colors">
@@ -35,45 +57,20 @@ function QuotaTableRow({ service, isEye }) {
         <p className="text-sm font-medium">{service.service_name}</p>
         <p className="text-xs text-muted-foreground">Booth {service.booth_number}</p>
       </td>
-      {/* FREE */}
-      <td className="py-3 px-4 text-center text-sm font-medium">{freeTotal}</td>
-      <td className="py-3 px-4 text-center">
-        <span className="text-sm font-bold text-green-700">{freeUsed}</span>
-      </td>
-      <td className="py-3 px-4">
-        <div className="flex items-center gap-2">
-          <div className="flex-1 h-2 bg-muted rounded-full overflow-hidden min-w-[60px]">
-            <div
-              className={`h-full rounded-full transition-all ${freePct >= 100 ? "bg-destructive" : "bg-green-500"}`}
-              style={{ width: `${freePct}%` }}
-            />
-          </div>
-          <span className={`text-sm font-bold w-6 text-right ${freeRem <= 0 ? "text-destructive" : "text-foreground"}`}>
-            {freeRem}
-          </span>
-        </div>
-      </td>
-      {/* PAID */}
-      <td className="py-3 px-4 text-center text-sm font-medium">{paidTotal}</td>
-      <td className="py-3 px-4 text-center">
-        <span className="text-sm font-bold text-orange-600">{paidUsed}</span>
-      </td>
-      <td className="py-3 px-4">
-        <div className="flex items-center gap-2">
-          <div className="flex-1 h-2 bg-muted rounded-full overflow-hidden min-w-[60px]">
-            <div
-              className={`h-full rounded-full transition-all ${paidPct >= 100 ? "bg-destructive" : "bg-orange-400"}`}
-              style={{ width: `${paidPct}%` }}
-            />
-          </div>
-          <span className={`text-sm font-bold w-6 text-right ${paidRem <= 0 ? "text-destructive" : "text-foreground"}`}>
-            {paidRem}
-          </span>
-        </div>
-      </td>
-      <td className="py-3 px-4">
-        <Badge className={`text-xs border whitespace-nowrap ${status.color}`}>{status.label}</Badge>
-      </td>
+      {/* Tanpa Syarat (Full Free) */}
+      <td className="py-3 px-4 text-center text-sm font-medium">{fullFreeTotal}</td>
+      <td className="py-3 px-4 text-center text-sm font-bold text-green-700">{fullFreeUsed}</td>
+      <td className="py-3 px-4">{renderQuota(fullFreeTotal, fullFreeUsed, fullFreePct)}</td>
+      {/* Dengan CC Rp 1 */}
+      <td className="py-3 px-4 text-center text-sm font-medium">{ccRp1Total || "-"}</td>
+      <td className="py-3 px-4 text-center text-sm font-bold text-blue-700">{ccRp1Used}</td>
+      <td className="py-3 px-4">{ccRp1Total > 0 ? renderQuota(ccRp1Total, ccRp1Used, ccRp1Pct) : "-"}</td>
+      {/* Berbayar Penuh */}
+      <td className="py-3 px-4 text-center text-sm font-medium">{fullPaidTotal || "-"}</td>
+      <td className="py-3 px-4 text-center text-sm font-bold text-orange-600">{fullPaidUsed}</td>
+      <td className="py-3 px-4">{fullPaidTotal > 0 ? renderQuota(fullPaidTotal, fullPaidUsed, fullPaidPct) : "-"}</td>
+      {/* Total Slot */}
+      <td className="py-3 px-4 text-center text-sm font-medium">{isUnlimited ? "Unlimited" : totalSlot}</td>
     </tr>
   );
 }
@@ -116,10 +113,12 @@ export default function QuotaDashboard() {
 
   const medical = services.filter(s => s.service_group === "MEDICAL");
   const eye = services.filter(s => s.service_group === "EYE_CHECK");
-  const totalFreeUsed = services.reduce((a, s) => a + (s.used_free_quota || 0), 0);
-  const totalPaidUsed = services.reduce((a, s) => a + (s.used_paid_quota || 0), 0);
-  const totalFreeQuota = services.reduce((a, s) => a + (s.free_quota || 0), 0);
-  const totalPaidQuota = services.reduce((a, s) => a + (s.paid_quota || 0), 0);
+  const totalFullFreeUsed = services.reduce((a, s) => a + (s.used_full_free || 0), 0);
+  const totalCcRp1Used = services.reduce((a, s) => a + (s.used_cc_rp1 || 0), 0);
+  const totalFullPaidUsed = services.reduce((a, s) => a + (s.used_full_paid || 0), 0);
+  const totalFullFreeQuota = services.reduce((a, s) => a + (s.full_free_quota || 0), 0);
+  const totalCcRp1Quota = services.reduce((a, s) => a + (s.cc_rp1_quota || 0), 0);
+  const totalFullPaidQuota = services.reduce((a, s) => a + (s.full_paid_quota || 0), 0);
   const activeBooths = services.filter(s => s.is_active).length;
   const lastUpdatedStr = dataUpdatedAt ? new Date(dataUpdatedAt).toLocaleTimeString("id-ID") : "—";
 
@@ -127,14 +126,24 @@ export default function QuotaDashboard() {
     <thead>
       <tr className="bg-muted/60 border-b border-border">
         <th className="text-left text-xs font-semibold text-muted-foreground py-3 px-4 w-12">Kode</th>
-        <th className="text-left text-xs font-semibold text-muted-foreground py-3 px-4">Nama Layanan</th>
-        <th className="text-center text-xs font-semibold text-muted-foreground py-3 px-4">Kuota Gratis</th>
-        <th className="text-center text-xs font-semibold text-muted-foreground py-3 px-4">Terpakai</th>
-        <th className="text-left text-xs font-semibold text-muted-foreground py-3 px-4">Sisa Gratis</th>
-        <th className="text-center text-xs font-semibold text-muted-foreground py-3 px-4">Kuota Bayar</th>
-        <th className="text-center text-xs font-semibold text-muted-foreground py-3 px-4">Terpakai</th>
-        <th className="text-left text-xs font-semibold text-muted-foreground py-3 px-4">Sisa Bayar</th>
-        <th className="text-left text-xs font-semibold text-muted-foreground py-3 px-4">Status</th>
+        <th className="text-left text-xs font-semibold text-muted-foreground py-3 px-4">Layanan</th>
+        <th className="text-center text-xs font-semibold text-muted-foreground py-3 px-4" colSpan={3}>Tanpa Syarat</th>
+        <th className="text-center text-xs font-semibold text-muted-foreground py-3 px-4" colSpan={3}>Dengan CC Rp 1</th>
+        <th className="text-center text-xs font-semibold text-muted-foreground py-3 px-4" colSpan={3}>Berbayar Penuh</th>
+        <th className="text-center text-xs font-semibold text-muted-foreground py-3 px-4">Total Slot</th>
+      </tr>
+      <tr className="bg-muted/30 border-b border-border">
+        <th colSpan={2}></th>
+        <th className="text-center text-xs font-semibold text-muted-foreground py-2 px-4">Kuota</th>
+        <th className="text-center text-xs font-semibold text-muted-foreground py-2 px-4">Pakai</th>
+        <th className="text-center text-xs font-semibold text-muted-foreground py-2 px-4">Sisa</th>
+        <th className="text-center text-xs font-semibold text-muted-foreground py-2 px-4">Kuota</th>
+        <th className="text-center text-xs font-semibold text-muted-foreground py-2 px-4">Pakai</th>
+        <th className="text-center text-xs font-semibold text-muted-foreground py-2 px-4">Sisa</th>
+        <th className="text-center text-xs font-semibold text-muted-foreground py-2 px-4">Kuota</th>
+        <th className="text-center text-xs font-semibold text-muted-foreground py-2 px-4">Pakai</th>
+        <th className="text-center text-xs font-semibold text-muted-foreground py-2 px-4">Sisa</th>
+        <th className="text-center text-xs font-semibold text-muted-foreground py-2 px-4"></th>
       </tr>
     </thead>
   );
@@ -164,16 +173,23 @@ export default function QuotaDashboard() {
         </Card>
         <Card>
           <CardContent className="p-5">
-            <p className="text-xs text-muted-foreground font-medium">Slot Gratis Terpakai</p>
-            <p className="text-3xl font-black text-green-600 mt-1">{totalFreeUsed}</p>
-            <p className="text-xs text-muted-foreground mt-1">dari {totalFreeQuota} total</p>
+            <p className="text-xs text-muted-foreground font-medium">Tanpa Syarat</p>
+            <p className="text-3xl font-black text-green-600 mt-1">{totalFullFreeUsed}</p>
+            <p className="text-xs text-muted-foreground mt-1">dari {totalFullFreeQuota} total</p>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="p-5">
-            <p className="text-xs text-muted-foreground font-medium">Slot Bayar Terpakai</p>
-            <p className="text-3xl font-black text-orange-500 mt-1">{totalPaidUsed}</p>
-            <p className="text-xs text-muted-foreground mt-1">dari {totalPaidQuota} total</p>
+            <p className="text-xs text-muted-foreground font-medium">CC Rp 1</p>
+            <p className="text-3xl font-black text-blue-600 mt-1">{totalCcRp1Used}</p>
+            <p className="text-xs text-muted-foreground mt-1">dari {totalCcRp1Quota} total</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-5">
+            <p className="text-xs text-muted-foreground font-medium">Berbayar Penuh</p>
+            <p className="text-3xl font-black text-orange-600 mt-1">{totalFullPaidUsed}</p>
+            <p className="text-xs text-muted-foreground mt-1">dari {totalFullPaidQuota} total</p>
           </CardContent>
         </Card>
         <Card>
@@ -198,7 +214,7 @@ export default function QuotaDashboard() {
               <TableHeader />
               <tbody>
                 {medical.length === 0
-                  ? <tr><td colSpan={9} className="text-center py-8 text-sm text-muted-foreground">Tidak ada data</td></tr>
+                  ? <tr><td colSpan={12} className="text-center py-8 text-sm text-muted-foreground">Tidak ada data</td></tr>
                   : medical.map(s => <QuotaTableRow key={s.id} service={s} isEye={false} />)
                 }
               </tbody>
@@ -220,7 +236,7 @@ export default function QuotaDashboard() {
               <TableHeader />
               <tbody>
                 {eye.length === 0
-                  ? <tr><td colSpan={9} className="text-center py-8 text-sm text-muted-foreground">Tidak ada data</td></tr>
+                  ? <tr><td colSpan={12} className="text-center py-8 text-sm text-muted-foreground">Tidak ada data</td></tr>
                   : eye.map(s => <QuotaTableRow key={s.id} service={s} isEye={true} />)
                 }
               </tbody>
