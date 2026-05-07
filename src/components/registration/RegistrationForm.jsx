@@ -205,7 +205,7 @@ export default function RegistrationForm({ services, participants = [], eventSet
     }
   };
 
-  const CategoryCard = ({ value, label, icon: Icon, desc, quota, used, isFull }) => (
+  const CategoryCard = ({ value, label, icon: CatIcon, desc, quota, used, isFull }) => (
     <div
       className={`flex items-start gap-3 px-4 py-3 rounded-xl border-2 cursor-pointer transition-all
         ${isFull ? "opacity-50 cursor-not-allowed border-border bg-muted/20" :
@@ -221,7 +221,7 @@ export default function RegistrationForm({ services, participants = [], eventSet
       <RadioGroupItem value={value} id={`cat-${value}`} disabled={isFull} className="mt-0.5" />
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2">
-          <Icon className="w-4 h-4 text-primary flex-shrink-0" />
+          <CatIcon className="w-4 h-4 text-primary flex-shrink-0" />
           <Label htmlFor={`cat-${value}`} className={`text-sm font-semibold ${isFull ? "cursor-not-allowed" : "cursor-pointer"}`}>
             {label}
           </Label>

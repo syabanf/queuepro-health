@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -6,9 +6,8 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
-  Monitor, ChevronRight, PhoneCall, PlayCircle, CheckCircle2,
-  SkipForward, XCircle, RotateCcw, Clock, Users, Hash,
-  Stethoscope, Eye, ListChecks
+  Monitor, PhoneCall, PlayCircle, CheckCircle2,
+  SkipForward, XCircle, RotateCcw, Clock, Stethoscope, Eye, User
 } from "lucide-react";
 
 const QUEUE_STATUS_CONFIG = {
@@ -33,6 +32,8 @@ export default function NakesBooth() {
   const queryClient = useQueryClient();
   const [selectedServiceId, setSelectedServiceId] = useState("");
   const [currentUser, setCurrentUser] = useState(null);
+  const prevActiveRef = useRef(null);
+  const [flashActive, setFlashActive] = useState(false);
 
   useEffect(() => {
     base44.auth.me().then(u => setCurrentUser(u)).catch(() => {});
@@ -41,6 +42,11 @@ export default function NakesBooth() {
   const { data: services = [] } = useQuery({
     queryKey: ["services"],
     queryFn: () => base44.entities.Service.list(),
+  });
+
+  const { data: participants = [] } = useQuery({
+    queryKey: ["participants"],
+    queryFn: () => base44.entities.Participant.list(),
   });
 
   const selectedService = services.find(s => s.id === selectedServiceId);
@@ -52,13 +58,36 @@ export default function NakesBooth() {
     refetchInterval: 5000,
   });
 
+  // Real-time subscription
+  useEffect(() => {
+    if (!selectedServiceId) return;
+    const unsub = base44.entities.Queue.subscribe(() => {
+      queryClient.invalidateQueries({ queryKey: ["booth-queues", selectedServiceId] });
+    });
+    return unsub;
+  }, [selectedServiceId, queryClient]);
+
   const sorted = [...queues].sort((a, b) => (a.queue_sequence || 0) - (b.queue_sequence || 0));
-  const waiting = sorted.filter(q => q.status === "WAITING");
-  const called = sorted.find(q => q.status === "CALLED");
-  const serving = sorted.find(q => q.status === "SERVING");
-  const skipped = sorted.filter(q => q.status === "SKIPPED");
-  const done = sorted.filter(q => q.status === "DONE");
+  const waiting  = sorted.filter(q => q.status === "WAITING");
+  const called   = sorted.find(q => q.status === "CALLED");
+  const serving  = sorted.find(q => q.status === "SERVING");
+  const skipped  = sorted.filter(q => q.status === "SKIPPED");
+  const done     = sorted.filter(q => q.status === "DONE");
   const nextWaiting = waiting[0];
+  const activeQueue = serving || called;
+
+  // Flash animation when active queue number changes
+  useEffect(() => {
+    const current = activeQueue?.queue_number;
+    if (current && current !== prevActiveRef.current) {
+      prevActiveRef.current = current;
+      setFlashActive(true);
+      setTimeout(() => setFlashActive(false), 800);
+    }
+  }, [activeQueue?.queue_number]);
+
+  const getParticipant = (participantId) =>
+    participants.find(p => p.id === participantId);
 
   const updateQueue = useMutation({
     mutationFn: async ({ queue, newStatus, eventType, notes }) => {
@@ -78,11 +107,10 @@ export default function NakesBooth() {
         performed_by: currentUser?.email,
         notes,
       });
-      // If DONE, update participant status
       if (newStatus === "DONE") {
         const allQueues = await base44.entities.Queue.filter({ participant_id: queue.participant_id });
         const updated = allQueues.map(q => q.id === queue.id ? { ...q, status: "DONE" } : q);
-        const allDone = updated.every(q => q.status === "DONE");
+        const allDone = updated.every(q => q.status === "DONE" || q.status === "CANCELLED");
         const anyDone = updated.some(q => q.status === "DONE");
         const newParticipantStatus = allDone ? "COMPLETED" : anyDone ? "PARTIALLY_COMPLETED" : "REGISTERED";
         await base44.entities.Participant.update(queue.participant_id, { participant_status: newParticipantStatus });
@@ -99,8 +127,6 @@ export default function NakesBooth() {
     updateQueue.mutate({ queue, newStatus, eventType, notes });
   };
 
-  const activeQueue = serving || called;
-
   return (
     <div className="space-y-6 max-w-5xl mx-auto">
       {/* Header */}
@@ -114,15 +140,20 @@ export default function NakesBooth() {
             <p className="text-sm text-muted-foreground">Operasional layanan kesehatan</p>
           </div>
         </div>
-        <div className="sm:ml-auto w-full sm:w-64">
+        <div className="sm:ml-auto w-full sm:w-72">
           <Select value={selectedServiceId} onValueChange={setSelectedServiceId}>
             <SelectTrigger>
               <SelectValue placeholder="Pilih booth layanan..." />
             </SelectTrigger>
             <SelectContent>
-              {services.map(s => (
+              {services.filter(s => s.is_active).map(s => (
                 <SelectItem key={s.id} value={s.id}>
-                  [{s.service_code}] {s.service_name} — Booth {s.booth_number}
+                  <div className="flex items-center gap-2">
+                    {s.service_group === "MEDICAL"
+                      ? <Stethoscope className="w-3.5 h-3.5 text-primary" />
+                      : <Eye className="w-3.5 h-3.5 text-accent" />}
+                    [{s.service_code}] {s.service_name} — Booth {s.booth_number}
+                  </div>
                 </SelectItem>
               ))}
             </SelectContent>
@@ -149,40 +180,54 @@ export default function NakesBooth() {
               <p className="font-bold text-lg leading-tight">{selectedService?.service_name}</p>
               <p className="text-primary-foreground/70 text-sm">Booth {selectedService?.booth_number} &bull; Kode: {selectedService?.service_code}</p>
             </div>
-            <div className="flex gap-4 text-sm">
-              <div className="text-center">
+            <div className="flex gap-6 text-sm text-center">
+              <div>
                 <p className="font-bold text-2xl">{waiting.length}</p>
-                <p className="text-primary-foreground/70">Menunggu</p>
+                <p className="text-primary-foreground/70 text-xs">Menunggu</p>
               </div>
-              <div className="text-center">
-                <p className="font-bold text-2xl">{done.length}</p>
-                <p className="text-primary-foreground/70">Selesai</p>
+              <div>
+                <p className="font-bold text-2xl text-green-300">{done.length}</p>
+                <p className="text-primary-foreground/70 text-xs">Selesai</p>
               </div>
-              <div className="text-center">
-                <p className="font-bold text-2xl">{skipped.length}</p>
-                <p className="text-primary-foreground/70">Dilewati</p>
+              <div>
+                <p className="font-bold text-2xl text-orange-300">{skipped.length}</p>
+                <p className="text-primary-foreground/70 text-xs">Dilewati</p>
               </div>
             </div>
           </div>
 
-          {/* Main Panel */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            {/* Now Serving Card */}
+            {/* Left: Now Serving + Next */}
             <div className="lg:col-span-2 space-y-4">
-              <Card className="border-2 border-primary/20">
+              {/* Now Serving */}
+              <Card className={`border-2 transition-all ${flashActive ? "border-primary shadow-lg shadow-primary/20" : "border-primary/20"}`}>
                 <CardHeader className="pb-3">
                   <CardTitle className="text-sm text-muted-foreground uppercase tracking-wider">Now Serving</CardTitle>
                 </CardHeader>
                 <CardContent>
                   {activeQueue ? (
                     <div className="space-y-4">
-                      <div className="flex items-center justify-between">
+                      <div className="flex items-start justify-between gap-4">
                         <div>
-                          <p className="text-7xl font-black text-primary tracking-widest leading-none">
+                          <p className={`text-7xl font-black tracking-widest leading-none transition-all ${
+                            flashActive ? "text-primary scale-105" : "text-primary"
+                          }`}>
                             {activeQueue.queue_number}
                           </p>
-                          <p className="text-sm text-muted-foreground mt-2">
-                            Slot: <span className="font-semibold">{activeQueue.slot_type === "FREE" ? "Gratis" : "Berbayar"}</span>
+                          {(() => {
+                            const p = getParticipant(activeQueue.participant_id);
+                            return p ? (
+                              <div className="mt-2 flex items-center gap-2 text-sm">
+                                <User className="w-4 h-4 text-muted-foreground" />
+                                <span className="font-semibold">{p.full_name}</span>
+                                <span className="text-muted-foreground">— {p.unit_division}</span>
+                              </div>
+                            ) : null;
+                          })()}
+                          <p className="text-sm text-muted-foreground mt-1">
+                            Slot: <span className={`font-semibold ${activeQueue.slot_type === "FREE" ? "text-green-600" : "text-orange-600"}`}>
+                              {activeQueue.slot_type === "FREE" ? "Gratis" : "Berbayar"}
+                            </span>
                           </p>
                         </div>
                         <Badge className={`text-sm px-4 py-2 border ${QUEUE_STATUS_CONFIG[activeQueue.status]?.color}`}>
@@ -190,25 +235,37 @@ export default function NakesBooth() {
                         </Badge>
                       </div>
                       {/* Action Buttons */}
-                      <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 pt-2 border-t border-border">
+                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-2 border-t border-border">
                         {activeQueue.status === "CALLED" && (
-                          <Button className="gap-2" onClick={() => handleAction(activeQueue, "SERVING", "SERVING")}>
+                          <Button className="gap-1.5" onClick={() => handleAction(activeQueue, "SERVING", "SERVING")}
+                            disabled={updateQueue.isPending}>
                             <PlayCircle className="w-4 h-4" /> Mulai Layanan
                           </Button>
                         )}
                         {activeQueue.status === "SERVING" && (
-                          <Button className="gap-2 bg-green-600 hover:bg-green-700" onClick={() => handleAction(activeQueue, "DONE", "DONE")}>
+                          <Button className="gap-1.5 bg-green-600 hover:bg-green-700"
+                            onClick={() => handleAction(activeQueue, "DONE", "DONE")}
+                            disabled={updateQueue.isPending}>
                             <CheckCircle2 className="w-4 h-4" /> Selesai
                           </Button>
                         )}
                         {(activeQueue.status === "CALLED" || activeQueue.status === "SERVING") && (
-                          <Button variant="outline" className="gap-2 text-orange-600 border-orange-300 hover:bg-orange-50"
-                            onClick={() => handleAction(activeQueue, "SKIPPED", "SKIPPED")}>
+                          <Button variant="outline" className="gap-1.5 text-orange-600 border-orange-300 hover:bg-orange-50"
+                            onClick={() => handleAction(activeQueue, "SKIPPED", "SKIPPED")}
+                            disabled={updateQueue.isPending}>
                             <SkipForward className="w-4 h-4" /> Lewati
                           </Button>
                         )}
-                        <Button variant="outline" className="gap-2 text-red-600 border-red-300 hover:bg-red-50"
-                          onClick={() => handleAction(activeQueue, "CANCELLED", "CANCELLED")}>
+                        {activeQueue.status === "CALLED" && (
+                          <Button variant="outline" className="gap-1.5 text-amber-600 border-amber-300 hover:bg-amber-50"
+                            onClick={() => handleAction(activeQueue, "CALLED", "RECALLED")}
+                            disabled={updateQueue.isPending}>
+                            <PhoneCall className="w-4 h-4" /> Panggil Ulang
+                          </Button>
+                        )}
+                        <Button variant="outline" className="gap-1.5 text-red-600 border-red-300 hover:bg-red-50"
+                          onClick={() => handleAction(activeQueue, "CANCELLED", "CANCELLED")}
+                          disabled={updateQueue.isPending}>
                           <XCircle className="w-4 h-4" /> Batalkan
                         </Button>
                       </div>
@@ -222,17 +279,25 @@ export default function NakesBooth() {
                 </CardContent>
               </Card>
 
-              {/* Next Queue + Call Next */}
+              {/* Next Queue + Call */}
               <Card>
                 <CardContent className="p-4">
-                  <div className="flex items-center justify-between">
+                  <div className="flex items-center justify-between gap-4">
                     <div>
                       <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">Berikutnya</p>
                       <p className="text-3xl font-black text-foreground/60">
                         {nextWaiting ? nextWaiting.queue_number : "—"}
                       </p>
+                      {nextWaiting && (() => {
+                        const p = getParticipant(nextWaiting.participant_id);
+                        return p ? (
+                          <p className="text-xs text-muted-foreground mt-1 flex items-center gap-1">
+                            <User className="w-3 h-3" /> {p.full_name}
+                          </p>
+                        ) : null;
+                      })()}
                       {nextWaiting && (
-                        <p className="text-xs text-muted-foreground mt-1">
+                        <p className="text-xs text-muted-foreground mt-0.5">
                           {nextWaiting.slot_type === "FREE" ? "Gratis" : "Berbayar"}
                         </p>
                       )}
@@ -247,14 +312,10 @@ export default function NakesBooth() {
                         <PhoneCall className="w-5 h-5" /> Panggil Berikutnya
                       </Button>
                       {skipped.length > 0 && (
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="gap-2 text-orange-600 border-orange-300"
+                        <Button variant="outline" size="sm" className="gap-2 text-orange-600 border-orange-300"
                           disabled={!!called || !!serving || updateQueue.isPending}
-                          onClick={() => handleAction(skipped[0], "CALLED", "RECALLED")}
-                        >
-                          <RotateCcw className="w-4 h-4" /> Panggil Ulang Dilewati
+                          onClick={() => handleAction(skipped[0], "CALLED", "RECALLED")}>
+                          <RotateCcw className="w-4 h-4" /> Panggil Ulang Dilewati ({skipped.length})
                         </Button>
                       )}
                     </div>
@@ -263,7 +324,7 @@ export default function NakesBooth() {
               </Card>
             </div>
 
-            {/* Queue Lists */}
+            {/* Right: Queue Lists */}
             <div className="space-y-4">
               {/* Waiting */}
               <Card>
@@ -274,15 +335,21 @@ export default function NakesBooth() {
                     <Badge variant="secondary" className="ml-auto">{waiting.length}</Badge>
                   </CardTitle>
                 </CardHeader>
-                <CardContent className="p-3 pt-0 max-h-48 overflow-y-auto space-y-1">
+                <CardContent className="p-3 pt-0 max-h-52 overflow-y-auto space-y-1">
                   {waiting.length === 0
                     ? <p className="text-xs text-muted-foreground text-center py-4">Kosong</p>
-                    : waiting.map(q => (
-                      <div key={q.id} className="flex items-center justify-between px-2 py-1.5 rounded-md bg-muted/40 text-sm">
-                        <span className="font-mono font-bold">{q.queue_number}</span>
-                        <span className="text-xs text-muted-foreground">{q.slot_type === "FREE" ? "Gratis" : "Bayar"}</span>
-                      </div>
-                    ))
+                    : waiting.map((q, i) => {
+                        const p = getParticipant(q.participant_id);
+                        return (
+                          <div key={q.id} className={`flex items-center gap-2 px-2 py-1.5 rounded-md text-sm ${i === 0 ? "bg-primary/5 border border-primary/20" : "bg-muted/40"}`}>
+                            <span className="font-mono font-bold w-14 flex-shrink-0">{q.queue_number}</span>
+                            <span className="text-xs text-muted-foreground truncate flex-1">{p?.full_name || "—"}</span>
+                            <span className={`text-[10px] font-bold flex-shrink-0 ${q.slot_type === "FREE" ? "text-green-600" : "text-orange-600"}`}>
+                              {q.slot_type === "FREE" ? "G" : "B"}
+                            </span>
+                          </div>
+                        );
+                      })
                   }
                 </CardContent>
               </Card>
@@ -298,20 +365,20 @@ export default function NakesBooth() {
                     </CardTitle>
                   </CardHeader>
                   <CardContent className="p-3 pt-0 max-h-36 overflow-y-auto space-y-1">
-                    {skipped.map(q => (
-                      <div key={q.id} className="flex items-center justify-between px-2 py-1.5 rounded-md bg-orange-50 text-sm">
-                        <span className="font-mono font-bold text-orange-700">{q.queue_number}</span>
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          className="h-6 px-2 text-xs text-orange-600"
-                          disabled={!!called || !!serving || updateQueue.isPending}
-                          onClick={() => handleAction(q, "CALLED", "RECALLED")}
-                        >
-                          <RotateCcw className="w-3 h-3 mr-1" /> Panggil
-                        </Button>
-                      </div>
-                    ))}
+                    {skipped.map(q => {
+                      const p = getParticipant(q.participant_id);
+                      return (
+                        <div key={q.id} className="flex items-center justify-between px-2 py-1.5 rounded-md bg-orange-50 text-sm gap-2">
+                          <span className="font-mono font-bold text-orange-700 w-14 flex-shrink-0">{q.queue_number}</span>
+                          <span className="text-xs text-muted-foreground truncate flex-1">{p?.full_name || "—"}</span>
+                          <Button size="sm" variant="ghost" className="h-6 px-2 text-xs text-orange-600 flex-shrink-0"
+                            disabled={!!called || !!serving || updateQueue.isPending}
+                            onClick={() => handleAction(q, "CALLED", "RECALLED")}>
+                            <RotateCcw className="w-3 h-3 mr-1" /> Panggil
+                          </Button>
+                        </div>
+                      );
+                    })}
                   </CardContent>
                 </Card>
               )}
@@ -321,7 +388,7 @@ export default function NakesBooth() {
                 <CardHeader className="pb-2">
                   <CardTitle className="text-sm flex items-center gap-2">
                     <CheckCircle2 className="w-4 h-4 text-green-500" />
-                    Selesai Dilayani
+                    Selesai
                     <Badge variant="secondary" className="ml-auto bg-green-100 text-green-700">{done.length}</Badge>
                   </CardTitle>
                 </CardHeader>
@@ -329,11 +396,13 @@ export default function NakesBooth() {
                   {done.length === 0
                     ? <p className="text-xs text-muted-foreground text-center py-4">Belum ada</p>
                     : done.slice(-10).reverse().map(q => (
-                      <div key={q.id} className="flex items-center justify-between px-2 py-1.5 rounded-md bg-green-50 text-sm">
-                        <span className="font-mono font-bold text-green-700">{q.queue_number}</span>
-                        <span className="text-xs text-muted-foreground">{q.slot_type === "FREE" ? "Gratis" : "Bayar"}</span>
-                      </div>
-                    ))
+                        <div key={q.id} className="flex items-center justify-between px-2 py-1.5 rounded-md bg-green-50 text-sm">
+                          <span className="font-mono font-bold text-green-700">{q.queue_number}</span>
+                          <span className={`text-[10px] font-bold ${q.slot_type === "FREE" ? "text-green-600" : "text-orange-600"}`}>
+                            {q.slot_type === "FREE" ? "Gratis" : "Bayar"}
+                          </span>
+                        </div>
+                      ))
                   }
                 </CardContent>
               </Card>
