@@ -17,6 +17,8 @@ import ParticipantDetail from "@/pages/ParticipantDetail";
 import QueueHistory from "@/pages/QueueHistory";
 import Reports from "@/pages/Reports";
 import SettingsPage from "@/pages/SettingsPage";
+import Events from "@/pages/Events";
+import EventDetail from "@/pages/EventDetail";
 import LEDMonitor from "@/pages/LEDMonitor";
 import MobileMonitor from "@/pages/MobileMonitor";
 import DemoLauncher from "@/pages/DemoLauncher";
@@ -81,6 +83,8 @@ const AuthenticatedApp = () => {
         <Route path="/queue-history" element={isAdmin ? <QueueHistory /> : <Navigate to="/booth" replace />} />
         <Route path="/reports" element={isAdmin ? <Reports /> : <Navigate to="/booth" replace />} />
         <Route path="/settings" element={isAdmin ? <SettingsPage /> : <Navigate to="/booth" replace />} />
+        <Route path="/events" element={isAdmin ? <Events /> : <Navigate to="/booth" replace />} />
+        <Route path="/events/:eventId" element={isAdmin ? <EventDetail /> : <Navigate to="/booth" replace />} />
         <Route path="/user-management" element={isAdmin ? <UserManagement /> : <Navigate to="/booth" replace />} />
 
         {/* Shared Routes */}

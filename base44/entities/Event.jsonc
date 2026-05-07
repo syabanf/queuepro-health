@@ -1,0 +1,103 @@
+{
+  "name": "Event",
+  "type": "object",
+  "properties": {
+    "event_name": {
+      "type": "string",
+      "description": "Nama event"
+    },
+    "event_headline": {
+      "type": "string",
+      "description": "Headline event"
+    },
+    "event_tagline": {
+      "type": "string",
+      "description": "Tagline event"
+    },
+    "location": {
+      "type": "string",
+      "description": "Lokasi event"
+    },
+    "event_date": {
+      "type": "string",
+      "format": "date",
+      "description": "Tanggal event"
+    },
+    "max_participants": {
+      "type": "number",
+      "default": 200,
+      "description": "Total kapasitas peserta"
+    },
+    "queue_monitor_url": {
+      "type": "string",
+      "description": "URL LED monitor"
+    },
+    "mobile_monitor_url": {
+      "type": "string",
+      "description": "URL mobile monitor"
+    },
+    "event_status": {
+      "type": "string",
+      "enum": [
+        "DRAFT",
+        "ACTIVE",
+        "CLOSED"
+      ],
+      "default": "DRAFT",
+      "description": "Status event"
+    },
+    "is_active_event": {
+      "type": "boolean",
+      "default": false,
+      "description": "Apakah ini event yang sedang aktif digunakan sistem"
+    },
+    "service_quotas": {
+      "type": "array",
+      "description": "Kuota per layanan untuk event ini",
+      "items": {
+        "type": "object",
+        "properties": {
+          "service_id": {
+            "type": "string"
+          },
+          "service_code": {
+            "type": "string"
+          },
+          "service_name": {
+            "type": "string"
+          },
+          "service_group": {
+            "type": "string"
+          },
+          "booth_number": {
+            "type": "number"
+          },
+          "full_free_quota": {
+            "type": "number",
+            "default": 0
+          },
+          "cc_rp1_quota": {
+            "type": "number",
+            "default": 0
+          },
+          "full_paid_quota": {
+            "type": "number",
+            "default": 0
+          },
+          "is_unlimited": {
+            "type": "boolean",
+            "default": false
+          },
+          "is_active": {
+            "type": "boolean",
+            "default": true
+          }
+        }
+      }
+    }
+  },
+  "required": [
+    "event_name",
+    "location"
+  ]
+}
