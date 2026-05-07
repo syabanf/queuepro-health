@@ -22,23 +22,7 @@ import DemoLauncher from "@/pages/DemoLauncher";
 
 
 const AuthenticatedApp = () => {
-  const { isLoadingAuth, isLoadingPublicSettings, authError, navigateToLogin, user, isAuthenticated } = useAuth();
-  const currentPath = window.location.pathname;
-  const publicPages = ['/demo', '/mobile-monitor', '/led-monitor'];
-  const isPublicPage = publicPages.includes(currentPath);
-
-  // If accessing protected route without auth, redirect to login
-  if (!isLoadingAuth && !isLoadingPublicSettings && !isPublicPage && !isAuthenticated) {
-    window.location.href = '/demo';
-    return (
-      <div className="fixed inset-0 flex items-center justify-center bg-background">
-        <div className="flex flex-col items-center gap-4">
-          <div className="w-10 h-10 border-4 border-primary/20 border-t-primary rounded-full animate-spin" />
-          <p className="text-sm text-muted-foreground">Memindahkan ke login...</p>
-        </div>
-      </div>
-    );
-  }
+  const { isLoadingAuth, isLoadingPublicSettings, authError, user, isAuthenticated } = useAuth();
 
   if (isLoadingPublicSettings || isLoadingAuth) {
     return (
