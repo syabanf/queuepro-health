@@ -117,22 +117,6 @@ export default function EventConfigForm({ form, onChange, errors, totalParticipa
         </div>
 
         <div className="border-t border-border pt-3">
-          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-3">Kapasitas Event</p>
-          <div>
-            <Label className="text-xs font-medium">Maks. Total Peserta <span className="text-destructive">*</span></Label>
-            <Input
-              type="number"
-              min={totalParticipants}
-              className={`mt-1 ${errors?.max_participants ? "border-destructive" : ""}`}
-              value={form.max_participants || 200}
-              onChange={e => set("max_participants", parseInt(e.target.value) || 0)}
-            />
-            {errors?.max_participants && <p className="text-xs text-destructive mt-1">{errors.max_participants}</p>}
-            <p className="text-[10px] text-muted-foreground mt-1">Terdaftar: {totalParticipants}</p>
-          </div>
-        </div>
-
-        <div className="border-t border-border pt-3">
           <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-3">URL Monitor</p>
           <div className="space-y-3">
             <div>

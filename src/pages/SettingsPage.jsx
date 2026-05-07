@@ -13,9 +13,6 @@ const DEFAULT_EVENT = {
   event_tagline: "Healthy People, Healthy Performance",
   location: "BRI Pusat Cabang Benhil",
   event_date: "",
-  max_participants: 200,
-  free_check_quota: 100,
-  payment_quota: 100,
   queue_monitor_url: "",
   mobile_monitor_url: "",
   event_status: "ACTIVE",
@@ -64,10 +61,6 @@ export default function SettingsPage() {
     if (!eventForm.event_name?.trim()) errs.event_name = "Nama event wajib diisi.";
     if (!eventForm.location?.trim()) errs.location = "Lokasi wajib diisi.";
     if (!eventForm.event_date) errs.event_date = "Tanggal event wajib diisi.";
-    if ((eventForm.max_participants || 0) < participants.length)
-      errs.max_participants = `Tidak boleh kurang dari jumlah peserta terdaftar (${participants.length}).`;
-    if ((eventForm.max_participants || 0) < 1)
-      errs.max_participants = "Kapasitas minimal 1.";
 
     setErrors(errs);
     return Object.keys(errs).length === 0;
