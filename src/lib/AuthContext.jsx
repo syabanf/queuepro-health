@@ -91,14 +91,19 @@ export const AuthProvider = ({ children }) => {
   const autoLoginDemo = async () => {
     try {
       setIsLoadingAuth(true);
-      const result = await base44.auth.loginViaEmailPassword("admin@brilianhealth.demo", "Demo@Admin123");
-      const token = result?.access_token || result?.token || result;
-      if (token && typeof token === "string") {
-        base44.auth.setToken(token);
-        await checkUserAuth();
-      }
+      // Mock login - simulate successful admin authentication without real backend call
+      const mockUser = {
+        id: "mock-admin-id",
+        email: "admin@brilianhealth.demo",
+        full_name: "Admin Demo",
+        role: "admin"
+      };
+      setUser(mockUser);
+      setIsAuthenticated(true);
+      setIsLoadingAuth(false);
+      setAuthChecked(true);
     } catch (err) {
-      console.error("Auto-login failed:", err);
+      console.error("Mock login failed:", err);
       setIsLoadingAuth(false);
       setAuthChecked(true);
       setAuthError({
@@ -136,13 +141,11 @@ export const AuthProvider = ({ children }) => {
   const logout = (shouldRedirect = true) => {
     setUser(null);
     setIsAuthenticated(false);
+    setAuthChecked(false);
     
     if (shouldRedirect) {
-      // Use the SDK's logout method which handles token cleanup and redirect
-      base44.auth.logout(window.location.href);
-    } else {
-      // Just remove the token without redirect
-      base44.auth.logout();
+      // Mock logout - just reload the page to trigger re-login
+      window.location.reload();
     }
   };
 
