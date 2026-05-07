@@ -254,10 +254,10 @@ export default function RegistrationForm({ services, participants = [], eventSet
           <p className="text-xs text-muted-foreground mt-0.5">{desc}</p>
           <div className="flex gap-4 text-[10px] text-muted-foreground mt-2">
             {fullFreeQuota > 0 && (
-              <span>Sisa Gratis: <span className="font-bold">{fullFreeRemaining}</span> / {fullFreeQuota}</span>
+              <span><span className="font-bold">{fullFreeRemaining}</span> / {fullFreeQuota}</span>
             )}
             {ccRp1Quota > 0 && (
-              <span>Sisa Bayar: <span className="font-bold">{ccRp1Remaining}</span> / {ccRp1Quota}</span>
+              <span><span className="font-bold">{ccRp1Remaining}</span> / {ccRp1Quota}</span>
             )}
           </div>
         </div>
