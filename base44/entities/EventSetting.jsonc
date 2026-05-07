@@ -1,0 +1,33 @@
+{
+  "name": "EventSetting",
+  "type": "object",
+  "properties": {
+    "event_name": {
+      "type": "string",
+      "description": "Name of the event"
+    },
+    "location": {
+      "type": "string",
+      "description": "Event location"
+    },
+    "event_date": {
+      "type": "string",
+      "format": "date",
+      "description": "Date of the event"
+    },
+    "max_participants": {
+      "type": "number",
+      "default": 200,
+      "description": "Maximum number of participants"
+    },
+    "queue_monitor_url": {
+      "type": "string",
+      "description": "URL for the queue monitor display"
+    }
+  },
+  "required": [
+    "event_name",
+    "location",
+    "max_participants"
+  ]
+}
