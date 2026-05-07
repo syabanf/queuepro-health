@@ -42,25 +42,27 @@ export default function RegistrationForm({ services, totalParticipants, onSucces
   const getEyeFreeRemaining = () => selectedEye ? (selectedEye.free_quota || 0) - (selectedEye.used_free_quota || 0) : 0;
   const getEyePaidRemaining = () => selectedEye ? (selectedEye.paid_quota || 0) - (selectedEye.used_paid_quota || 0) : 0;
 
+  // If quota is 0/unset, treat as unlimited (not disabled)
+  const hasQuotaSet = (service) => service && ((service.free_quota || 0) + (service.paid_quota || 0)) > 0;
+
   const isMedicalSlotDisabled = (slotType) => {
-    if (!selectedMedical) return false;
-    if (slotType === "FREE") return getMedicalFreeRemaining() <= 0;
-    if (slotType === "PAID") return getMedicalPaidRemaining() <= 0;
+    if (!selectedMedical || !hasQuotaSet(selectedMedical)) return false;
+    if (slotType === "FREE") return (selectedMedical.free_quota || 0) > 0 && getMedicalFreeRemaining() <= 0;
+    if (slotType === "PAID") return (selectedMedical.paid_quota || 0) > 0 && getMedicalPaidRemaining() <= 0;
     return false;
   };
 
   const isEyeSlotDisabled = (slotType) => {
-    if (!selectedEye) return false;
-    if (slotType === "FREE") return getEyeFreeRemaining() <= 0;
-    if (slotType === "PAID") return getEyePaidRemaining() <= 0;
+    if (!selectedEye || !hasQuotaSet(selectedEye)) return false;
+    if (slotType === "FREE") return (selectedEye.free_quota || 0) > 0 && getEyeFreeRemaining() <= 0;
+    if (slotType === "PAID") return (selectedEye.paid_quota || 0) > 0 && getEyePaidRemaining() <= 0;
     return false;
   };
 
   const isServiceFull = (service) => {
-    if (!service) return false;
+    if (!service || !hasQuotaSet(service)) return false;
     return (service.free_quota || 0) - (service.used_free_quota || 0) <= 0 &&
-           (service.paid_quota || 0) - (service.used_paid_quota || 0) <= 0 &&
-           ((service.free_quota || 0) + (service.paid_quota || 0)) > 0;
+           (service.paid_quota || 0) - (service.used_paid_quota || 0) <= 0;
   };
 
   const validate = () => {
@@ -74,17 +76,17 @@ export default function RegistrationForm({ services, totalParticipants, onSucces
     if (!form.eye_slot_type) errs.eye_slot_type = "Tipe slot mata wajib dipilih.";
     if (totalParticipants >= 200) errs.global = "Kuota maksimal 200 peserta sudah tercapai.";
 
-    if (form.medical_service_id && form.medical_slot_type) {
-      if (form.medical_slot_type === "FREE" && getMedicalFreeRemaining() <= 0)
+    if (form.medical_service_id && form.medical_slot_type && selectedMedical && hasQuotaSet(selectedMedical)) {
+      if (form.medical_slot_type === "FREE" && (selectedMedical.free_quota || 0) > 0 && getMedicalFreeRemaining() <= 0)
         errs.medical_slot_type = "Kuota gratis layanan medis ini sudah habis.";
-      if (form.medical_slot_type === "PAID" && getMedicalPaidRemaining() <= 0)
+      if (form.medical_slot_type === "PAID" && (selectedMedical.paid_quota || 0) > 0 && getMedicalPaidRemaining() <= 0)
         errs.medical_slot_type = "Kuota berbayar layanan medis ini sudah habis.";
     }
 
-    if (form.eye_service_id && form.eye_slot_type) {
-      if (form.eye_slot_type === "FREE" && getEyeFreeRemaining() <= 0)
+    if (form.eye_service_id && form.eye_slot_type && selectedEye && hasQuotaSet(selectedEye)) {
+      if (form.eye_slot_type === "FREE" && (selectedEye.free_quota || 0) > 0 && getEyeFreeRemaining() <= 0)
         errs.eye_slot_type = "Kuota gratis layanan mata ini sudah habis.";
-      if (form.eye_slot_type === "PAID" && getEyePaidRemaining() <= 0)
+      if (form.eye_slot_type === "PAID" && (selectedEye.paid_quota || 0) > 0 && getEyePaidRemaining() <= 0)
         errs.eye_slot_type = "Kuota berbayar layanan mata ini sudah habis.";
     }
 
