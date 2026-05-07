@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import { useNavigate } from "react-router-dom";
@@ -8,11 +8,13 @@ import { Button } from "@/components/ui/button";
 import {
   ArrowLeft, Printer, User, Phone, Building2,
   Hash, Clock, CheckCircle2, AlertCircle, SkipForward,
-  XCircle, Stethoscope, Eye, CalendarDays, UserCheck
+  XCircle, Stethoscope, Eye, CalendarDays, UserCheck, Barcode, ShieldCheck, ShieldX
 } from "lucide-react";
 import { format } from "date-fns";
 import { printCoupon } from "@/lib/couponPrinter";
 import { PARTICIPANT_STATUS_LABELS, PARTICIPANT_STATUS_COLORS, SLOT_TYPE_COLORS } from "@/lib/registrationUtils";
+import QrScannerModal from "@/components/booth/QrScannerModal";
+import { useToast } from "@/components/ui/use-toast";
 
 const QUEUE_STATUS_CONFIG = {
   WAITING:   { label: "Menunggu",      color: "bg-blue-100 text-blue-700 border-blue-200",   icon: Clock },
@@ -51,6 +53,10 @@ export default function ParticipantDetail() {
   const participantId = urlParams.get("id");
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const { toast } = useToast();
+  const [scannerOpen, setScannerOpen] = useState(false);
+  const [scanningFor, setScanningFor] = useState(null);
+  const [currentUser, setCurrentUser] = useState(null);
 
   const { data: participant, isLoading: loadingP } = useQuery({
     queryKey: ["participant", participantId],
@@ -78,6 +84,51 @@ export default function ParticipantDetail() {
     mutationFn: () => base44.entities.Participant.update(participantId, { participant_status: "CANCELLED" }),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["participant", participantId] }),
   });
+
+  const updateQueueVerification = useMutation({
+    mutationFn: async ({ queueId, status }) => {
+      const now = new Date().toISOString();
+      await base44.entities.Queue.update(queueId, {
+        qr_verification_status: status,
+        qr_verified_at: status === "VERIFIED" ? now : undefined,
+        qr_verified_by: status === "VERIFIED" ? currentUser?.email : undefined,
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["participant-queues", participantId] });
+    },
+  });
+
+  React.useEffect(() => {
+    base44.auth.me().then(u => setCurrentUser(u)).catch(() => {});
+  }, []);
+
+  const handleQrScan = async (token) => {
+    setScannerOpen(false);
+    if (!scanningFor || !token) return;
+
+    try {
+      const allQueues = await base44.entities.Queue.list();
+      const matchedQueue = allQueues.find(q => q.qr_token === token);
+
+      if (!matchedQueue) {
+        toast({ title: "QR Tidak Valid", description: "Token tidak ditemukan.", variant: "destructive" });
+        return;
+      }
+
+      if (matchedQueue.id !== scanningFor) {
+        toast({ title: "QR Salah", description: "QR code ini bukan untuk antrian ini.", variant: "destructive" });
+        return;
+      }
+
+      updateQueueVerification.mutate({ queueId: scanningFor, status: "VERIFIED" });
+      toast({ title: "✓ Terverifikasi", description: "Status pemeriksaan sudah diperbarui." });
+    } catch (error) {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+    } finally {
+      setScanningFor(null);
+    }
+  };
 
   if (!participantId) {
     navigate("/participants");
@@ -207,54 +258,78 @@ export default function ParticipantDetail() {
       {/* Queue Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
         {/* Medical Queue */}
-        <Card className="border-primary/20">
-          <div className="h-1 bg-primary rounded-t-lg" />
-          <CardHeader className="pb-3 pt-4">
-            <CardTitle className="text-sm flex items-center gap-2">
-              <Stethoscope className="w-4 h-4 text-primary" />
-              Antrian Layanan Medis
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            <div className="text-center py-3">
-              <div className="text-5xl font-black text-primary tracking-widest">
-                {medicalQueue?.queue_number || "—"}
-              </div>
-            </div>
-            <div className="space-y-2">
-              <div className="flex justify-between items-center text-sm">
-                <span className="text-muted-foreground">Layanan</span>
-                <span className="font-medium">{medicalService?.service_name || "—"}</span>
-              </div>
-              <div className="flex justify-between items-center text-sm">
-                <span className="text-muted-foreground">Booth</span>
-                <span className="font-medium">Booth {medicalService?.booth_number || "—"}</span>
-              </div>
-              <div className="flex justify-between items-center text-sm">
-                <span className="text-muted-foreground">Slot</span>
-                <Badge className={`text-xs border ${SLOT_TYPE_COLORS[participant.medical_slot_type]}`}>
-                  {participant.medical_slot_type === "FREE" ? "Gratis" : "Berbayar"}
-                </Badge>
-              </div>
-              <div className="flex justify-between items-center text-sm">
-                <span className="text-muted-foreground">Status</span>
-                {medicalQueue ? <QueueStatusBadge status={medicalQueue.status} /> : <span className="text-muted-foreground">—</span>}
-              </div>
-              {medicalQueue?.called_at && (
-                <div className="flex justify-between items-center text-sm">
-                  <span className="text-muted-foreground">Dipanggil</span>
-                  <span className="text-xs">{format(new Date(medicalQueue.called_at), "HH:mm")}</span>
+          <Card className="border-primary/20">
+            <div className="h-1 bg-primary rounded-t-lg" />
+            <CardHeader className="pb-3 pt-4">
+              <CardTitle className="text-sm flex items-center gap-2">
+                <Stethoscope className="w-4 h-4 text-primary" />
+                Antrian Layanan Medis
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <div className="text-center py-3">
+                <div className="text-5xl font-black text-primary tracking-widest">
+                  {medicalQueue?.queue_number || "—"}
                 </div>
-              )}
-              {medicalQueue?.done_at && (
+              </div>
+              <div className="space-y-2">
                 <div className="flex justify-between items-center text-sm">
-                  <span className="text-muted-foreground">Selesai</span>
-                  <span className="text-xs">{format(new Date(medicalQueue.done_at), "HH:mm")}</span>
+                  <span className="text-muted-foreground">Layanan</span>
+                  <span className="font-medium">{medicalService?.service_name || "—"}</span>
                 </div>
+                <div className="flex justify-between items-center text-sm">
+                  <span className="text-muted-foreground">Booth</span>
+                  <span className="font-medium">Booth {medicalService?.booth_number || "—"}</span>
+                </div>
+                <div className="flex justify-between items-center text-sm">
+                  <span className="text-muted-foreground">Slot</span>
+                  <Badge className={`text-xs border ${SLOT_TYPE_COLORS[participant.medical_slot_type]}`}>
+                    {participant.medical_slot_type === "FREE" ? "Gratis" : "Berbayar"}
+                  </Badge>
+                </div>
+                <div className="flex justify-between items-center text-sm">
+                  <span className="text-muted-foreground">Status</span>
+                  {medicalQueue ? <QueueStatusBadge status={medicalQueue.status} /> : <span className="text-muted-foreground">—</span>}
+                </div>
+                <div className="flex justify-between items-center text-sm">
+                  <span className="text-muted-foreground">Verifikasi</span>
+                  <div className="flex items-center gap-1">
+                    {medicalQueue?.qr_verification_status === "VERIFIED" ? (
+                      <Badge className="text-xs border bg-green-100 text-green-700 border-green-200 gap-1">
+                        <ShieldCheck className="w-3 h-3" /> Terverifikasi
+                      </Badge>
+                    ) : (
+                      <Badge className="text-xs border bg-slate-100 text-slate-600 border-slate-200 gap-1">
+                        <ShieldX className="w-3 h-3" /> Belum Verifikasi
+                      </Badge>
+                    )}
+                  </div>
+                </div>
+                {medicalQueue?.called_at && (
+                  <div className="flex justify-between items-center text-sm">
+                    <span className="text-muted-foreground">Dipanggil</span>
+                    <span className="text-xs">{format(new Date(medicalQueue.called_at), "HH:mm")}</span>
+                  </div>
+                )}
+                {medicalQueue?.done_at && (
+                  <div className="flex justify-between items-center text-sm">
+                    <span className="text-muted-foreground">Selesai</span>
+                    <span className="text-xs">{format(new Date(medicalQueue.done_at), "HH:mm")}</span>
+                  </div>
+                )}
+              </div>
+              {medicalQueue && (
+                <Button
+                  className="w-full gap-2 bg-blue-600 hover:bg-blue-700 mt-2"
+                  onClick={() => { setScanningFor(medicalQueue.id); setScannerOpen(true); }}
+                  disabled={updateQueueVerification.isPending}
+                >
+                  <Barcode className="w-4 h-4" />
+                  Scan Verifikasi
+                </Button>
               )}
-            </div>
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
 
         {/* Eye Queue */}
         <Card className="border-accent/30">
@@ -290,6 +365,20 @@ export default function ParticipantDetail() {
                 <span className="text-muted-foreground">Status</span>
                 {eyeQueue ? <QueueStatusBadge status={eyeQueue.status} /> : <span className="text-muted-foreground">—</span>}
               </div>
+              <div className="flex justify-between items-center text-sm">
+                <span className="text-muted-foreground">Verifikasi</span>
+                <div className="flex items-center gap-1">
+                  {eyeQueue?.qr_verification_status === "VERIFIED" ? (
+                    <Badge className="text-xs border bg-green-100 text-green-700 border-green-200 gap-1">
+                      <ShieldCheck className="w-3 h-3" /> Terverifikasi
+                    </Badge>
+                  ) : (
+                    <Badge className="text-xs border bg-slate-100 text-slate-600 border-slate-200 gap-1">
+                      <ShieldX className="w-3 h-3" /> Belum Verifikasi
+                    </Badge>
+                  )}
+                </div>
+              </div>
               {eyeQueue?.called_at && (
                 <div className="flex justify-between items-center text-sm">
                   <span className="text-muted-foreground">Dipanggil</span>
@@ -303,9 +392,26 @@ export default function ParticipantDetail() {
                 </div>
               )}
             </div>
+            {eyeQueue && (
+              <Button
+                className="w-full gap-2 bg-blue-600 hover:bg-blue-700 mt-2"
+                onClick={() => { setScanningFor(eyeQueue.id); setScannerOpen(true); }}
+                disabled={updateQueueVerification.isPending}
+              >
+                <Barcode className="w-4 h-4" />
+                Scan Verifikasi
+              </Button>
+            )}
           </CardContent>
         </Card>
-      </div>
-    </div>
-  );
-}
+        </div>
+
+        {/* QR Scanner Modal */}
+        <QrScannerModal
+        open={scannerOpen}
+        onClose={() => { setScannerOpen(false); setScanningFor(null); }}
+        onScan={handleQrScan}
+        />
+        </div>
+        );
+        }
