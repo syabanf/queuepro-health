@@ -54,29 +54,15 @@ export default function Sidebar({ user }) {
   const menuItems = !isAdmin ? nakesMenuItemsList : [];
 
   const handleLogout = () => {
-    base44.auth.logout("/demo");
-  };
-
-  const handleRoleSwitch = async (newRole) => {
     try {
-      // Switch role by reloading as the other demo account
-      const demoAccounts = {
-        admin: { email: "admin@brilianhealth.demo", password: "Demo@Admin123" },
-        user: { email: "nakes@brilianhealth.demo", password: "Demo@Nakes123" }
-      };
-      
-      const account = demoAccounts[newRole];
-      if (account) {
-        const result = await base44.auth.loginViaEmailPassword(account.email, account.password);
-        const token = result?.access_token || result?.token || result;
-        if (token && typeof token === "string") {
-          base44.auth.setToken(token);
-          window.location.reload();
-        }
-      }
+      base44.auth.logout();
     } catch (err) {
-      console.error("Role switch failed:", err);
+      console.error("Logout error:", err);
     }
+    // Redirect to demo page after logout
+    setTimeout(() => {
+      window.location.href = "/demo";
+    }, 300);
   };
 
   const NavContent = () => (
@@ -111,35 +97,31 @@ export default function Sidebar({ user }) {
             </div>
           </div>
           
-          {/* Role Switcher */}
-          <div className="flex gap-2">
-            <button
-              onClick={() => !isAdmin && handleRoleSwitch("admin")}
-              disabled={isAdmin}
-              className={`flex-1 flex items-center justify-center gap-1.5 px-2 py-1.5 rounded-lg text-xs font-medium transition-all ${
-                isAdmin 
-                  ? "bg-sidebar-primary text-sidebar-primary-foreground" 
-                  : "bg-sidebar-accent/30 text-sidebar-foreground/60 hover:bg-sidebar-accent/50 cursor-pointer"
-              }`}
-              title="Switch to Admin role"
-            >
-              <Shield className="w-3.5 h-3.5" />
-              <span>Admin</span>
-            </button>
-            <button
-              onClick={() => isAdmin && handleRoleSwitch("user")}
-              disabled={!isAdmin}
-              className={`flex-1 flex items-center justify-center gap-1.5 px-2 py-1.5 rounded-lg text-xs font-medium transition-all ${
-                !isAdmin 
-                  ? "bg-sidebar-primary text-sidebar-primary-foreground" 
-                  : "bg-sidebar-accent/30 text-sidebar-foreground/60 hover:bg-sidebar-accent/50 cursor-pointer"
-              }`}
-              title="Switch to Nakes role"
-            >
-              <Stethoscope className="w-3.5 h-3.5" />
-              <span>Nakes</span>
-            </button>
-          </div>
+          {/* Role Display */}
+           <div className="flex gap-2">
+             <div
+               disabled={isAdmin}
+               className={`flex-1 flex items-center justify-center gap-1.5 px-2 py-1.5 rounded-lg text-xs font-medium ${
+                 isAdmin 
+                   ? "bg-sidebar-primary text-sidebar-primary-foreground" 
+                   : "bg-sidebar-accent/30 text-sidebar-foreground/60"
+               }`}
+             >
+               <Shield className="w-3.5 h-3.5" />
+               <span>Admin</span>
+             </div>
+             <div
+               disabled={!isAdmin}
+               className={`flex-1 flex items-center justify-center gap-1.5 px-2 py-1.5 rounded-lg text-xs font-medium ${
+                 !isAdmin 
+                   ? "bg-sidebar-primary text-sidebar-primary-foreground" 
+                   : "bg-sidebar-accent/30 text-sidebar-foreground/60"
+               }`}
+             >
+               <Stethoscope className="w-3.5 h-3.5" />
+               <span>Nakes</span>
+             </div>
+           </div>
         </div>
       )}
 
