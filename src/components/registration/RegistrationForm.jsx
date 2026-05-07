@@ -35,17 +35,13 @@ export default function RegistrationForm({ services, participants = [], eventSet
   const selectedMedical = services.find(s => s.id === form.medical_service_id);
   const selectedEye = services.find(s => s.id === form.eye_service_id);
 
-  // Category quota checks (using tiered quota fields)
-  const freeCheckUsed = participants.filter(p => p.participant_category === "FREE_CHECK").length;
-  const paymentUsed = participants.filter(p => p.participant_category === "PAYMENT").length;
-  const freeCheckQuota = eventSetting?.free_check_quota ?? 0;
-  const paymentQuota = eventSetting?.payment_quota ?? 0;
-  const freeCheckFull = freeCheckQuota > 0 && freeCheckUsed >= freeCheckQuota;
-  const paymentFull = paymentQuota > 0 && paymentUsed >= paymentQuota;
-  
-  // Tiered quota details for display
-  const freeCheckRemaining = Math.max(0, freeCheckQuota - freeCheckUsed);
-  const paymentRemaining = Math.max(0, paymentQuota - paymentUsed);
+  // Calculate total service quotas for each tier
+  const totalFullFreeQuota = services.reduce((sum, s) => sum + (s.full_free_quota || 0), 0);
+  const totalCcRp1Quota = services.reduce((sum, s) => sum + (s.cc_rp1_quota || 0), 0);
+  const usedFullFree = participants.filter(p => p.participant_category === "FREE_CHECK").length;
+  const usedCcRp1 = participants.filter(p => p.participant_category === "PAYMENT").length;
+  const fullFreeFull = totalFullFreeQuota > 0 && usedFullFree >= totalFullFreeQuota;
+  const ccRp1Full = totalCcRp1Quota > 0 && usedCcRp1 >= totalCcRp1Quota;
 
   // Map category to quota category (tiered)
   const getQuotaCategoryForCategory = (cat) => cat === "FREE_CHECK" ? "FULL_FREE" : "FULL_PAID";
@@ -102,10 +98,10 @@ export default function RegistrationForm({ services, participants = [], eventSet
       errs.global = "Kuota total peserta sudah penuh.";
 
     // Category quota
-    if (form.participant_category === "FREE_CHECK" && freeCheckFull)
-      errs.participant_category = `Kuota FREE CHECK sudah penuh (${freeCheckUsed}/${freeCheckQuota}).`;
-    if (form.participant_category === "PAYMENT" && paymentFull)
-      errs.participant_category = `Kuota PAYMENT sudah penuh (${paymentUsed}/${paymentQuota}).`;
+    if (form.participant_category === "FREE_CHECK" && fullFreeFull)
+      errs.participant_category = `Kuota Tanpa Syarat sudah penuh (${usedFullFree}/${totalFullFreeQuota}).`;
+    if (form.participant_category === "PAYMENT" && ccRp1Full)
+      errs.participant_category = `Kuota Dengan CC Rp 1 sudah penuh (${usedCcRp1}/${totalCcRp1Quota}).`;
 
     // Service slot quota
     if (form.medical_service_id && form.participant_category && isMedicalFull(selectedMedical)) {
@@ -229,7 +225,7 @@ export default function RegistrationForm({ services, participants = [], eventSet
     }
   };
 
-  const CategoryCard = ({ value, label, icon: CatIcon, desc, quota, used, remaining, isFull }) => (
+  const CategoryCard = ({ value, label, icon: CatIcon, desc, quota, used, isFull }) => (
     <div
       className={`flex items-start gap-3 px-4 py-3 rounded-xl border-2 cursor-pointer transition-all
         ${isFull ? "opacity-50 cursor-not-allowed border-border bg-muted/20" :
@@ -254,7 +250,7 @@ export default function RegistrationForm({ services, participants = [], eventSet
         <p className="text-xs text-muted-foreground mt-0.5">{desc}</p>
         {quota > 0 && (
           <p className="text-[10px] text-muted-foreground mt-1">
-            Sisa: <span className="font-bold">{remaining}</span> / {quota}
+            Sisa: <span className="font-bold">{Math.max(0, quota - used)}</span> / {quota}
           </p>
         )}
       </div>
@@ -336,20 +332,18 @@ export default function RegistrationForm({ services, participants = [], eventSet
                    label="FREE CHECK"
                    icon={Gift}
                    desc="Pemeriksaan gratis — tidak dipungut biaya"
-                   quota={freeCheckQuota}
-                   used={freeCheckUsed}
-                   remaining={freeCheckRemaining}
-                   isFull={freeCheckFull}
+                   quota={totalFullFreeQuota}
+                   used={usedFullFree}
+                   isFull={fullFreeFull}
                  />
                  <CategoryCard
                    value="PAYMENT"
                    label="PAYMENT"
                    icon={CreditCard}
                    desc="Pemeriksaan berbayar — diperlukan konfirmasi pembayaran"
-                   quota={paymentQuota}
-                   used={paymentUsed}
-                   remaining={paymentRemaining}
-                   isFull={paymentFull}
+                   quota={totalCcRp1Quota}
+                   used={usedCcRp1}
+                   isFull={ccRp1Full}
                  />
               </RadioGroup>
               {errors.participant_category && <p className="text-xs text-destructive mt-1">{errors.participant_category}</p>}
