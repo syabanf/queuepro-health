@@ -43,42 +43,41 @@ export default function RegistrationForm({ services, participants = [], eventSet
   const freeCheckFull = freeCheckQuota > 0 && freeCheckUsed >= freeCheckQuota;
   const paymentFull = paymentQuota > 0 && paymentUsed >= paymentQuota;
 
-  // Service quota checks (per slot type used for this category)
-  // Category FREE_CHECK → uses FREE slots, PAYMENT → uses PAID slots
-  const getSlotTypeForCategory = (cat) => cat === "FREE_CHECK" ? "FREE" : "PAID";
+  // Map category to quota category (tiered)
+  const getQuotaCategoryForCategory = (cat) => cat === "FREE_CHECK" ? "FULL_FREE" : "FULL_PAID";
 
   const isMedicalFull = (service) => {
     if (!service) return false;
     if (!form.participant_category) return false;
-    const slotType = getSlotTypeForCategory(form.participant_category);
-    if (slotType === "FREE") {
-      const fq = service.free_quota || 0;
-      return fq > 0 && (service.used_free_quota || 0) >= fq;
+    const qcat = getQuotaCategoryForCategory(form.participant_category);
+    if (qcat === "FULL_FREE") {
+      const fq = service.full_free_quota || 0;
+      return fq > 0 && (service.used_full_free || 0) >= fq;
     } else {
-      const pq = service.paid_quota || 0;
-      return pq > 0 && (service.used_paid_quota || 0) >= pq;
+      const pq = service.full_paid_quota || 0;
+      return pq > 0 && (service.used_full_paid || 0) >= pq;
     }
   };
 
   const isEyeFull = (service) => {
     if (!service) return false;
     if (!form.participant_category) return false;
-    const slotType = getSlotTypeForCategory(form.participant_category);
-    if (slotType === "FREE") {
-      const fq = service.free_quota || 0;
-      return fq > 0 && (service.used_free_quota || 0) >= fq;
+    const qcat = getQuotaCategoryForCategory(form.participant_category);
+    if (qcat === "FULL_FREE") {
+      const fq = service.full_free_quota || 0;
+      return fq > 0 && (service.used_full_free || 0) >= fq;
     } else {
-      const pq = service.paid_quota || 0;
-      return pq > 0 && (service.used_paid_quota || 0) >= pq;
+      const pq = service.full_paid_quota || 0;
+      return pq > 0 && (service.used_full_paid || 0) >= pq;
     }
   };
 
   const isServiceFull = (service) => {
     if (!service) return false;
-    const freeRem = (service.free_quota || 0) - (service.used_free_quota || 0);
-    const paidRem = (service.paid_quota || 0) - (service.used_paid_quota || 0);
-    const hasQuota = (service.free_quota || 0) + (service.paid_quota || 0) > 0;
-    return hasQuota && freeRem <= 0 && paidRem <= 0;
+    if (service.is_unlimited) return false;
+    const totalUsed = (service.used_full_free || 0) + (service.used_cc_rp1 || 0) + (service.used_full_paid || 0);
+    const totalSlot = service.total_slot || 0;
+    return totalSlot > 0 && totalUsed >= totalSlot;
   };
 
   const validate = () => {
@@ -106,12 +105,12 @@ export default function RegistrationForm({ services, participants = [], eventSet
 
     // Service slot quota
     if (form.medical_service_id && form.participant_category && isMedicalFull(selectedMedical)) {
-      const slotType = getSlotTypeForCategory(form.participant_category);
-      errs.medical_service_id = `Kuota ${slotType} layanan medis ini sudah habis.`;
+      const qcat = getQuotaCategoryForCategory(form.participant_category);
+      errs.medical_service_id = `Kuota ${qcat === "FULL_FREE" ? "Tanpa Syarat" : "Berbayar"} layanan medis ini sudah habis.`;
     }
     if (form.eye_service_id && form.participant_category && isEyeFull(selectedEye)) {
-      const slotType = getSlotTypeForCategory(form.participant_category);
-      errs.eye_service_id = `Kuota ${slotType} layanan mata ini sudah habis.`;
+      const qcat = getQuotaCategoryForCategory(form.participant_category);
+      errs.eye_service_id = `Kuota ${qcat === "FULL_FREE" ? "Tanpa Syarat" : "Berbayar"} layanan mata ini sudah habis.`;
     }
 
     return errs;
@@ -125,7 +124,9 @@ export default function RegistrationForm({ services, participants = [], eventSet
     setSubmitting(true);
 
     try {
-      const slotType = getSlotTypeForCategory(form.participant_category);
+      const quotaCategory = getQuotaCategoryForCategory(form.participant_category);
+      const paymentDisplayStatus = form.participant_category === "FREE_CHECK" ? "FREE" : "PAID";
+      
       const allParticipants = await base44.entities.Participant.list();
       const regNumber = generateRegistrationNumber(allParticipants.length + 1);
 
@@ -159,13 +160,14 @@ export default function RegistrationForm({ services, participants = [], eventSet
       const medQrCodeUrl = buildQrCodeUrl(medQrToken, 120);
       const eyeQrCodeUrl = buildQrCodeUrl(eyeQrToken, 120);
 
-      // Create queues
+      // Create queues with quota_category and payment_display_status
       const medicalQueue = await base44.entities.Queue.create({
         participant_id: participant.id,
         service_id: form.medical_service_id,
         queue_number: medQueueNum,
         queue_sequence: medSeq,
-        slot_type: slotType,
+        quota_category: quotaCategory,
+        payment_display_status: paymentDisplayStatus,
         status: "WAITING",
         qr_token: medQrToken,
         qr_code_url: medQrCodeUrl,
@@ -176,27 +178,32 @@ export default function RegistrationForm({ services, participants = [], eventSet
         service_id: form.eye_service_id,
         queue_number: eyeQueueNum,
         queue_sequence: eyeSeq,
-        slot_type: slotType,
+        quota_category: quotaCategory,
+        payment_display_status: paymentDisplayStatus,
         status: "WAITING",
         qr_token: eyeQrToken,
         qr_code_url: eyeQrCodeUrl,
         qr_verification_status: "NOT_SCANNED",
       });
 
-      // Deduct service quotas (one slot per service based on category)
-      if (slotType === "FREE") {
+      // Deduct service quotas based on quota_category
+      if (quotaCategory === "FULL_FREE") {
         await base44.entities.Service.update(form.medical_service_id, {
-          used_free_quota: (selectedMedical.used_free_quota || 0) + 1,
+          used_full_free: (selectedMedical.used_full_free || 0) + 1,
+          used_total: (selectedMedical.used_total || 0) + 1,
         });
         await base44.entities.Service.update(form.eye_service_id, {
-          used_free_quota: (selectedEye.used_free_quota || 0) + 1,
+          used_full_free: (selectedEye.used_full_free || 0) + 1,
+          used_total: (selectedEye.used_total || 0) + 1,
         });
       } else {
         await base44.entities.Service.update(form.medical_service_id, {
-          used_paid_quota: (selectedMedical.used_paid_quota || 0) + 1,
+          used_full_paid: (selectedMedical.used_full_paid || 0) + 1,
+          used_total: (selectedMedical.used_total || 0) + 1,
         });
         await base44.entities.Service.update(form.eye_service_id, {
-          used_paid_quota: (selectedEye.used_paid_quota || 0) + 1,
+          used_full_paid: (selectedEye.used_full_paid || 0) + 1,
+          used_total: (selectedEye.used_total || 0) + 1,
         });
       }
 
