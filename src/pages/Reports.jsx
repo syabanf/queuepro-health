@@ -128,15 +128,19 @@ export default function Reports() {
   };
 
   const StatBox = ({ label, value, colorClass, children }) => (
-    <div className="flex items-center gap-3 p-4 rounded-xl bg-muted/40">
-      <div className={`w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0 ${colorClass}`}>
-        {children}
-      </div>
-      <div>
-        <p className="text-2xl font-black leading-none">{value}</p>
-        <p className="text-xs text-muted-foreground mt-0.5">{label}</p>
-      </div>
-    </div>
+    <Card className="border-border/50 hover:shadow-lg transition-shadow">
+      <CardContent className="p-4">
+        <div className="flex items-center gap-3">
+          <div className={`w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0 shadow-sm ${colorClass}`}>
+            {children}
+          </div>
+          <div className="flex-1">
+            <p className="text-2xl font-bold leading-tight text-foreground">{value}</p>
+            <p className="text-xs text-muted-foreground mt-1">{label}</p>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
   );
 
   return (
@@ -219,62 +223,77 @@ export default function Reports() {
       </Card>
 
       {/* Summary Stats */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
-        <StatBox label="Total Peserta (Filter)" value={stats.totalFiltered} colorClass="bg-primary/10 text-primary"><Users className="w-5 h-5" /></StatBox>
-        <StatBox label="Selesai Lengkap" value={stats.completed} colorClass="bg-green-100 text-green-600"><CheckCircle2 className="w-5 h-5" /></StatBox>
-        <StatBox label="Sebagian Selesai" value={stats.partial} colorClass="bg-amber-100 text-amber-600"><Clock className="w-5 h-5" /></StatBox>
-        <StatBox label="Masih Terdaftar" value={stats.registered} colorClass="bg-blue-100 text-blue-600"><Users className="w-5 h-5" /></StatBox>
-        <StatBox label="Antrian Dilewati" value={stats.skipped} colorClass="bg-orange-100 text-orange-600"><SkipForward className="w-5 h-5" /></StatBox>
-        <StatBox label="Antrian Dibatalkan" value={stats.cancelled} colorClass="bg-red-100 text-red-600"><XCircle className="w-5 h-5" /></StatBox>
-        <StatBox label="Slot Gratis Terpakai" value={stats.freeUsed} colorClass="bg-green-100 text-green-600"><FileText className="w-5 h-5" /></StatBox>
-        <StatBox label="Slot Bayar Terpakai" value={stats.paidUsed} colorClass="bg-orange-100 text-orange-600"><FileText className="w-5 h-5" /></StatBox>
+      <div>
+        <h3 className="text-sm font-semibold text-foreground mb-3">Ringkasan Statistik</h3>
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
+          <StatBox label="Total Peserta" value={stats.totalFiltered} colorClass="bg-primary/15 text-primary"><Users className="w-5 h-5" /></StatBox>
+          <StatBox label="Selesai Lengkap" value={stats.completed} colorClass="bg-green-100 text-green-700"><CheckCircle2 className="w-5 h-5" /></StatBox>
+          <StatBox label="Sebagian Selesai" value={stats.partial} colorClass="bg-amber-100 text-amber-700"><Clock className="w-5 h-5" /></StatBox>
+          <StatBox label="Masih Terdaftar" value={stats.registered} colorClass="bg-blue-100 text-blue-700"><Users className="w-5 h-5" /></StatBox>
+          <StatBox label="Antrian Dilewati" value={stats.skipped} colorClass="bg-orange-100 text-orange-700"><SkipForward className="w-5 h-5" /></StatBox>
+          <StatBox label="Antrian Dibatalkan" value={stats.cancelled} colorClass="bg-red-100 text-red-700"><XCircle className="w-5 h-5" /></StatBox>
+          <StatBox label="Slot Gratis Terpakai" value={stats.freeUsed} colorClass="bg-green-100 text-green-700"><FileText className="w-5 h-5" /></StatBox>
+          <StatBox label="Slot Bayar Terpakai" value={stats.paidUsed} colorClass="bg-orange-100 text-orange-700"><FileText className="w-5 h-5" /></StatBox>
+        </div>
       </div>
 
       {/* Completion Rate + Timing */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <Card className="sm:col-span-1">
-          <CardContent className="p-5 flex flex-col items-center justify-center text-center">
-            <TrendingUp className="w-8 h-8 text-primary mb-2" />
-            <p className="text-5xl font-black text-primary">{stats.completionRate}%</p>
-            <p className="text-sm text-muted-foreground mt-1">Tingkat Penyelesaian</p>
-            <p className="text-xs text-muted-foreground">({stats.completed} dari {stats.totalFiltered} peserta)</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-5 text-center">
-            <Clock className="w-6 h-6 text-accent mx-auto mb-2" />
-            <p className="text-4xl font-black text-accent">
-              {stats.avgWaitMin !== null ? `${stats.avgWaitMin}` : "—"}
-            </p>
-            <p className="text-sm text-muted-foreground mt-1">Rata-rata Waktu Tunggu</p>
-            <p className="text-xs text-muted-foreground">menit</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-5 text-center">
-            <CheckCircle2 className="w-6 h-6 text-success mx-auto mb-2" />
-            <p className="text-4xl font-black text-success">
-              {stats.avgServiceMin !== null ? `${stats.avgServiceMin}` : "—"}
-            </p>
-            <p className="text-sm text-muted-foreground mt-1">Rata-rata Waktu Layanan</p>
-            <p className="text-xs text-muted-foreground">menit</p>
-          </CardContent>
-        </Card>
+      <div>
+        <h3 className="text-sm font-semibold text-foreground mb-3">Metrik Kinerja Utama</h3>
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <Card className="border-border/50 bg-gradient-to-br from-primary/5 to-transparent hover:shadow-lg transition-shadow">
+            <CardContent className="p-6 flex flex-col items-center justify-center text-center">
+              <div className="w-12 h-12 rounded-full bg-primary/15 flex items-center justify-center mb-3">
+                <TrendingUp className="w-6 h-6 text-primary" />
+              </div>
+              <p className="text-5xl font-bold text-primary leading-tight">{stats.completionRate}%</p>
+              <p className="text-sm font-medium text-foreground mt-2">Tingkat Penyelesaian</p>
+              <p className="text-xs text-muted-foreground mt-1">({stats.completed}/{stats.totalFiltered} peserta)</p>
+            </CardContent>
+          </Card>
+          <Card className="border-border/50 bg-gradient-to-br from-accent/5 to-transparent hover:shadow-lg transition-shadow">
+            <CardContent className="p-6 text-center flex flex-col items-center justify-center">
+              <div className="w-12 h-12 rounded-full bg-accent/15 flex items-center justify-center mb-3">
+                <Clock className="w-6 h-6 text-accent" />
+              </div>
+              <p className="text-5xl font-bold text-accent leading-tight">
+                {stats.avgWaitMin !== null ? `${stats.avgWaitMin}` : "—"}
+              </p>
+              <p className="text-sm font-medium text-foreground mt-2">Rata-rata Waktu Tunggu</p>
+              <p className="text-xs text-muted-foreground mt-1">menit</p>
+            </CardContent>
+          </Card>
+          <Card className="border-border/50 bg-gradient-to-br from-success/5 to-transparent hover:shadow-lg transition-shadow">
+            <CardContent className="p-6 text-center flex flex-col items-center justify-center">
+              <div className="w-12 h-12 rounded-full bg-success/15 flex items-center justify-center mb-3">
+                <CheckCircle2 className="w-6 h-6 text-success" />
+              </div>
+              <p className="text-5xl font-bold text-success leading-tight">
+                {stats.avgServiceMin !== null ? `${stats.avgServiceMin}` : "—"}
+              </p>
+              <p className="text-sm font-medium text-foreground mt-2">Rata-rata Waktu Layanan</p>
+              <p className="text-xs text-muted-foreground mt-1">menit</p>
+            </CardContent>
+          </Card>
+        </div>
       </div>
 
       {/* Per Service Breakdown */}
       {stats.serviceBreakdown.length > 0 && (
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-sm">Rincian Per Layanan</CardTitle>
+        <Card className="border-border/50">
+          <CardHeader className="pb-4 border-b border-border/50">
+            <CardTitle className="text-base flex items-center gap-2">
+              <Stethoscope className="w-5 h-5 text-primary" />
+              Rincian Per Layanan
+            </CardTitle>
           </CardHeader>
           <CardContent className="p-0">
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
-                <thead className="bg-muted/50 border-y border-border">
+                <thead className="bg-muted/30 border-y border-border/30">
                   <tr>
                     {["Kode", "Nama Layanan", "Terlayani", "Total Antrian", "Slot Gratis", "Slot Berbayar", "Selesai (%)"].map((h, i) => (
-                      <th key={i} className="text-left text-xs font-semibold text-muted-foreground py-2.5 px-4">{h}</th>
+                      <th key={i} className="text-left text-xs font-semibold text-muted-foreground py-3 px-4">{h}</th>
                     ))}
                   </tr>
                 </thead>
@@ -283,27 +302,33 @@ export default function Reports() {
                     const pct = total > 0 ? Math.round((done / total) * 100) : 0;
                     const isEye = svc.service_group === "EYE_CHECK";
                     return (
-                      <tr key={svc.id} className="border-b border-border last:border-0 hover:bg-muted/20">
-                        <td className="py-3 px-4">
-                          <div className={`w-8 h-8 rounded-lg flex items-center justify-center text-xs font-bold
-                            ${isEye ? "bg-accent/10 text-accent" : "bg-primary/10 text-primary"}`}>
+                      <tr key={svc.id} className="border-b border-border/30 last:border-0 hover:bg-muted/40 transition-colors">
+                        <td className="py-3.5 px-4">
+                          <div className={`w-9 h-9 rounded-lg flex items-center justify-center text-xs font-bold shadow-sm
+                            ${isEye ? "bg-accent/15 text-accent" : "bg-primary/15 text-primary"}`}>
                             {svc.service_code}
                           </div>
                         </td>
-                        <td className="py-3 px-4">
-                          <p className="font-medium">{svc.service_name}</p>
-                          <p className="text-xs text-muted-foreground">Booth {svc.booth_number}</p>
+                        <td className="py-3.5 px-4">
+                          <p className="font-medium text-foreground">{svc.service_name}</p>
+                          <p className="text-xs text-muted-foreground mt-0.5">Booth {svc.booth_number}</p>
                         </td>
-                        <td className="py-3 px-4 font-bold text-green-600">{done}</td>
-                        <td className="py-3 px-4">{total}</td>
-                        <td className="py-3 px-4 text-green-700">{freeQ}</td>
-                        <td className="py-3 px-4 text-orange-600">{paidQ}</td>
-                        <td className="py-3 px-4">
+                        <td className="py-3.5 px-4">
+                          <span className="font-bold text-green-700 bg-green-50 px-2 py-1 rounded text-xs">{done}</span>
+                        </td>
+                        <td className="py-3.5 px-4 font-medium">{total}</td>
+                        <td className="py-3.5 px-4">
+                          <span className="text-green-700 font-medium">{freeQ}</span>
+                        </td>
+                        <td className="py-3.5 px-4">
+                          <span className="text-orange-700 font-medium">{paidQ}</span>
+                        </td>
+                        <td className="py-3.5 px-4">
                           <div className="flex items-center gap-2">
-                            <div className="flex-1 h-2 bg-muted rounded-full overflow-hidden min-w-[60px]">
-                              <div className="h-full bg-green-500 rounded-full" style={{ width: `${pct}%` }} />
+                            <div className="flex-1 h-2.5 bg-muted rounded-full overflow-hidden min-w-[60px]">
+                              <div className="h-full bg-gradient-to-r from-green-400 to-green-600 rounded-full" style={{ width: `${pct}%` }} />
                             </div>
-                            <span className="text-xs font-bold w-10">{pct}%</span>
+                            <span className="text-xs font-bold text-foreground w-10 text-right">{pct}%</span>
                           </div>
                         </td>
                       </tr>
