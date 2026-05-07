@@ -136,9 +136,9 @@ export default function UserManagement() {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <form onSubmit={handleCreate} className="grid grid-cols-1 sm:grid-cols-3 gap-3 items-end">
-            <div className="space-y-1">
-              <Label className="text-xs">Email <span className="text-destructive">*</span></Label>
+          <form onSubmit={handleCreate} className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+            <div className="space-y-1.5">
+              <Label className="text-xs font-medium">Email <span className="text-destructive">*</span></Label>
               <Input
                 type="email"
                 placeholder="email@contoh.com"
@@ -146,16 +146,16 @@ export default function UserManagement() {
                 onChange={e => setForm(p => ({ ...p, email: e.target.value }))}
               />
             </div>
-            <div className="space-y-1">
-              <Label className="text-xs">Password <span className="text-destructive">*</span></Label>
+            <div className="space-y-1.5">
+              <Label className="text-xs font-medium">Password <span className="text-destructive">*</span></Label>
               <PasswordInput
                 value={form.password}
                 onChange={e => setForm(p => ({ ...p, password: e.target.value }))}
                 placeholder="Min. 6 karakter"
               />
             </div>
-            <div className="space-y-1">
-              <Label className="text-xs">Role</Label>
+            <div className="space-y-1.5">
+              <Label className="text-xs font-medium">Role</Label>
               <Select value={form.role} onValueChange={v => setForm(p => ({ ...p, role: v }))}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
@@ -164,8 +164,8 @@ export default function UserManagement() {
                 </SelectContent>
               </Select>
             </div>
-            {error && <p className="text-xs text-destructive sm:col-span-3">{error}</p>}
-            <Button type="submit" disabled={creating} className="gap-2 sm:col-span-3 sm:w-fit">
+            {error && <p className="text-xs text-destructive lg:col-span-3">{error}</p>}
+            <Button type="submit" disabled={creating} className="gap-2 lg:col-span-3 w-full lg:w-fit">
               {creating ? <Loader2 className="w-4 h-4 animate-spin" /> : <UserPlus className="w-4 h-4" />}
               Buat Pengguna
             </Button>
@@ -175,16 +175,16 @@ export default function UserManagement() {
 
       {/* Daftar Pengguna */}
       <Card>
-        <CardHeader className="pb-3">
-          <div className="flex items-center justify-between gap-3">
+        <CardHeader className="pb-4">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
             <CardTitle className="text-base">Daftar Pengguna ({users.length})</CardTitle>
-            <div className="relative w-56">
+            <div className="relative w-full sm:w-56">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
               <Input
                 placeholder="Cari..."
                 value={search}
                 onChange={e => setSearch(e.target.value)}
-                className="pl-9 h-8 text-sm"
+                className="pl-9 h-9 text-sm"
               />
             </div>
           </div>
@@ -199,25 +199,27 @@ export default function UserManagement() {
               {search ? "Tidak ada pengguna yang sesuai." : "Belum ada pengguna."}
             </p>
           ) : (
-            <div className="divide-y divide-border">
+            <div className="grid grid-cols-1 md:grid-cols-1 gap-3 p-4 md:p-0 md:divide-y md:divide-border">
               {filtered.map(u => (
-                <div key={u.id} className="flex items-center gap-4 px-6 py-3">
-                  <div className="w-9 h-9 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
+                <div key={u.id} className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4 md:px-6 md:py-3 bg-card md:bg-transparent border border-border rounded-lg md:border-0 md:rounded-0 p-3 md:p-0">
+                  <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
                     <span className="text-sm font-semibold text-primary">
                       {(u.full_name || u.email || "?").charAt(0).toUpperCase()}
                     </span>
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium truncate">{u.full_name || u.email}</p>
-                    {u.full_name && <p className="text-xs text-muted-foreground truncate">{u.email}</p>}
+                    <p className="text-sm font-medium">{u.full_name || u.email}</p>
+                    {u.full_name && <p className="text-xs text-muted-foreground">{u.email}</p>}
                   </div>
-                  <Badge variant="outline" className="text-xs gap-1 flex-shrink-0">
-                    {u.role === "admin" ? <Shield className="w-3 h-3" /> : <Stethoscope className="w-3 h-3" />}
-                    {ROLE_LABEL[u.role] || u.role}
-                  </Badge>
-                  <Button variant="ghost" size="icon" className="w-8 h-8 flex-shrink-0" onClick={() => openEdit(u)}>
-                    <Pencil className="w-3.5 h-3.5" />
-                  </Button>
+                  <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap">
+                    <Badge variant="outline" className="text-xs gap-1 whitespace-nowrap">
+                      {u.role === "admin" ? <Shield className="w-3 h-3" /> : <Stethoscope className="w-3 h-3" />}
+                      {ROLE_LABEL[u.role] || u.role}
+                    </Badge>
+                    <Button variant="ghost" size="icon" className="w-8 h-8" onClick={() => openEdit(u)}>
+                      <Pencil className="w-3.5 h-3.5" />
+                    </Button>
+                  </div>
                 </div>
               ))}
             </div>
@@ -227,18 +229,18 @@ export default function UserManagement() {
 
       {/* Edit Dialog */}
       <Dialog open={!!editUser} onOpenChange={open => !open && setEditUser(null)}>
-        <DialogContent className="max-w-sm">
+        <DialogContent className="max-w-sm w-full mx-4">
           <DialogHeader>
             <DialogTitle>Edit Pengguna</DialogTitle>
           </DialogHeader>
           {editUser && (
             <form onSubmit={handleEdit} className="space-y-4">
-              <div className="space-y-1">
-                <Label className="text-xs">Email</Label>
+              <div className="space-y-1.5">
+                <Label className="text-xs font-medium">Email</Label>
                 <Input value={editUser.email} disabled className="bg-muted text-muted-foreground" />
               </div>
-              <div className="space-y-1">
-                <Label className="text-xs">Role</Label>
+              <div className="space-y-1.5">
+                <Label className="text-xs font-medium">Role</Label>
                 <Select value={editForm.role} onValueChange={v => setEditForm(p => ({ ...p, role: v }))}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
@@ -247,8 +249,8 @@ export default function UserManagement() {
                   </SelectContent>
                 </Select>
               </div>
-              <div className="space-y-1">
-                <Label className="text-xs">Password Baru <span className="text-muted-foreground">(opsional)</span></Label>
+              <div className="space-y-1.5">
+                <Label className="text-xs font-medium">Password Baru <span className="text-muted-foreground text-xs">(opsional)</span></Label>
                 <PasswordInput
                   value={editForm.password}
                   onChange={e => setEditForm(p => ({ ...p, password: e.target.value }))}
@@ -256,9 +258,9 @@ export default function UserManagement() {
                 />
               </div>
               {editError && <p className="text-xs text-destructive">{editError}</p>}
-              <DialogFooter>
-                <Button type="button" variant="outline" onClick={() => setEditUser(null)}>Batal</Button>
-                <Button type="submit" disabled={editSaving} className="gap-2">
+              <DialogFooter className="gap-2 sm:gap-0">
+                <Button type="button" variant="outline" onClick={() => setEditUser(null)} className="w-full sm:w-auto">Batal</Button>
+                <Button type="submit" disabled={editSaving} className="gap-2 w-full sm:w-auto">
                   {editSaving && <Loader2 className="w-4 h-4 animate-spin" />}
                   Simpan
                 </Button>
