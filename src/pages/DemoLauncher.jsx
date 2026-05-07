@@ -23,16 +23,19 @@ export default function DemoLauncher() {
   const doLogin = async (username, pass, redirectTo = "/", demoKey = null) => {
     if (demoKey) setDemoLoading(demoKey); else setLoading(true);
     setError("");
+    
+    const timeoutPromise = new Promise((_, reject) =>
+      setTimeout(() => reject(new Error("Login timeout")), 10000)
+    );
+    
     try {
-      // Real login attempt
-      const response = await base44.auth.login(username, pass);
-      // If login succeeds, redirect
+      await Promise.race([base44.auth.login(username, pass), timeoutPromise]);
       setTimeout(() => {
         window.location.href = redirectTo;
       }, 500);
     } catch (err) {
       console.error("Login error:", err);
-      setError("Username atau password salah.");
+      setError(err?.message || "Username atau password salah.");
       if (demoKey) setDemoLoading(null); else setLoading(false);
     }
   };
