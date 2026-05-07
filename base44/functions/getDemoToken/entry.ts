@@ -1,28 +1,32 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.25';
 
-const DEMO_USERS = [
-  { email: "admin@brilianhealth.demo", role: "admin" },
-  { email: "nakes@brilianhealth.demo", role: "user" },
-];
+const DEMO_CREDENTIALS = {
+  admin: { email: "admin@brilianhealth.demo", password: "admin123" },
+  nakes: { email: "nakes@brilianhealth.demo", password: "nakes" },
+};
 
-// Auto-invite demo users if they don't exist yet
 Deno.serve(async (req) => {
   try {
-    const base44 = createClientFromRequest(req);
-    const results = [];
+    const body = await req.json().catch(() => ({}));
+    const { username, password } = body;
 
-    for (const u of DEMO_USERS) {
-      try {
-        await base44.users.inviteUser(u.email, u.role);
-        results.push({ email: u.email, status: "invited" });
-      } catch (e) {
-        const msg = e?.message || "";
-        results.push({ email: u.email, status: msg.toLowerCase().includes("already") || msg.toLowerCase().includes("exist") ? "exists" : "error", message: msg });
-      }
+    if (!username || !password) {
+      return Response.json({ error: "Username and password required" }, { status: 400 });
     }
 
-    return Response.json({ results });
+    const credentials = DEMO_CREDENTIALS[username];
+    if (!credentials || credentials.password !== password) {
+      return Response.json({ error: "Invalid credentials" }, { status: 401 });
+    }
+
+    const base44 = createClientFromRequest(req);
+
+    // Generate demo token (use base44's built-in token generation)
+    const token = await base44.asServiceRole.auth.createDemoUserToken(credentials.email);
+
+    return Response.json({ token });
   } catch (error) {
+    console.error("getDemoToken error:", error);
     return Response.json({ error: error.message }, { status: 500 });
   }
 });
