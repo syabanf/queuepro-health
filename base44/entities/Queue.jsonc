@@ -18,22 +18,13 @@
       "type": "number",
       "description": "Numeric sequence for this service"
     },
-    "quota_category": {
-      "type": "string",
-      "enum": [
-        "FULL_FREE",
-        "CC_RP_1",
-        "FULL_PAID"
-      ],
-      "description": "Quota tier category automatically assigned based on sequence"
-    },
-    "payment_display_status": {
+    "slot_type": {
       "type": "string",
       "enum": [
         "FREE",
         "PAID"
       ],
-      "description": "Simplified payment status for staff display"
+      "description": "Whether this queue uses FREE or PAID slot"
     },
     "qr_token": {
       "type": "string",
@@ -110,7 +101,6 @@
     "service_id",
     "queue_number",
     "queue_sequence",
-    "quota_category",
-    "payment_display_status"
+    "slot_type"
   ]
 }

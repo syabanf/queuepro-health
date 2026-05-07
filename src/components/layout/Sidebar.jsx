@@ -3,7 +3,7 @@ import { Link, useLocation } from "react-router-dom";
 import { 
   UserPlus, Monitor, LayoutDashboard, Users, Clock, 
   FileText, Settings, LogOut, Menu, X, ChevronRight,
-  Activity, CalendarDays
+  Activity
 } from "lucide-react";
 import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
@@ -17,7 +17,6 @@ const adminMenuItems = [
   { label: "Riwayat Antrian", icon: Clock, path: "/queue-history" },
   { label: "Laporan", icon: FileText, path: "/reports" },
   { label: "Manajemen Pengguna", icon: Users, path: "/user-management" },
-  { label: "Daftar Event", icon: CalendarDays, path: "/events" },
   { label: "Pengaturan", icon: Settings, path: "/settings" },
 ];
 
@@ -77,9 +76,7 @@ export default function Sidebar({ user }) {
       {/* Menu */}
       <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
         {menuItems.map((item) => {
-          const isActive = item.path === "/events"
-            ? location.pathname === "/events" || location.pathname.startsWith("/events/")
-            : location.pathname === item.path;
+          const isActive = location.pathname === item.path;
           return (
             <Link
               key={item.path}

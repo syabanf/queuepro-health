@@ -20,52 +20,37 @@
     },
     "booth_number": {
       "type": "number",
-      "description": "Booth number"
+      "description": "Booth number (1-5)"
     },
-    "full_free_quota": {
+    "free_quota": {
       "type": "number",
       "default": 0,
-      "description": "Tanpa Syarat / Full Free quota"
+      "description": "Total free quota"
     },
-    "cc_rp1_quota": {
+    "paid_quota": {
       "type": "number",
       "default": 0,
-      "description": "Dengan CC Rp 1 quota"
+      "description": "Total paid quota"
     },
-    "full_paid_quota": {
+    "used_free_quota": {
       "type": "number",
       "default": 0,
-      "description": "Berbayar Penuh / Full Paid quota"
+      "description": "Used free quota count"
     },
-    "total_slot": {
+    "used_paid_quota": {
       "type": "number",
       "default": 0,
-      "description": "Total slots (0 = unlimited)"
+      "description": "Used paid quota count"
     },
-    "is_unlimited": {
-      "type": "boolean",
-      "default": false,
-      "description": "Whether the service has unlimited quota"
-    },
-    "used_full_free": {
-      "type": "number",
-      "default": 0,
-      "description": "Used Full Free quota count"
-    },
-    "used_cc_rp1": {
-      "type": "number",
-      "default": 0,
-      "description": "Used CC Rp 1 quota count"
-    },
-    "used_full_paid": {
-      "type": "number",
-      "default": 0,
-      "description": "Used Full Paid quota count"
-    },
-    "used_total": {
-      "type": "number",
-      "default": 0,
-      "description": "Total used slots"
+    "quota_status": {
+      "type": "string",
+      "enum": [
+        "AVAILABLE",
+        "ALMOST_FULL",
+        "FULL"
+      ],
+      "default": "AVAILABLE",
+      "description": "Current quota status"
     },
     "is_active": {
       "type": "boolean",

@@ -419,11 +419,8 @@ export default function NakesBooth() {
                             ) : null;
                           })()}
                           <p className="text-sm text-muted-foreground mt-1">
-                            Kategori: <span className={`font-semibold ${activeQueue.payment_display_status === "FREE" ? "text-green-600" : "text-orange-600"}`}>
-                              {activeQueue.quota_category === "FULL_FREE" ? "Tanpa Syarat"
-                                : activeQueue.quota_category === "CC_RP_1" ? "CC Rp 1"
-                                : activeQueue.quota_category === "FULL_PAID" ? "Berbayar Penuh"
-                                : activeQueue.payment_display_status === "FREE" ? "Gratis" : "Berbayar"}
+                            Slot: <span className={`font-semibold ${activeQueue.slot_type === "FREE" ? "text-green-600" : "text-orange-600"}`}>
+                              {activeQueue.slot_type === "FREE" ? "Gratis" : "Berbayar"}
                             </span>
                           </p>
                         </div>
@@ -538,10 +535,7 @@ export default function NakesBooth() {
                       })()}
                       {nextWaiting && (
                         <p className="text-xs text-muted-foreground mt-0.5">
-                          {nextWaiting.quota_category === "FULL_FREE" ? "Tanpa Syarat"
-                            : nextWaiting.quota_category === "CC_RP_1" ? "CC Rp 1"
-                            : nextWaiting.quota_category === "FULL_PAID" ? "Berbayar Penuh"
-                            : nextWaiting.payment_display_status === "FREE" ? "Gratis" : "Berbayar"}
+                          {nextWaiting.slot_type === "FREE" ? "Gratis" : "Berbayar"}
                         </p>
                       )}
                     </div>
@@ -587,8 +581,8 @@ export default function NakesBooth() {
                           <div key={q.id} className={`flex items-center gap-2 px-2 py-1.5 rounded-md text-sm ${i === 0 ? "bg-primary/5 border border-primary/20" : "bg-muted/40"}`}>
                             <span className="font-mono font-bold w-14 flex-shrink-0">{q.queue_number}</span>
                             <span className="text-xs text-muted-foreground truncate flex-1">{p?.full_name || "—"}</span>
-                            <span className={`text-[10px] font-bold flex-shrink-0 ${q.payment_display_status === "FREE" ? "text-green-600" : "text-orange-600"}`}>
-                              {q.payment_display_status === "FREE" ? "F" : "P"}
+                            <span className={`text-[10px] font-bold flex-shrink-0 ${q.slot_type === "FREE" ? "text-green-600" : "text-orange-600"}`}>
+                              {q.slot_type === "FREE" ? "G" : "B"}
                             </span>
                           </div>
                         );
@@ -645,8 +639,8 @@ export default function NakesBooth() {
                             {q.qr_verification_status === "VERIFIED" && (
                               <ShieldCheck className="w-3 h-3 text-green-500" title="QR Verified" />
                             )}
-                            <span className={`text-[10px] font-bold ${q.payment_display_status === "FREE" ? "text-green-600" : "text-orange-600"}`}>
-                              {q.payment_display_status === "FREE" ? "FREE" : "PAID"}
+                            <span className={`text-[10px] font-bold ${q.slot_type === "FREE" ? "text-green-600" : "text-orange-600"}`}>
+                              {q.slot_type === "FREE" ? "Gratis" : "Bayar"}
                             </span>
                           </div>
                         </div>
