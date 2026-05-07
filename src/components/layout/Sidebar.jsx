@@ -21,7 +21,7 @@ const adminMenuItems = [
 
 const nakesMenuItemsList = [
   { label: "Booth Operasi", icon: Monitor, path: "/booth" },
-  { label: "Antrian Real-time", icon: Monitor, path: "/queue-monitor" },
+  { label: "Monitor Antrian", icon: Monitor, path: "/queue-monitor" },
 ];
 
 

@@ -1,0 +1,49 @@
+{
+  "name": "QueueEvent",
+  "type": "object",
+  "properties": {
+    "queue_id": {
+      "type": "string",
+      "description": "ID of the queue record"
+    },
+    "event_type": {
+      "type": "string",
+      "enum": [
+        "CALLED",
+        "RECALLED",
+        "SERVING",
+        "DONE",
+        "SKIPPED",
+        "CANCELLED",
+        "REGISTERED"
+      ],
+      "description": "Type of event"
+    },
+    "previous_status": {
+      "type": "string",
+      "description": "Queue status before this event"
+    },
+    "new_status": {
+      "type": "string",
+      "description": "Queue status after this event"
+    },
+    "performed_by": {
+      "type": "string",
+      "description": "Email of user who performed the action"
+    },
+    "notes": {
+      "type": "string",
+      "description": "Optional notes about the event"
+    },
+    "created_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When this event occurred"
+    }
+  },
+  "required": [
+    "queue_id",
+    "event_type",
+    "new_status"
+  ]
+}

@@ -10,7 +10,7 @@ export function printCoupon({ participant, medicalQueue, eyeQueue, medicalServic
     : new Date().toLocaleString("id-ID", { dateStyle: "medium", timeStyle: "short" });
 
   // QR code URL via Google Charts API (no external lib needed)
-  const qrData = encodeURIComponent(`${window.location.origin}/queue-monitor`);
+  const qrData = encodeURIComponent(`${window.location.origin}/mobile-monitor`);
   const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=80x80&data=${qrData}`;
 
   const html = `<!DOCTYPE html>

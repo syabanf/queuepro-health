@@ -17,6 +17,8 @@ import ParticipantDetail from "@/pages/ParticipantDetail";
 import QueueHistory from "@/pages/QueueHistory";
 import Reports from "@/pages/Reports";
 import SettingsPage from "@/pages/SettingsPage";
+import LEDMonitor from "@/pages/LEDMonitor";
+import MobileMonitor from "@/pages/MobileMonitor";
 
 const AuthenticatedApp = () => {
   const { isLoadingAuth, isLoadingPublicSettings, authError, navigateToLogin, user } = useAuth();
@@ -45,6 +47,10 @@ const AuthenticatedApp = () => {
 
   return (
     <Routes>
+      {/* Fullscreen public routes — no sidebar */}
+      <Route path="/led-monitor" element={<LEDMonitor />} />
+      <Route path="/mobile-monitor" element={<MobileMonitor />} />
+
       <Route element={<AppLayout user={user} />}>
         {/* Admin Routes */}
         <Route path="/" element={isAdmin ? <AdminDashboard /> : <Navigate to="/booth" replace />} />
@@ -55,10 +61,10 @@ const AuthenticatedApp = () => {
         <Route path="/queue-history" element={isAdmin ? <QueueHistory /> : <Navigate to="/booth" replace />} />
         <Route path="/reports" element={isAdmin ? <Reports /> : <Navigate to="/booth" replace />} />
         <Route path="/settings" element={isAdmin ? <SettingsPage /> : <Navigate to="/booth" replace />} />
-        
+
         {/* Shared Routes */}
         <Route path="/queue-monitor" element={<QueueMonitor />} />
-        
+
         {/* Nakes Routes */}
         <Route path="/booth" element={!isAdmin ? <NakesBooth /> : <Navigate to="/" replace />} />
       </Route>
