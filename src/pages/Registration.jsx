@@ -7,7 +7,7 @@ import RegistrationForm from "@/components/registration/RegistrationForm";
 import QueuePreviewCard from "@/components/registration/QueuePreviewCard";
 import QuotaTable from "@/components/registration/QuotaTable";
 import ParticipantTable from "@/components/registration/ParticipantTable";
-import PrintCoupon from "@/components/registration/PrintCoupon";
+import { printCoupon } from "@/lib/couponPrinter";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 
@@ -57,9 +57,9 @@ export default function Registration() {
 
   const handlePrint = useCallback(() => {
     if (!lastResult) return;
-    const coupon = PrintCoupon({ result: lastResult });
-    coupon?.handlePrint();
-  }, [lastResult]);
+    const { participant, medicalQueue, eyeQueue, medicalService, eyeService } = lastResult;
+    printCoupon({ participant, medicalQueue, eyeQueue, medicalService, eyeService, eventSetting: eventSettings[0] });
+  }, [lastResult, eventSettings]);
 
   if (loadingServices) {
     return (

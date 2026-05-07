@@ -13,6 +13,7 @@ import QueueMonitor from "@/pages/QueueMonitor";
 import QuotaDashboard from "@/pages/QuotaDashboard";
 import NakesBooth from "@/pages/NakesBooth";
 import Participants from "@/pages/Participants";
+import ParticipantDetail from "@/pages/ParticipantDetail";
 import QueueHistory from "@/pages/QueueHistory";
 import Reports from "@/pages/Reports";
 import SettingsPage from "@/pages/SettingsPage";
@@ -50,6 +51,7 @@ const AuthenticatedApp = () => {
         <Route path="/registration" element={isAdmin ? <Registration /> : <Navigate to="/booth" replace />} />
         <Route path="/quota-dashboard" element={isAdmin ? <QuotaDashboard /> : <Navigate to="/booth" replace />} />
         <Route path="/participants" element={isAdmin ? <Participants /> : <Navigate to="/booth" replace />} />
+        <Route path="/participants/detail" element={isAdmin ? <ParticipantDetail /> : <Navigate to="/booth" replace />} />
         <Route path="/queue-history" element={isAdmin ? <QueueHistory /> : <Navigate to="/booth" replace />} />
         <Route path="/reports" element={isAdmin ? <Reports /> : <Navigate to="/booth" replace />} />
         <Route path="/settings" element={isAdmin ? <SettingsPage /> : <Navigate to="/booth" replace />} />
