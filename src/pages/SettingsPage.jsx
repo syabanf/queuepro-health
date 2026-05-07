@@ -5,9 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Settings, Save, RotateCcw, Loader2, CheckCircle2, AlertCircle } from "lucide-react";
 import PageHeader from "@/components/layout/PageHeader";
 import EventConfigForm from "@/components/settings/EventConfigForm";
-import ServiceQuotaConfig from "@/components/settings/ServiceQuotaConfig";
 import EventPreviewCard from "@/components/settings/EventPreviewCard";
-import QuotaPreviewTable from "@/components/settings/QuotaPreviewTable";
 
 const DEFAULT_EVENT = {
   event_name: "Brilian Talks Health Care",
@@ -42,9 +40,7 @@ export default function SettingsPage() {
   });
 
   const [eventForm, setEventForm] = useState(DEFAULT_EVENT);
-  const [servicesForm, setServicesForm] = useState([]);
   const [errors, setErrors] = useState({});
-  const [serviceErrors, setServiceErrors] = useState({});
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [isDirty, setIsDirty] = useState(false);
@@ -57,20 +53,8 @@ export default function SettingsPage() {
     }
   }, [eventSettings]);
 
-  useEffect(() => {
-    if (services.length > 0) {
-      setServicesForm(services);
-    }
-  }, [services]);
-
   const handleEventChange = (updated) => {
     setEventForm(updated);
-    setIsDirty(true);
-    setSaved(false);
-  };
-
-  const handleServicesChange = (updated) => {
-    setServicesForm(updated);
     setIsDirty(true);
     setSaved(false);
   };
@@ -85,22 +69,8 @@ export default function SettingsPage() {
     if ((eventForm.max_participants || 0) < 1)
       errs.max_participants = "Kapasitas minimal 1.";
 
-    const svcErrs = {};
-    servicesForm.forEach(s => {
-      const errsRow = {};
-      if (!s.booth_number) errsRow.booth_number = "Wajib diisi.";
-      if ((s.free_quota || 0) < 0) errsRow.free_quota = "Tidak boleh negatif.";
-      if ((s.paid_quota || 0) < 0) errsRow.paid_quota = "Tidak boleh negatif.";
-      if ((s.free_quota || 0) < (s.used_free_quota || 0))
-        errsRow.free_quota = `Tidak boleh kurang dari terpakai (${s.used_free_quota}).`;
-      if ((s.paid_quota || 0) < (s.used_paid_quota || 0))
-        errsRow.paid_quota = `Tidak boleh kurang dari terpakai (${s.used_paid_quota}).`;
-      if (Object.keys(errsRow).length > 0) svcErrs[s.id] = errsRow;
-    });
-
     setErrors(errs);
-    setServiceErrors(svcErrs);
-    return Object.keys(errs).length === 0 && Object.keys(svcErrs).length === 0;
+    return Object.keys(errs).length === 0;
   };
 
   const handleSave = async () => {
@@ -114,20 +84,7 @@ export default function SettingsPage() {
         await base44.entities.EventSetting.create(eventForm);
       }
 
-      // Save all services
-      await Promise.all(
-        servicesForm.map(s =>
-          base44.entities.Service.update(s.id, {
-            booth_number: s.booth_number,
-            free_quota: s.free_quota || 0,
-            paid_quota: s.paid_quota || 0,
-            is_active: s.is_active,
-          })
-        )
-      );
-
       queryClient.invalidateQueries({ queryKey: ["eventSettings"] });
-      queryClient.invalidateQueries({ queryKey: ["services"] });
       setIsDirty(false);
       setSaved(true);
       setTimeout(() => setSaved(false), 3000);
@@ -141,9 +98,7 @@ export default function SettingsPage() {
   const handleReset = () => {
     if (eventSettings.length > 0) setEventForm({ ...DEFAULT_EVENT, ...eventSettings[0] });
     else setEventForm(DEFAULT_EVENT);
-    setServicesForm(services);
     setErrors({});
-    setServiceErrors({});
     setIsDirty(false);
   };
 
@@ -202,29 +157,20 @@ export default function SettingsPage() {
         </div>
       )}
 
-      <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
-        {/* Left: Event Config + Preview */}
-        <div className="xl:col-span-1 space-y-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="lg:col-span-1">
           <EventConfigForm
             form={eventForm}
             onChange={handleEventChange}
             errors={errors}
             totalParticipants={participants.length}
           />
+        </div>
+        <div className="lg:col-span-2">
           <EventPreviewCard
             form={eventForm}
             totalParticipants={participants.length}
           />
-        </div>
-
-        {/* Right: Service Quota Config + Preview Table */}
-        <div className="xl:col-span-2 space-y-6">
-          <ServiceQuotaConfig
-            services={servicesForm}
-            onChange={handleServicesChange}
-            serviceErrors={serviceErrors}
-          />
-          <QuotaPreviewTable services={servicesForm} />
         </div>
       </div>
     </div>
