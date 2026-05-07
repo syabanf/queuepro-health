@@ -8,7 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useToast } from "@/components/ui/use-toast";
 import {
   Monitor, PhoneCall, PlayCircle, CheckCircle2,
-  SkipForward, XCircle, RotateCcw, Clock, Stethoscope, Eye, User, QrCode,
+  SkipForward, XCircle, RotateCcw, Clock, Stethoscope, Eye, User, QrCode, Barcode,
   ShieldCheck, ShieldX, Shield
 } from "lucide-react";
 import QrScannerModal from "@/components/booth/QrScannerModal";
@@ -435,47 +435,67 @@ export default function NakesBooth() {
                       )}
 
                       {/* Action Buttons - Simplified Flow */}
-                                      <div className="grid grid-cols-2 gap-2 pt-2 border-t border-border">
-                                        {/* Primary: Next Action */}
-                                        {activeQueue.status === "CALLED" && (
-                                          <Button
-                                            className="gap-1.5 col-span-2 sm:col-span-1 bg-green-600 hover:bg-green-700"
-                                            onClick={() => handleAction(activeQueue, "SERVING", "SERVICE_STARTED")}
-                                            disabled={updateQueue.isPending}
-                                          >
-                                            <PlayCircle className="w-4 h-4" />
-                                            Mulai Layanan
-                                          </Button>
-                                        )}
+                                      <div className="space-y-2 pt-2 border-t border-border">
+                                        {/* Scan Barcode Button */}
+                                        <Button
+                                          className="w-full gap-2 bg-blue-600 hover:bg-blue-700"
+                                          onClick={() => setScannerOpen(true)}
+                                          disabled={updateQueue.isPending}
+                                        >
+                                          <Barcode className="w-4 h-4" />
+                                          Scan Barcode Verifikasi
+                                        </Button>
 
-                       {activeQueue.status === "SERVING" && (
-                         <Button
-                           className="gap-1.5 col-span-2 sm:col-span-1 bg-green-600 hover:bg-green-700"
-                           onClick={() => handleAction(activeQueue, "DONE", "SERVICE_DONE")}
-                           disabled={updateQueue.isPending}
-                         >
-                           <CheckCircle2 className="w-4 h-4" /> Selesai
-                         </Button>
-                       )}
+                                        <div className="grid grid-cols-2 gap-2">
+                                          {/* Primary: Next Action */}
+                                          {activeQueue.status === "CALLED" && (
+                                            <Button
+                                              className="gap-1.5 bg-green-600 hover:bg-green-700"
+                                              onClick={() => handleAction(activeQueue, "SERVING", "SERVICE_STARTED")}
+                                              disabled={updateQueue.isPending}
+                                            >
+                                              <PlayCircle className="w-4 h-4" />
+                                              Mulai Layanan
+                                            </Button>
+                                          )}
 
-                       {/* Secondary: Skip/Cancel */}
-                       {(activeQueue.status === "CALLED" || activeQueue.status === "SERVING") && (
-                         <Button 
-                           variant="outline" 
-                           className="gap-1.5 text-orange-600 border-orange-300 hover:bg-orange-50"
-                           onClick={() => handleAction(activeQueue, "SKIPPED", "SKIPPED")}
-                           disabled={updateQueue.isPending}>
-                           <SkipForward className="w-4 h-4" /> Lewati
-                         </Button>
-                       )}
+                           {activeQueue.status === "SERVING" && (
+                             <Button
+                               className="gap-1.5 col-span-2 bg-green-600 hover:bg-green-700"
+                               onClick={() => {
+                                 handleAction(activeQueue, "DONE", "SERVICE_DONE");
+                                 // Auto-call next queue after 800ms
+                                 setTimeout(() => {
+                                   if (nextWaiting && !called && !qrVerified && !serving) {
+                                     handleAction(nextWaiting, "CALLED", "CALLED");
+                                   }
+                                 }, 800);
+                               }}
+                               disabled={updateQueue.isPending}
+                             >
+                               <CheckCircle2 className="w-4 h-4" /> Selesai & Lanjut
+                             </Button>
+                           )}
 
-                       <Button 
-                         variant="outline" 
-                         className="gap-1.5 text-red-600 border-red-300 hover:bg-red-50"
-                         onClick={() => handleAction(activeQueue, "CANCELLED", "CANCELLED")}
-                         disabled={updateQueue.isPending}>
-                         <XCircle className="w-4 h-4" /> Batalkan
-                       </Button>
+                           {/* Secondary: Skip/Cancel */}
+                           {(activeQueue.status === "CALLED" || activeQueue.status === "SERVING") && (
+                             <Button 
+                               variant="outline" 
+                               className="gap-1.5 text-orange-600 border-orange-300 hover:bg-orange-50"
+                               onClick={() => handleAction(activeQueue, "SKIPPED", "SKIPPED")}
+                               disabled={updateQueue.isPending}>
+                               <SkipForward className="w-4 h-4" /> Lewati
+                             </Button>
+                           )}
+
+                           <Button 
+                             variant="outline" 
+                             className="gap-1.5 text-red-600 border-red-300 hover:bg-red-50"
+                             onClick={() => handleAction(activeQueue, "CANCELLED", "CANCELLED")}
+                             disabled={updateQueue.isPending}>
+                             <XCircle className="w-4 h-4" /> Batalkan
+                           </Button>
+                        </div>
                       </div>
 
 
