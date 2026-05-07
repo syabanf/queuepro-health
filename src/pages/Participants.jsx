@@ -34,6 +34,22 @@ function SlotBadge({ type }) {
   );
 }
 
+function CategoryBadge({ category }) {
+  const colors = {
+    "FREE_CHECK": "bg-green-50 text-green-700 border-green-200",
+    "PAYMENT": "bg-blue-50 text-blue-700 border-blue-200"
+  };
+  const labels = {
+    "FREE_CHECK": "FREE CHECK",
+    "PAYMENT": "PAYMENT"
+  };
+  return (
+    <Badge className={`text-xs border ${colors[category] || ""}`}>
+      {labels[category] || "—"}
+    </Badge>
+  );
+}
+
 export default function Participants() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
@@ -137,7 +153,7 @@ export default function Participants() {
       "No. Reg", "Nama", "No. Telp", "Unit/Divisi",
       "Antrian Medis", "Layanan Medis", "Slot Medis",
       "Antrian Mata", "Layanan Mata", "Slot Mata",
-      "Status", "Waktu Daftar"
+      "Kategori Peserta", "Status", "Waktu Daftar"
     ];
     const rows = filtered.map(p => [
       p.registration_number,
@@ -150,6 +166,7 @@ export default function Participants() {
       p.eyeQueue?.queue_number || "",
       serviceMap[p.eye_service_id]?.service_name || "",
       p.eye_slot_type || "",
+      p.participant_category === "FREE_CHECK" ? "FREE CHECK" : "PAYMENT",
       PARTICIPANT_STATUS_LABELS[p.computedStatus] || p.computedStatus,
       p.registered_at
         ? format(new Date(p.registered_at), "dd/MM/yyyy HH:mm")
@@ -272,7 +289,7 @@ export default function Participants() {
                     "No. Reg", "Nama", "No. Telp", "Unit/Divisi",
                     "Antrian Medis", "Layanan Medis", "Slot",
                     "Antrian Mata", "Layanan Mata", "Slot",
-                    "Status", "Waktu Daftar", "Aksi"
+                    "Kategori Peserta", "Status", "Waktu Daftar", "Aksi"
                   ].map((col, i) => (
                     <th key={i} className="text-left text-xs font-semibold text-muted-foreground py-2.5 px-3 whitespace-nowrap">
                       {col}
@@ -282,13 +299,13 @@ export default function Participants() {
               </thead>
               <tbody>
                 {isLoading ? (
-                  <tr><td colSpan={13} className="text-center py-12">
+                  <tr><td colSpan={14} className="text-center py-12">
                     <div className="flex justify-center">
                       <div className="w-6 h-6 border-2 border-primary/30 border-t-primary rounded-full animate-spin" />
                     </div>
                   </td></tr>
                 ) : paged.length === 0 ? (
-                  <tr><td colSpan={13} className="text-center py-12 text-sm text-muted-foreground">
+                  <tr><td colSpan={14} className="text-center py-12 text-sm text-muted-foreground">
                     {hasActiveFilters ? "Tidak ada peserta yang cocok dengan filter." : "Belum ada peserta terdaftar."}
                   </td></tr>
                 ) : (
@@ -317,6 +334,9 @@ export default function Participants() {
                       </td>
                       <td className="py-2.5 px-3">
                         {p.eye_slot_type && <SlotBadge type={p.eye_slot_type} />}
+                      </td>
+                      <td className="py-2.5 px-3">
+                        <CategoryBadge category={p.participant_category} />
                       </td>
                       <td className="py-2.5 px-3">
                         <StatusBadge status={p.computedStatus} />
