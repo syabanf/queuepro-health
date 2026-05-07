@@ -32,7 +32,6 @@ const adminMenuSections = [
     section: "Laporan & Pengaturan",
     items: [
       { label: "Laporan", icon: FileText, path: "/reports" },
-      { label: "Manajemen Pengguna", icon: Users, path: "/user-management" },
       { label: "Pengaturan", icon: Settings, path: "/settings" },
     ]
   }

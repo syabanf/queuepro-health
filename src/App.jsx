@@ -18,7 +18,7 @@ import SettingsPage from "@/pages/SettingsPage";
 import LEDMonitor from "@/pages/LEDMonitor";
 import MobileMonitor from "@/pages/MobileMonitor";
 import DemoLauncher from "@/pages/DemoLauncher";
-import UserManagement from "@/pages/UserManagement";
+
 
 const AuthenticatedApp = () => {
   const { isLoadingAuth, isLoadingPublicSettings, authError, navigateToLogin, user } = useAuth();
@@ -77,7 +77,6 @@ const AuthenticatedApp = () => {
         <Route path="/participants/detail" element={isAdmin ? <ParticipantDetail /> : <Navigate to="/booth" replace />} />
         <Route path="/reports" element={isAdmin ? <Reports /> : <Navigate to="/booth" replace />} />
         <Route path="/settings" element={isAdmin ? <SettingsPage /> : <Navigate to="/booth" replace />} />
-        <Route path="/user-management" element={isAdmin ? <UserManagement /> : <Navigate to="/booth" replace />} />
 
         {/* Shared Routes */}
         <Route path="/queue-monitor" element={<QueueMonitor />} />
