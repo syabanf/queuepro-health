@@ -10,7 +10,6 @@ import { Activity, Eye, EyeOff, Loader2, AlertCircle, Shield, Stethoscope, Monit
 const DEMO_USERS = {
   admin: { email: "admin@brilianhealth.demo", password: "Demo@Admin123", label: "Admin Pusat", redirectTo: "/" },
   nakes: { email: "nakes@brilianhealth.demo", password: "Demo@Nakes123", label: "Nakes / Petugas Pelayanan", redirectTo: "/booth" },
-  user: { email: "user@brilianhealth.demo", password: "Demo@User123", label: "Peserta / Pengunjung", redirectTo: "/mobile-monitor" },
 };
 
 export default function DemoLauncher() {
@@ -174,26 +173,6 @@ export default function DemoLauncher() {
                   <p className="text-[11px] text-muted-foreground font-mono">{DEMO_USERS.nakes.email} · {DEMO_USERS.nakes.password}</p>
                 </div>
                 {demoLoading === "nakes" ? <Loader2 className="w-4 h-4 animate-spin text-accent flex-shrink-0" /> : null}
-              </button>
-
-              {/* Demo User */}
-              <button
-                type="button"
-                onClick={() => handleDemo("user")}
-                disabled={!!demoLoading || loading}
-                className="w-full flex items-center gap-3 p-3.5 rounded-xl border-2 border-purple-200 bg-purple-50 hover:bg-purple-100 hover:border-purple-300 transition-all text-left disabled:opacity-60 group"
-              >
-                <div className="w-9 h-9 rounded-xl bg-purple-100 flex items-center justify-center flex-shrink-0 group-hover:bg-purple-200">
-                  <Users className="w-4 h-4 text-purple-700" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm font-semibold text-foreground">Demo Peserta</span>
-                    <Badge className="bg-purple-100 text-purple-700 border-purple-200 text-[10px] border">USER</Badge>
-                  </div>
-                  <p className="text-[11px] text-muted-foreground font-mono">{DEMO_USERS.user.email} · {DEMO_USERS.user.password}</p>
-                </div>
-                {demoLoading === "user" ? <Loader2 className="w-4 h-4 animate-spin text-purple-700 flex-shrink-0" /> : null}
               </button>
 
               {/* Public Monitor */}

@@ -9,25 +9,19 @@ const DEMO_USERS = [
 Deno.serve(async (req) => {
   try {
     const base44 = createClientFromRequest(req);
-
-    // Only allow admin to call this
-    const user = await base44.auth.me();
-    if (!user || user.role !== "admin") {
-      return Response.json({ error: "Forbidden" }, { status: 403 });
-    }
-
     const results = [];
 
     for (const u of DEMO_USERS) {
-      // Step 1: Invite user (creates if not exists)
       try {
-        await base44.users.inviteUser(u.email, u.role);
+        // Invite using service role
+        await base44.asServiceRole.users.inviteUser(u.email, u.role);
         results.push({ email: u.email, invited: true });
-      } catch {
-        results.push({ email: u.email, invited: false, note: "already exists or error" });
+      } catch (e) {
+        results.push({ email: u.email, invited: false, error: e.message });
+        continue;
       }
 
-      // Step 2: Set password via service role
+      // Set password
       try {
         const users = await base44.asServiceRole.entities.User.filter({ email: u.email });
         if (users && users.length > 0) {
