@@ -106,13 +106,28 @@ function BoothPanel({ service, participants, services, currentUser, compact = fa
         if (svc) await base44.entities.Service.update(svc.id, { used_free_quota: (svc.used_free_quota || 0) + 1 }).catch(e => console.warn(e));
         await base44.entities.Participant.update(queue.participant_id, { participant_status: "COMPLETED" }).catch(e => console.warn(e));
         setVerificationResult(null);
+
+        // Auto-call next: fetch fresh queue data to avoid stale closure
+        const freshQueues = await base44.entities.Queue.filter({ service_id: queue.service_id }).catch(() => []);
+        const sortedFresh = [...freshQueues].sort((a, b) => (a.queue_sequence || 0) - (b.queue_sequence || 0));
+        const hasActive = sortedFresh.some(q => ["CALLED", "QR_VERIFIED", "SERVING"].includes(q.status) && q.id !== queue.id);
+        const nextUp = sortedFresh.find(q => q.status === "WAITING");
+        if (!hasActive && nextUp) {
+          await base44.entities.Queue.update(nextUp.id, { status: "CALLED", called_at: new Date().toISOString() }).catch(e => console.warn(e));
+          await logQueueEvent({ queue_id: nextUp.id, event_type: "CALLED", previous_status: "WAITING", new_status: "CALLED", performed_by: currentUser?.email || "mock-user", notes: "Auto-called after previous completed" }).catch(e => console.warn(e));
+          return { autoCalledNumber: nextUp.queue_number };
+        }
       }
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["booth-queues", service.id] });
       queryClient.invalidateQueries({ queryKey: ["queues"] });
       queryClient.invalidateQueries({ queryKey: ["participants"] });
-      toast({ title: "Berhasil", description: "Status antrian diperbarui" });
+      if (data?.autoCalledNumber) {
+        toast({ title: "Selesai — Antrian Berikutnya Dipanggil", description: `Nomor ${data.autoCalledNumber} dipanggil otomatis` });
+      } else {
+        toast({ title: "Berhasil", description: "Status antrian diperbarui" });
+      }
     },
   });
 
@@ -286,16 +301,10 @@ function BoothPanel({ service, participants, services, currentUser, compact = fa
                       <Button
                         size="sm"
                         className="w-full gap-1.5 text-xs h-7 bg-green-600 hover:bg-green-700"
-                        onClick={() => {
-                          handleAction(activeQueue, "DONE", "SERVICE_DONE");
-                          setTimeout(() => {
-                            if (nextWaiting && !called && !qrVerified && !serving)
-                              handleAction(nextWaiting, "CALLED", "CALLED");
-                          }, 800);
-                        }}
+                        onClick={() => handleAction(activeQueue, "DONE", "SERVICE_DONE")}
                         disabled={updateQueue.isPending}
                       >
-                        <CheckCircle2 className="w-3.5 h-3.5" /> Selesai & Lanjut
+                        <CheckCircle2 className="w-3.5 h-3.5" /> Selesai
                       </Button>
                     )}
 
@@ -506,15 +515,9 @@ function BoothPanel({ service, participants, services, currentUser, compact = fa
                       )}
                       {activeQueue.status === "SERVING" && (
                         <Button className="gap-1.5 col-span-2 bg-green-600 hover:bg-green-700"
-                          onClick={() => {
-                            handleAction(activeQueue, "DONE", "SERVICE_DONE");
-                            setTimeout(() => {
-                              if (nextWaiting && !called && !qrVerified && !serving)
-                                handleAction(nextWaiting, "CALLED", "CALLED");
-                            }, 800);
-                          }}
+                          onClick={() => handleAction(activeQueue, "DONE", "SERVICE_DONE")}
                           disabled={updateQueue.isPending}>
-                          <CheckCircle2 className="w-4 h-4" /> Selesai & Lanjut
+                          <CheckCircle2 className="w-4 h-4" /> Selesai
                         </Button>
                       )}
                       {(activeQueue.status === "CALLED" || activeQueue.status === "QR_VERIFIED" || activeQueue.status === "SERVING") && (
