@@ -18,10 +18,18 @@ import { PARTICIPANT_STATUS_LABELS, PARTICIPANT_STATUS_COLORS, SLOT_TYPE_COLORS 
 
 const PAGE_SIZE = 15;
 
+const MOBILE_STATUS_LABELS = {
+  REGISTERED: "Daftar",
+  PARTIALLY_COMPLETED: "Sebagian",
+  COMPLETED: "Selesai",
+  CANCELLED: "Batal",
+};
+
 function StatusBadge({ status }) {
   return (
-    <Badge className={`text-xs font-medium border ${PARTICIPANT_STATUS_COLORS[status] || "bg-gray-100 text-gray-700"}`}>
-      {PARTICIPANT_STATUS_LABELS[status] || status}
+    <Badge className={`text-[10px] sm:text-xs font-medium border whitespace-nowrap ${PARTICIPANT_STATUS_COLORS[status] || "bg-gray-100 text-gray-700"}`}>
+      <span className="sm:hidden">{MOBILE_STATUS_LABELS[status] || status}</span>
+      <span className="hidden sm:inline">{PARTICIPANT_STATUS_LABELS[status] || status}</span>
     </Badge>
   );
 }
@@ -296,16 +304,20 @@ export default function Participants() {
             <table className="w-full text-sm">
               <thead className="bg-muted/50 border-y border-border">
                 <tr>
-                  {[
-                    "No. Reg", "Nama", "No. Telp", "Unit/Divisi",
-                    "Antrian Medis", "Layanan Medis", "Slot",
-                    "Antrian Mata", "Layanan Mata", "Slot",
-                    "Kategori Peserta", "Status", "Waktu Daftar", "Aksi"
-                  ].map((col, i) => (
-                    <th key={i} className="text-left text-xs font-semibold text-muted-foreground py-2.5 px-3 whitespace-nowrap">
-                      {col}
-                    </th>
-                  ))}
+                  <th className="hidden sm:table-cell text-left text-xs font-semibold text-muted-foreground py-2.5 px-2 sm:px-3 whitespace-nowrap">No. Reg</th>
+                  <th className="text-left text-xs font-semibold text-muted-foreground py-2.5 px-2 sm:px-3 whitespace-nowrap">Nama</th>
+                  <th className="hidden md:table-cell text-left text-xs font-semibold text-muted-foreground py-2.5 px-2 sm:px-3 whitespace-nowrap">No. Telp</th>
+                  <th className="hidden lg:table-cell text-left text-xs font-semibold text-muted-foreground py-2.5 px-2 sm:px-3 whitespace-nowrap">Unit/Divisi</th>
+                  <th className="text-left text-xs font-semibold text-muted-foreground py-2.5 px-2 sm:px-3 whitespace-nowrap">Medis</th>
+                  <th className="hidden xl:table-cell text-left text-xs font-semibold text-muted-foreground py-2.5 px-2 sm:px-3 whitespace-nowrap">Layanan Medis</th>
+                  <th className="hidden lg:table-cell text-left text-xs font-semibold text-muted-foreground py-2.5 px-2 sm:px-3 whitespace-nowrap">Slot</th>
+                  <th className="text-left text-xs font-semibold text-muted-foreground py-2.5 px-2 sm:px-3 whitespace-nowrap">Mata</th>
+                  <th className="hidden xl:table-cell text-left text-xs font-semibold text-muted-foreground py-2.5 px-2 sm:px-3 whitespace-nowrap">Layanan Mata</th>
+                  <th className="hidden lg:table-cell text-left text-xs font-semibold text-muted-foreground py-2.5 px-2 sm:px-3 whitespace-nowrap">Slot</th>
+                  <th className="hidden md:table-cell text-left text-xs font-semibold text-muted-foreground py-2.5 px-2 sm:px-3 whitespace-nowrap">Kategori</th>
+                  <th className="text-left text-xs font-semibold text-muted-foreground py-2.5 px-2 sm:px-3 whitespace-nowrap">Status</th>
+                  <th className="hidden md:table-cell text-left text-xs font-semibold text-muted-foreground py-2.5 px-2 sm:px-3 whitespace-nowrap">Waktu Daftar</th>
+                  <th className="text-left text-xs font-semibold text-muted-foreground py-2.5 px-2 sm:px-3 whitespace-nowrap">Aksi</th>
                 </tr>
               </thead>
               <tbody>
@@ -322,58 +334,58 @@ export default function Participants() {
                 ) : (
                   paged.map(p => (
                     <tr key={p.id} className="border-b border-border last:border-0 hover:bg-muted/20 transition-colors">
-                      <td className="py-2.5 px-3">
+                      <td className="hidden sm:table-cell py-2.5 px-2 sm:px-3">
                         <span className="text-xs font-mono text-muted-foreground">{p.registration_number}</span>
                       </td>
-                      <td className="py-2.5 px-3 font-medium whitespace-nowrap">{p.full_name}</td>
-                      <td className="py-2.5 px-3 text-muted-foreground whitespace-nowrap">{p.phone_number}</td>
-                      <td className="py-2.5 px-3 text-muted-foreground whitespace-nowrap max-w-[120px] truncate">{p.unit_division}</td>
-                      <td className="py-2.5 px-3">
-                        <span className="font-mono font-bold text-primary">{p.medQueue?.queue_number || "—"}</span>
+                      <td className="py-2.5 px-2 sm:px-3 font-medium whitespace-nowrap">{p.full_name}</td>
+                      <td className="hidden md:table-cell py-2.5 px-2 sm:px-3 text-muted-foreground whitespace-nowrap">{p.phone_number}</td>
+                      <td className="hidden lg:table-cell py-2.5 px-2 sm:px-3 text-muted-foreground whitespace-nowrap max-w-[120px] truncate">{p.unit_division}</td>
+                      <td className="py-2.5 px-2 sm:px-3">
+                        <span className="font-mono font-bold text-primary text-xs sm:text-sm">{p.medQueue?.queue_number || "—"}</span>
                       </td>
-                      <td className="py-2.5 px-3 text-xs text-muted-foreground whitespace-nowrap">
+                      <td className="hidden xl:table-cell py-2.5 px-2 sm:px-3 text-xs text-muted-foreground whitespace-nowrap">
                         {serviceMap[p.medical_service_id]?.service_name || "—"}
                       </td>
-                      <td className="py-2.5 px-3">
+                      <td className="hidden lg:table-cell py-2.5 px-2 sm:px-3">
                         {p.medical_slot_type && <SlotBadge type={p.medical_slot_type} />}
                       </td>
-                      <td className="py-2.5 px-3">
-                        <span className="font-mono font-bold text-accent">{p.eyeQueue?.queue_number || "—"}</span>
+                      <td className="py-2.5 px-2 sm:px-3">
+                        <span className="font-mono font-bold text-accent text-xs sm:text-sm">{p.eyeQueue?.queue_number || "—"}</span>
                       </td>
-                      <td className="py-2.5 px-3 text-xs text-muted-foreground whitespace-nowrap">
+                      <td className="hidden xl:table-cell py-2.5 px-2 sm:px-3 text-xs text-muted-foreground whitespace-nowrap">
                         {serviceMap[p.eye_service_id]?.service_name || "—"}
                       </td>
-                      <td className="py-2.5 px-3">
+                      <td className="hidden lg:table-cell py-2.5 px-2 sm:px-3">
                         {p.eye_slot_type && <SlotBadge type={p.eye_slot_type} />}
                       </td>
-                      <td className="py-2.5 px-3">
+                      <td className="hidden md:table-cell py-2.5 px-2 sm:px-3">
                         <CategoryBadge category={p.participant_category} />
                       </td>
-                      <td className="py-2.5 px-3">
+                      <td className="py-2.5 px-2 sm:px-3">
                         <StatusBadge status={p.computedStatus} />
                       </td>
-                      <td className="py-2.5 px-3 text-xs text-muted-foreground whitespace-nowrap">
+                      <td className="hidden md:table-cell py-2.5 px-2 sm:px-3 text-xs text-muted-foreground whitespace-nowrap">
                         {p.registered_at
                           ? format(new Date(p.registered_at), "dd/MM/yy HH:mm")
                           : p.created_date
                           ? format(new Date(p.created_date), "dd/MM/yy HH:mm")
                           : "—"}
                       </td>
-                      <td className="py-2.5 px-3">
-                        <div className="flex items-center gap-1">
+                      <td className="py-2.5 px-2 sm:px-3">
+                        <div className="flex items-center gap-0.5 sm:gap-1">
                           <Button
                             variant="ghost"
                             size="icon"
-                            className="h-7 w-7 text-muted-foreground hover:text-primary"
+                            className="h-6 w-6 sm:h-7 sm:w-7 text-muted-foreground hover:text-primary"
                             title="Lihat Detail"
                             onClick={() => navigate(`/participants/detail?id=${p.id}`)}
                           >
-                            <Eye className="w-4 h-4" />
+                            <Eye className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                           </Button>
                           <Button
                             variant="ghost"
                             size="icon"
-                            className="h-7 w-7 text-muted-foreground hover:text-primary"
+                            className="hidden sm:flex h-7 w-7 text-muted-foreground hover:text-primary"
                             title="Cetak Ulang Kupon"
                             onClick={() => handleReprint(p)}
                           >

@@ -169,41 +169,25 @@ export default function AdminDashboard() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between gap-2">
-         <PageHeader
-           title="Dashboard"
-           subtitle={event ? `${event.event_name} · ${event.location}` : "Memuat data..."}
-           icon={Activity}
-         />
-         <div className="flex gap-2">
-           <Button
-             variant="outline"
-             size="sm"
-             onClick={() => setShowDataChecker(true)}
-             className="gap-2"
-           >
-             <CheckCircle className="w-4 h-4" /> Data Check
-           </Button>
-           <Button
-             variant="outline"
-             size="sm"
-             onClick={() => setShowTestWizard(true)}
-             className="gap-2"
-           >
-             <TestTube className="w-4 h-4" /> Test Flow
-           </Button>
-           <Button
-             variant="destructive"
-             size="sm"
-             onClick={switchRole}
-             disabled={switching}
-             className="gap-2"
-           >
-             <LogOut className="w-4 h-4" /> 
-             {switching ? 'Mengganti...' : `Ganti ke ${user?.role === 'admin' ? 'Nakes' : 'Admin'}`}
-           </Button>
-         </div>
-       </div>
+      <PageHeader
+        title="Dashboard"
+        subtitle={event ? `${event.event_name} · ${event.location}` : "Memuat data..."}
+        icon={Activity}
+        action={
+          <div className="flex flex-wrap gap-2">
+            <Button variant="outline" size="sm" onClick={() => setShowDataChecker(true)} className="gap-2">
+              <CheckCircle className="w-4 h-4" /> Data Check
+            </Button>
+            <Button variant="outline" size="sm" onClick={() => setShowTestWizard(true)} className="gap-2">
+              <TestTube className="w-4 h-4" /> Test Flow
+            </Button>
+            <Button variant="destructive" size="sm" onClick={switchRole} disabled={switching} className="gap-2">
+              <LogOut className="w-4 h-4" />
+              {switching ? 'Mengganti...' : `Ganti ke ${user?.role === 'admin' ? 'Nakes' : 'Admin'}`}
+            </Button>
+          </div>
+        }
+      />
 
       <TestFlowWizard isOpen={showTestWizard} onClose={() => setShowTestWizard(false)} />
       <DataConsistencyChecker isOpen={showDataChecker} onClose={() => setShowDataChecker(false)} />
