@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef } from "react";
-import { base44 } from "@/api/base44Client";
+import { base44 } from "@/api/client";
 import { RefreshCw, Monitor, Eye, Stethoscope, Volume2, Users, Clock } from "lucide-react";
 
 function usePrev(val) {

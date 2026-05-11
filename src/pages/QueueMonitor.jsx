@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { base44 } from "@/api/base44Client";
+import { base44 } from "@/api/client";
 import PageHeader from "@/components/layout/PageHeader";
 import { Monitor, Smartphone, ExternalLink, Tv2, QrCode, Copy, CheckCircle2 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";

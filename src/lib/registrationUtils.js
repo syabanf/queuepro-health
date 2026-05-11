@@ -1,4 +1,4 @@
-import { base44 } from "@/api/base44Client";
+import { base44 } from "@/api/client";
 
 export const SERVICE_CODE_MAP = {
   "MCU": "A",

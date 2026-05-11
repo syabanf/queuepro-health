@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { base44 } from "@/api/base44Client";
+import { base44 } from "@/api/client";
 import { Button } from "@/components/ui/button";
 import { Settings, Save, RotateCcw, Loader2, CheckCircle2, AlertCircle } from "lucide-react";
 import PageHeader from "@/components/layout/PageHeader";

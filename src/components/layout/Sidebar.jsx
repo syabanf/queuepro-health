@@ -5,7 +5,7 @@ import {
   FileText, Settings, LogOut, Menu, X, ChevronRight,
   Activity, Shield, Stethoscope
 } from "lucide-react";
-import { base44 } from "@/api/base44Client";
+import { base44 } from "@/api/client";
 import { Button } from "@/components/ui/button";
 
 const adminMenuSections = [
