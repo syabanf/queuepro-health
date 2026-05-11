@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { base44 } from "@/api/client";
 import { Card, CardContent } from "@/components/ui/card";
@@ -14,13 +14,20 @@ import {
 import { formatQueueNumber, getNextQueueSequence, generateRegistrationNumber } from "@/lib/registrationUtils";
 import { generateQrToken, buildQrCodeUrl } from "@/lib/qrUtils";
 
-const SERVICE_VISUAL = {
-  'svc-a': { grad: ['#003D79', '#005BAB'], Icon: Activity, label: 'MINI MCU',        provider: 'PRIMAYA HOSPITAL' },
-  'svc-b': { grad: ['#004D8C', '#0069C0'], Icon: Syringe,  label: 'VITAMIN C',        provider: 'PRIMAYA HOSPITAL' },
-  'svc-c': { grad: ['#005BAB', '#0077CC'], Icon: Syringe,  label: 'VAKSIN INFLUENZA', provider: 'PRIMAYA HOSPITAL' },
-  'svc-d': { grad: ['#004D8C', '#006BB3'], Icon: Eye,      label: 'AIRDOC',           provider: 'OPTIK MELAWAI' },
-  'svc-e': { grad: ['#003D79', '#005BAB'], Icon: Eye,      label: 'AUTOREF',          provider: 'OPTIK MELAWAI' },
-};
+const MEDICAL_ICONS = [Activity, Syringe, Stethoscope];
+
+function getServiceVisual(service, idx = 0) {
+  const isEye = service?.service_group === 'EYE_CHECK';
+  const grads = isEye
+    ? [['#004D8C', '#006BB3'], ['#003D79', '#005BAB']]
+    : [['#003D79', '#005BAB'], ['#004D8C', '#0069C0'], ['#005BAB', '#0077CC']];
+  return {
+    grad: grads[idx % grads.length],
+    Icon: isEye ? Eye : (MEDICAL_ICONS[idx % MEDICAL_ICONS.length]),
+    label: (service?.service_code || '').toUpperCase(),
+    provider: (service?.provider || (isEye ? 'OPTIK MELAWAI' : 'PRIMAYA HOSPITAL')).toUpperCase(),
+  };
+}
 
 function ServiceOption({ service, selected, onSelect, getRemainingSlots, isServiceFull, groupKey }) {
   const remaining = getRemainingSlots(service);
@@ -65,9 +72,8 @@ function ServiceOption({ service, selected, onSelect, getRemainingSlots, isServi
   );
 }
 
-function QueueTicket({ queue, service }) {
-  const vis = SERVICE_VISUAL[service?.id] || SERVICE_VISUAL['svc-a'];
-  const { grad: [c1, c2], Icon, label, provider } = vis;
+function QueueTicket({ queue, service, idx = 0 }) {
+  const { grad: [c1, c2], Icon, label, provider } = getServiceVisual(service, idx);
 
   return (
     <Card className="overflow-hidden shadow-lg border-0">
@@ -119,19 +125,34 @@ export default function PublicRegistration() {
   const { data: services = [], isLoading: loadingServices } = useQuery({
     queryKey: ["pub-services"],
     queryFn: () => base44.entities.Service.list(),
-    refetchInterval: 15000,
+    refetchInterval: 30000,
   });
 
   const { data: participants = [] } = useQuery({
     queryKey: ["pub-participants"],
     queryFn: () => base44.entities.Participant.list(),
-    refetchInterval: 15000,
+    refetchInterval: 30000,
   });
 
   const { data: eventSettings = [] } = useQuery({
     queryKey: ["pub-eventSettings"],
     queryFn: () => base44.entities.EventSetting.list(),
+    refetchInterval: 60000,
   });
+
+  // Realtime push: invalidate on any write without page reload
+  useEffect(() => {
+    const unsubServices = base44.entities.Service.subscribe(() => {
+      queryClient.invalidateQueries({ queryKey: ["pub-services"] });
+    });
+    const unsubParticipants = base44.entities.Participant.subscribe(() => {
+      queryClient.invalidateQueries({ queryKey: ["pub-participants"] });
+    });
+    const unsubEvent = base44.entities.EventSetting.subscribe(() => {
+      queryClient.invalidateQueries({ queryKey: ["pub-eventSettings"] });
+    });
+    return () => { unsubServices(); unsubParticipants(); unsubEvent(); };
+  }, [queryClient]);
 
   const event = eventSettings[0];
   const activeServices = services.filter(s => s.is_active && s.service_code && s.service_name);
@@ -265,8 +286,8 @@ export default function PublicRegistration() {
           </Card>
 
           {/* Queue tickets */}
-          {queues.map(({ queue, service }) => (
-            <QueueTicket key={queue.id} queue={queue} service={service} />
+          {queues.map(({ queue, service }, idx) => (
+            <QueueTicket key={queue.id} queue={queue} service={service} idx={idx} />
           ))}
 
           <Button className="w-full" variant="outline" onClick={handleRegisterAnother}>
