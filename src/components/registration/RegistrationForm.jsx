@@ -45,7 +45,10 @@ export default function RegistrationForm({ services, participants = [], eventSet
   const medicalServices = activeServices.filter(s => s.service_group === "MEDICAL");
   const eyeServices = activeServices.filter(s => s.service_group === "EYE_CHECK");
 
-  const getRemainingSlots = (service) => Math.max(0, (service.free_quota || 0) - (service.used_free_quota || 0));
+  const getRemainingSlots = (service) =>
+    Math.max(0, (service.free_quota || 0) - (service.used_free_quota || 0)) +
+    Math.max(0, (service.rp1_quota  || 0) - (service.used_rp1_quota  || 0)) +
+    Math.max(0, (service.special_quota || 0) - (service.used_special_quota || 0));
   const isServiceFull = (service) => getRemainingSlots(service) <= 0;
 
   const validate = () => {
@@ -109,10 +112,12 @@ export default function RegistrationForm({ services, participants = [], eventSet
         qr_verification_status: "NOT_SCANNED",
       });
 
-      // Increment used quota on the service
-      await base44.entities.Service.update(form.service_id, {
-        used_free_quota: (selectedService.used_free_quota || 0) + 1,
-      });
+      // Increment the correct used counter based on quota_status
+      const quotaIncrement =
+        form.quota_status === "RP1_BRI"       ? { used_rp1_quota:     (selectedService.used_rp1_quota     || 0) + 1 }
+        : form.quota_status === "SPECIAL_PRICE" ? { used_special_quota: (selectedService.used_special_quota || 0) + 1 }
+        :                                         { used_free_quota:    (selectedService.used_free_quota    || 0) + 1 };
+      await base44.entities.Service.update(form.service_id, quotaIncrement);
 
       onSuccess({ participant, queue, service: selectedService });
       setForm({ full_name: "", phone_number: "", unit_division: "", service_id: "", quota_status: "FREE" });

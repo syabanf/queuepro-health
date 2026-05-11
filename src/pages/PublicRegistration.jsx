@@ -151,7 +151,10 @@ export default function PublicRegistration() {
   const eyeServices = activeServices.filter(s => s.service_group === "EYE_CHECK");
   const selectedService = services.find(s => s.id === form.service_id);
 
-  const getRemainingSlots = (s) => Math.max(0, (s.free_quota || 0) - (s.used_free_quota || 0));
+  const getRemainingSlots = (s) =>
+    Math.max(0, (s.free_quota    || 0) - (s.used_free_quota    || 0)) +
+    Math.max(0, (s.rp1_quota     || 0) - (s.used_rp1_quota     || 0)) +
+    Math.max(0, (s.special_quota || 0) - (s.used_special_quota || 0));
   const isServiceFull = (s) => getRemainingSlots(s) <= 0;
 
   const totalQuota = services.reduce((sum, s) => sum + (s.free_quota || 0) + (s.paid_quota || 0), 0)
@@ -239,10 +242,11 @@ export default function PublicRegistration() {
         qr_verification_status: "NOT_SCANNED",
       });
 
-      // Increment used quota on the service
+      // Public registration always uses Free Tanpa Syarat
       await base44.entities.Service.update(form.service_id, {
         used_free_quota: (selectedService.used_free_quota || 0) + 1,
       });
+
 
       setResult({ participant, queue, service: selectedService });
       queryClient.invalidateQueries({ queryKey: ["pub-services"] });

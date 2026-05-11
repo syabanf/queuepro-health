@@ -169,7 +169,8 @@ export default function SettingsPage() {
       for (const svc of services) {
         await base44.entities.Service.update(svc.id, {
           used_free_quota: 0,
-          used_paid_quota: 0,
+          used_rp1_quota: 0,
+          used_special_quota: 0,
         });
       }
       queryClient.invalidateQueries({ queryKey: ["services"] });
@@ -199,7 +200,7 @@ export default function SettingsPage() {
       const allParticipants = await base44.entities.Participant.list();
       for (const p of allParticipants) await base44.entities.Participant.delete(p.id);
       for (const svc of services) {
-        await base44.entities.Service.update(svc.id, { used_free_quota: 0, used_paid_quota: 0 });
+        await base44.entities.Service.update(svc.id, { used_free_quota: 0, used_rp1_quota: 0, used_special_quota: 0 });
       }
       queryClient.invalidateQueries();
       const freshServices = await base44.entities.Service.list();

@@ -1,9 +1,9 @@
 import React, { useState } from "react";
 import { Link, useLocation } from "react-router-dom";
-import { 
-  UserPlus, Monitor, LayoutDashboard, Users, Clock, 
+import {
+  UserPlus, Monitor, LayoutDashboard, Users,
   FileText, Settings, LogOut, Menu, X, ChevronRight,
-  Activity, Shield, Stethoscope
+  Activity, Shield, Stethoscope, BarChart3,
 } from "lucide-react";
 import { base44 } from "@/api/client";
 import { Button } from "@/components/ui/button";
@@ -33,6 +33,7 @@ const adminMenuSections = [
     section: "Laporan & Pengaturan",
     items: [
       { label: "Laporan", icon: FileText, path: "/reports" },
+      { label: "Master Kuota", icon: BarChart3, path: "/quota" },
       { label: "Pengaturan", icon: Settings, path: "/settings" },
     ]
   }

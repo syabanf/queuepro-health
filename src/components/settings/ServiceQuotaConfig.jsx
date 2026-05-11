@@ -4,21 +4,25 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
-import { Stethoscope, Eye } from "lucide-react";
+import { Stethoscope, Eye, Gift, CreditCard, Tag } from "lucide-react";
 
-function getQuotaStatus(service) {
+const QUOTA_TYPES = [
+  { limitField: 'free_quota',    usedField: 'used_free_quota',    label: 'Free Tanpa Syarat', color: 'text-green-700',  bg: 'bg-green-50',  border: 'border-green-200',  icon: Gift },
+  { limitField: 'rp1_quota',     usedField: 'used_rp1_quota',     label: 'Rp 1 BRI',          color: 'text-blue-700',   bg: 'bg-blue-50',   border: 'border-blue-200',   icon: CreditCard },
+  { limitField: 'special_quota', usedField: 'used_special_quota', label: 'Special Price',      color: 'text-purple-700', bg: 'bg-purple-50', border: 'border-purple-200', icon: Tag },
+];
+
+function getStatus(service) {
   if (!service.is_active) return { label: "TIDAK AKTIF", color: "bg-gray-100 text-gray-500 border-gray-200" };
-  const freeRem = (service.free_quota || 0) - (service.used_free_quota || 0);
-  const paidRem = (service.paid_quota || 0) - (service.used_paid_quota || 0);
-  const hasQuota = (service.free_quota || 0) + (service.paid_quota || 0) > 0;
-  if (!hasQuota) return { label: "BELUM DISET", color: "bg-blue-50 text-blue-500 border-blue-200" };
-  if (freeRem > 0) return { label: "FREE TERSEDIA", color: "bg-green-100 text-green-700 border-green-200" };
-  if (freeRem <= 0 && paidRem > 0) return { label: "FREE HABIS · PAID TERSEDIA", color: "bg-blue-100 text-blue-700 border-blue-200" };
-  return { label: "KUOTA HABIS", color: "bg-red-100 text-red-700 border-red-200" };
+  const totalLimit = QUOTA_TYPES.reduce((s, qt) => s + (service[qt.limitField] || 0), 0);
+  const totalUsed  = QUOTA_TYPES.reduce((s, qt) => s + (service[qt.usedField]  || 0), 0);
+  if (totalLimit === 0) return { label: "BELUM DISET", color: "bg-blue-50 text-blue-500 border-blue-200" };
+  if (totalUsed >= totalLimit) return { label: "KUOTA HABIS", color: "bg-red-100 text-red-700 border-red-200" };
+  return { label: "TERSEDIA", color: "bg-green-100 text-green-700 border-green-200" };
 }
 
 function ServiceRow({ service, onChange, errors }) {
-  const status = getQuotaStatus(service);
+  const status = getStatus(service);
   const isEye = service.service_group === "EYE_CHECK";
   const set = (field, value) => onChange({ ...service, [field]: value });
 
@@ -32,84 +36,62 @@ function ServiceRow({ service, onChange, errors }) {
           </div>
           <div>
             <p className="font-semibold text-sm">{service.service_name}</p>
-            <p className="text-xs text-muted-foreground">{isEye ? "Pemeriksaan Mata" : "Layanan Medis"}</p>
+            <p className="text-xs text-muted-foreground">{isEye ? "Optik Melawai" : "Primaya Hospital"}</p>
           </div>
         </div>
         <div className="flex items-center gap-2">
           <Badge className={`text-[10px] border whitespace-nowrap ${status.color}`}>{status.label}</Badge>
           <div className="flex items-center gap-1.5">
             <span className="text-xs text-muted-foreground">{service.is_active ? "Aktif" : "Nonaktif"}</span>
-            <Switch
-              checked={!!service.is_active}
-              onCheckedChange={v => set("is_active", v)}
-            />
+            <Switch checked={!!service.is_active} onCheckedChange={v => set("is_active", v)} />
           </div>
         </div>
       </div>
 
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        {/* Booth */}
-        <div>
-          <Label className="text-xs font-medium">No. Booth <span className="text-destructive">*</span></Label>
-          <Input
-            type="number"
-            min={1}
-            className={`mt-1 h-8 text-sm ${errors?.booth_number ? "border-destructive" : ""}`}
-            value={service.booth_number || ""}
-            onChange={e => set("booth_number", parseInt(e.target.value) || "")}
-          />
-          {errors?.booth_number && <p className="text-[10px] text-destructive mt-0.5">{errors.booth_number}</p>}
-        </div>
+      {/* Booth */}
+      <div className="mb-3">
+        <Label className="text-xs font-medium">No. Booth <span className="text-destructive">*</span></Label>
+        <Input
+          type="number"
+          min={1}
+          className={`mt-1 h-8 text-sm w-24 ${errors?.booth_number ? "border-destructive" : ""}`}
+          value={service.booth_number || ""}
+          onChange={e => set("booth_number", parseInt(e.target.value) || "")}
+        />
+      </div>
 
-        {/* Free Quota */}
-        <div>
-          <Label className="text-xs font-medium text-green-700">Kuota Gratis</Label>
-          <Input
-            type="number"
-            min={service.used_free_quota || 0}
-            className={`mt-1 h-8 text-sm ${errors?.free_quota ? "border-destructive" : ""}`}
-            value={service.free_quota ?? 0}
-            onChange={e => set("free_quota", parseInt(e.target.value) || 0)}
-          />
-          {errors?.free_quota
-            ? <p className="text-[10px] text-destructive mt-0.5">{errors.free_quota}</p>
-            : <p className="text-[10px] text-muted-foreground mt-0.5">Terpakai: {service.used_free_quota || 0}</p>
-          }
-        </div>
-
-        {/* Paid Quota */}
-        <div>
-          <Label className="text-xs font-medium text-orange-600">Kuota Berbayar</Label>
-          <Input
-            type="number"
-            min={service.used_paid_quota || 0}
-            className={`mt-1 h-8 text-sm ${errors?.paid_quota ? "border-destructive" : ""}`}
-            value={service.paid_quota ?? 0}
-            onChange={e => set("paid_quota", parseInt(e.target.value) || 0)}
-          />
-          {errors?.paid_quota
-            ? <p className="text-[10px] text-destructive mt-0.5">{errors.paid_quota}</p>
-            : <p className="text-[10px] text-muted-foreground mt-0.5">Terpakai: {service.used_paid_quota || 0}</p>
-          }
-        </div>
-
-        {/* Remaining (read-only) */}
-        <div className="space-y-1">
-          <Label className="text-xs font-medium text-muted-foreground">Sisa</Label>
-          <div className="flex gap-2 mt-1">
-            <div className="flex-1 h-8 rounded-md bg-green-50 border border-green-200 flex items-center justify-center">
-              <span className="text-sm font-bold text-green-700">
-                {Math.max(0, (service.free_quota || 0) - (service.used_free_quota || 0))}
-              </span>
+      {/* 3 quota types */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+        {QUOTA_TYPES.map(qt => {
+          const QtIcon = qt.icon;
+          const limit = service[qt.limitField] || 0;
+          const used  = service[qt.usedField]  || 0;
+          const rem   = Math.max(0, limit - used);
+          return (
+            <div key={qt.limitField} className={`rounded-lg border p-3 ${qt.bg} ${qt.border}`}>
+              <div className="flex items-center gap-1.5 mb-2">
+                <QtIcon className={`w-3.5 h-3.5 ${qt.color}`} />
+                <span className={`text-[11px] font-bold ${qt.color}`}>{qt.label}</span>
+              </div>
+              <div className="space-y-1">
+                <div>
+                  <Label className="text-[10px] text-muted-foreground">Kuota</Label>
+                  <Input
+                    type="number"
+                    min={used}
+                    className="h-7 mt-0.5 text-sm bg-white"
+                    value={limit}
+                    onChange={e => set(qt.limitField, parseInt(e.target.value) || 0)}
+                  />
+                </div>
+                <div className="flex justify-between text-[10px] text-muted-foreground pt-0.5">
+                  <span>Terpakai: <span className="font-mono font-medium">{used}</span></span>
+                  <span>Sisa: <span className={`font-mono font-medium ${rem <= 0 && limit > 0 ? "text-destructive" : "text-foreground"}`}>{rem}</span></span>
+                </div>
+              </div>
             </div>
-            <div className="flex-1 h-8 rounded-md bg-orange-50 border border-orange-200 flex items-center justify-center">
-              <span className="text-sm font-bold text-orange-600">
-                {Math.max(0, (service.paid_quota || 0) - (service.used_paid_quota || 0))}
-              </span>
-            </div>
-          </div>
-          <p className="text-[10px] text-muted-foreground text-center">Gratis · Bayar</p>
-        </div>
+          );
+        })}
       </div>
     </div>
   );
@@ -117,7 +99,7 @@ function ServiceRow({ service, onChange, errors }) {
 
 export default function ServiceQuotaConfig({ services, onChange, serviceErrors }) {
   const medical = services.filter(s => s.service_group === "MEDICAL");
-  const eye = services.filter(s => s.service_group === "EYE_CHECK");
+  const eye     = services.filter(s => s.service_group === "EYE_CHECK");
 
   const handleChange = (updated) => {
     onChange(services.map(s => s.id === updated.id ? updated : s));
@@ -125,40 +107,28 @@ export default function ServiceQuotaConfig({ services, onChange, serviceErrors }
 
   return (
     <div className="space-y-6">
-      {/* Medical */}
       <Card>
         <CardHeader className="pb-3">
           <CardTitle className="flex items-center gap-2 text-sm">
-            <Stethoscope className="w-4 h-4 text-primary" /> Layanan Medis
+            <Stethoscope className="w-4 h-4 text-primary" /> Layanan Medis — Primaya Hospital
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-3">
           {medical.map(s => (
-            <ServiceRow
-              key={s.id}
-              service={s}
-              onChange={handleChange}
-              errors={serviceErrors?.[s.id]}
-            />
+            <ServiceRow key={s.id} service={s} onChange={handleChange} errors={serviceErrors?.[s.id]} />
           ))}
         </CardContent>
       </Card>
 
-      {/* Eye */}
       <Card>
         <CardHeader className="pb-3">
           <CardTitle className="flex items-center gap-2 text-sm">
-            <Eye className="w-4 h-4 text-accent" /> Pemeriksaan Mata
+            <Eye className="w-4 h-4 text-accent" /> Pemeriksaan Mata — Optik Melawai
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-3">
           {eye.map(s => (
-            <ServiceRow
-              key={s.id}
-              service={s}
-              onChange={handleChange}
-              errors={serviceErrors?.[s.id]}
-            />
+            <ServiceRow key={s.id} service={s} onChange={handleChange} errors={serviceErrors?.[s.id]} />
           ))}
         </CardContent>
       </Card>

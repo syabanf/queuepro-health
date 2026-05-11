@@ -20,6 +20,7 @@ import LEDMonitor from "@/pages/LEDMonitor";
 import MobileMonitor from "@/pages/MobileMonitor";
 import DemoLauncher from "@/pages/DemoLauncher";
 import PublicRegistration from "@/pages/PublicRegistration";
+import QuotaMaster from "@/pages/QuotaMaster";
 
 
 const AuthenticatedApp = () => {
@@ -60,6 +61,7 @@ const AuthenticatedApp = () => {
         <Route path="/participants/detail" element={isAdmin ? <ParticipantDetail /> : <Navigate to="/booth" replace />} />
         <Route path="/reports" element={isAdmin ? <Reports /> : <Navigate to="/booth" replace />} />
         <Route path="/settings" element={isAdmin ? <SettingsPage /> : <Navigate to="/booth" replace />} />
+        <Route path="/quota" element={isAdmin ? <QuotaMaster /> : <Navigate to="/booth" replace />} />
 
         {/* Shared Routes */}
         <Route path="/booth" element={<NakesBooth />} />

@@ -102,11 +102,11 @@ const DEMO_USERS = [
 ];
 
 const SEED_SERVICES = [
-  { id: 'svc-a', service_code: 'A', service_name: 'Mini MCU',             service_group: 'MEDICAL',    booth_number: 1, free_quota: 150, paid_quota: 0, used_free_quota: 0, used_paid_quota: 0, quota_status: 'AVAILABLE', is_active: true, provider: 'Primaya Hospital', created_date: new Date().toISOString() },
-  { id: 'svc-b', service_code: 'B', service_name: 'Vitamin C Injection',   service_group: 'MEDICAL',    booth_number: 2, free_quota: 150, paid_quota: 0, used_free_quota: 0, used_paid_quota: 0, quota_status: 'AVAILABLE', is_active: true, provider: 'Primaya Hospital', created_date: new Date().toISOString() },
-  { id: 'svc-c', service_code: 'C', service_name: 'Influenza Vaccine',     service_group: 'MEDICAL',    booth_number: 3, free_quota: 150, paid_quota: 0, used_free_quota: 0, used_paid_quota: 0, quota_status: 'AVAILABLE', is_active: true, provider: 'Primaya Hospital', created_date: new Date().toISOString() },
-  { id: 'svc-d', service_code: 'D', service_name: 'Eye Check (Airdoc)',    service_group: 'EYE_CHECK',  booth_number: 4, free_quota: 150, paid_quota: 0, used_free_quota: 0, used_paid_quota: 0, quota_status: 'AVAILABLE', is_active: true, provider: 'Optik Melawai',   created_date: new Date().toISOString() },
-  { id: 'svc-e', service_code: 'E', service_name: 'Eye Check (Autoref)',   service_group: 'EYE_CHECK',  booth_number: 5, free_quota: 150, paid_quota: 0, used_free_quota: 0, used_paid_quota: 0, quota_status: 'AVAILABLE', is_active: true, provider: 'Optik Melawai',   created_date: new Date().toISOString() },
+  { id: 'svc-a', service_code: 'A', service_name: 'Mini MCU',             service_group: 'MEDICAL',    booth_number: 1, free_quota: 150, rp1_quota: 0, special_quota: 0, used_free_quota: 0, used_rp1_quota: 0, used_special_quota: 0, is_active: true, provider: 'Primaya Hospital', created_date: new Date().toISOString() },
+  { id: 'svc-b', service_code: 'B', service_name: 'Vitamin C Injection',   service_group: 'MEDICAL',    booth_number: 2, free_quota: 150, rp1_quota: 0, special_quota: 0, used_free_quota: 0, used_rp1_quota: 0, used_special_quota: 0, is_active: true, provider: 'Primaya Hospital', created_date: new Date().toISOString() },
+  { id: 'svc-c', service_code: 'C', service_name: 'Influenza Vaccine',     service_group: 'MEDICAL',    booth_number: 3, free_quota: 150, rp1_quota: 0, special_quota: 0, used_free_quota: 0, used_rp1_quota: 0, used_special_quota: 0, is_active: true, provider: 'Primaya Hospital', created_date: new Date().toISOString() },
+  { id: 'svc-d', service_code: 'D', service_name: 'Eye Check (Airdoc)',    service_group: 'EYE_CHECK',  booth_number: 4, free_quota: 150, rp1_quota: 0, special_quota: 0, used_free_quota: 0, used_rp1_quota: 0, used_special_quota: 0, is_active: true, provider: 'Optik Melawai',   created_date: new Date().toISOString() },
+  { id: 'svc-e', service_code: 'E', service_name: 'Eye Check (Autoref)',   service_group: 'EYE_CHECK',  booth_number: 5, free_quota: 150, rp1_quota: 0, special_quota: 0, used_free_quota: 0, used_rp1_quota: 0, used_special_quota: 0, is_active: true, provider: 'Optik Melawai',   created_date: new Date().toISOString() },
 ];
 
 const SEED_EVENT = {
@@ -131,7 +131,7 @@ function seedIfEmpty(name, data) {
   }
 }
 
-const DATA_VERSION = '4.0';
+const DATA_VERSION = '5.0';
 
 function initSeeds() {
   const storedVersion = localStorage.getItem(DB_PREFIX + 'data_version');
