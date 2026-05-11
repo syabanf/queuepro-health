@@ -128,17 +128,34 @@ export default function MobileMonitor() {
       background: "linear-gradient(160deg, #003D79 0%, #005BAB 50%, #0077CC 100%)"
     }}>
       {/* Header */}
-      <div className="px-3 pt-2 pb-1.5 backdrop-blur-md bg-black/20 border-b border-white/10 flex-shrink-0">
-        <div className="flex items-center justify-between">
-          <div>
-            <p className="text-cyan-300 text-[10px] font-bold uppercase tracking-widest">{eventName}</p>
-            <h1 className="text-white font-black text-sm leading-tight">Monitor Antrian</h1>
+      <div className="px-3 pt-2 pb-2 backdrop-blur-md bg-black/20 border-b border-white/10 flex-shrink-0">
+        {/* Logos row */}
+        <div className="flex items-center gap-2 mb-1.5">
+          <div className="bg-white rounded-lg px-2 py-1 flex items-center justify-center">
+            <img
+              src="/logo-bri-full.svg"
+              alt="BRI"
+              className="h-5 object-contain"
+              onError={e => e.target.style.display='none'}
+            />
           </div>
-          <button onClick={fetchData} className="flex items-center gap-1 text-white/50 text-[10px] active:scale-95">
+          <div className="w-px h-5 bg-white/25 flex-shrink-0" />
+          <div className="bg-white rounded-lg px-2 py-1 flex items-center justify-center">
+            <img
+              src="/logo-danantara.png"
+              alt="Danantara Indonesia"
+              className="h-5 object-contain"
+              onError={e => e.target.style.display='none'}
+            />
+          </div>
+          <button onClick={fetchData} className="flex items-center gap-1 text-white/50 text-[10px] active:scale-95 ml-auto">
             <RefreshCw className={`w-3 h-3 ${isRefreshing ? "animate-spin" : ""}`} />
             {lastUpdated.toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit", second: "2-digit" })}
           </button>
         </div>
+        {/* Event name */}
+        <p className="text-cyan-300 text-[10px] font-bold uppercase tracking-widest leading-tight">{eventName}</p>
+        <h1 className="text-white font-black text-xs leading-tight">Monitor Antrian</h1>
       </div>
 
       {/* Service Cards */}

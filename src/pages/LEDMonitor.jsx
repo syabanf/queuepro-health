@@ -173,17 +173,40 @@ export default function LEDMonitor() {
       <div className="relative h-full flex flex-col px-5 pt-4 pb-4 gap-3">
         {/* Top Bar */}
         <div className="flex items-center justify-between flex-shrink-0">
-          <div className="flex items-center gap-3">
-            <div className="flex items-center gap-2">
-              <img src="/logo-bri.png" alt="BRI" className="h-8 object-contain brightness-0 invert" onError={e => e.target.style.display='none'} />
-              <span className="text-white font-black text-xl tracking-widest">BRI</span>
+          {/* Logos + Event Name */}
+          <div className="flex items-center gap-4">
+            {/* BRI Logo */}
+            <div className="bg-white rounded-xl px-3 py-1.5 flex items-center justify-center flex-shrink-0">
+              <img
+                src="/logo-bri-full.svg"
+                alt="BRI"
+                className="h-8 object-contain"
+                onError={e => e.target.style.display='none'}
+              />
             </div>
-            <div className="w-px h-6 bg-white/20" />
+
+            <div className="w-px h-8 bg-white/20 flex-shrink-0" />
+
+            {/* Danantara Logo */}
+            <div className="bg-white rounded-xl px-3 py-1.5 flex items-center justify-center flex-shrink-0">
+              <img
+                src="/logo-danantara.png"
+                alt="Danantara Indonesia"
+                className="h-8 object-contain"
+                onError={e => e.target.style.display='none'}
+              />
+            </div>
+
+            <div className="w-px h-8 bg-white/20 flex-shrink-0" />
+
+            {/* Event name */}
             <div>
               <p className="text-cyan-300 text-xs font-bold uppercase tracking-[0.25em]">{eventTagline}</p>
               <h1 className="text-white font-black text-xl leading-tight">{eventName}</h1>
             </div>
           </div>
+
+          {/* Clock */}
           <div className="flex items-center gap-2 text-white/60">
             <Clock className="w-4 h-4" />
             <span className="font-mono font-black text-white text-2xl">{timeStr}</span>
