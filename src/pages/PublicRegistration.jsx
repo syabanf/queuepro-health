@@ -41,7 +41,7 @@ function ServiceOption({ service, selected, onSelect, getRemainingSlots, isServi
           : selected
           ? "border-primary bg-primary/5 shadow-sm"
           : "border-border hover:border-primary/40 bg-card"}`}
-      onClick={() => { if (!full) onSelect(service.id); }}
+      onClick={() => { if (!full) onSelect(selected ? "" : service.id); }}
     >
       <RadioGroupItem
         value={service.id}
