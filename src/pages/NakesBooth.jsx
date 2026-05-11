@@ -494,7 +494,7 @@ export default function NakesBooth() {
 
                                         <div className="grid grid-cols-2 gap-2">
                                           {/* Primary: Next Action */}
-                                          {activeQueue.status === "CALLED" && (
+                                          {(activeQueue.status === "CALLED" || activeQueue.status === "QR_VERIFIED") && (
                                             <Button
                                               className="gap-1.5 bg-green-600 hover:bg-green-700"
                                               onClick={() => handleAction(activeQueue, "SERVING", "SERVICE_STARTED")}
@@ -524,7 +524,7 @@ export default function NakesBooth() {
                            )}
 
                            {/* Secondary: Skip/Cancel */}
-                           {(activeQueue.status === "CALLED" || activeQueue.status === "SERVING") && (
+                           {(activeQueue.status === "CALLED" || activeQueue.status === "QR_VERIFIED" || activeQueue.status === "SERVING") && (
                              <Button 
                                variant="outline" 
                                className="gap-1.5 text-orange-600 border-orange-300 hover:bg-orange-50"

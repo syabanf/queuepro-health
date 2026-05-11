@@ -55,13 +55,13 @@ export default function QueuePreviewCard({ result, onPrint, onReset }) {
           <QueueNumberBig
             number={result.medicalQueue.queue_number}
             serviceName={result.medicalService.service_name}
-            slotType={result.medicalQueue.slot_type}
+            slotType={result.medicalQueue.payment_display_status}
             group="MEDICAL"
           />
           <QueueNumberBig
             number={result.eyeQueue.queue_number}
             serviceName={result.eyeService.service_name}
-            slotType={result.eyeQueue.slot_type}
+            slotType={result.eyeQueue.payment_display_status}
             group="EYE_CHECK"
           />
         </div>

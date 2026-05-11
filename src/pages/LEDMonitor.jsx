@@ -10,7 +10,7 @@ function usePrev(val) {
 
 function ServiceCard({ service, queues, participants }) {
   const sorted = [...queues].sort((a, b) => (a.queue_sequence || 0) - (b.queue_sequence || 0));
-  const serving = sorted.find(q => q.status === "SERVING" || q.status === "CALLED");
+  const serving = sorted.find(q => q.status === "SERVING" || q.status === "QR_VERIFIED" || q.status === "CALLED");
   const waiting = sorted.filter(q => q.status === "WAITING");
   const next = waiting[0];
   const doneCount = sorted.filter(q => q.status === "DONE").length;
@@ -60,9 +60,11 @@ function ServiceCard({ service, queues, participants }) {
         {serving && (
           <>
             <div className={`mt-2 px-3 py-0.5 rounded-full text-xs font-bold ${
-              serving.status === "SERVING" ? "bg-green-400/20 text-green-300 border border-green-400/30" : "bg-amber-400/20 text-amber-300 border border-amber-400/30"
+              serving.status === "SERVING" ? "bg-green-400/20 text-green-300 border border-green-400/30"
+              : serving.status === "QR_VERIFIED" ? "bg-blue-400/20 text-blue-300 border border-blue-400/30"
+              : "bg-amber-400/20 text-amber-300 border border-amber-400/30"
             }`}>
-              {serving.status === "SERVING" ? "● DILAYANI" : "● DIPANGGIL"}
+              {serving.status === "SERVING" ? "● DILAYANI" : serving.status === "QR_VERIFIED" ? "● TERVERIFIKASI" : "● DIPANGGIL"}
             </div>
             {participant && (
               <p className="text-white/50 text-xs mt-2 font-medium truncate max-w-full px-2 text-center">

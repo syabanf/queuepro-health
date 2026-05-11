@@ -75,7 +75,7 @@ export default function RegistrationForm({ services, participants = [], eventSet
   const isServiceFull = (service) => {
     if (!service) return false;
     if (service.is_unlimited) return false;
-    const totalUsed = (service.used_free_quota || 0) + (service.used_free_quota || 0) + (service.used_paid_quota || 0);
+    const totalUsed = (service.used_free_quota || 0) + (service.used_paid_quota || 0);
     const totalSlot = service.total_slot || 0;
     return totalSlot > 0 && totalUsed >= totalSlot;
   };
@@ -132,8 +132,8 @@ export default function RegistrationForm({ services, participants = [], eventSet
 
       const medSeq = await getNextQueueSequence(form.medical_service_id);
       const eyeSeq = await getNextQueueSequence(form.eye_service_id);
-      const medPrefix = getServicePrefix(selectedMedical.service_name);
-      const eyePrefix = getServicePrefix(selectedEye.service_name);
+      const medPrefix = selectedMedical.service_code;
+      const eyePrefix = selectedEye.service_code;
       const medQueueNum = formatQueueNumber(medPrefix, medSeq);
       const eyeQueueNum = formatQueueNumber(eyePrefix, eyeSeq);
 
@@ -367,7 +367,6 @@ export default function RegistrationForm({ services, participants = [], eventSet
                       <SelectValue placeholder="Pilih layanan medis..." />
                     </SelectTrigger>
                     <SelectContent>
-                       <SelectItem value={null}>NONE</SelectItem>
                        {medicalServices.map(s => (
                          <SelectItem key={s.id} value={s.id} disabled={isServiceFull(s)}>
                            <div className="flex items-center gap-2">
@@ -394,7 +393,6 @@ export default function RegistrationForm({ services, participants = [], eventSet
                       <SelectValue placeholder="Pilih layanan pemeriksaan mata..." />
                     </SelectTrigger>
                     <SelectContent>
-                       <SelectItem value={null}>NONE</SelectItem>
                        {eyeServices.map(s => (
                          <SelectItem key={s.id} value={s.id} disabled={isServiceFull(s)}>
                            <div className="flex items-center gap-2">
