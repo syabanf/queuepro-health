@@ -5,8 +5,8 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Badge } from "@/components/ui/badge";
+// Note: RadioGroup removed — using custom radio indicator to avoid Radix double-fire bug
 import {
   UserPlus, Loader2, AlertCircle, Stethoscope, Eye, Activity, Syringe,
   CheckCircle2, ArrowLeft, Users,
@@ -35,34 +35,32 @@ function ServiceOption({ service, selected, onSelect, getRemainingSlots, isServi
 
   return (
     <div
-      className={`flex items-center gap-3 px-3 py-2.5 rounded-xl border-2 cursor-pointer transition-all
+      className={`flex items-center gap-3 px-3 py-2.5 rounded-xl border-2 transition-all select-none
         ${full
           ? "opacity-50 cursor-not-allowed border-border bg-muted/20"
           : selected
-          ? "border-primary bg-primary/5 shadow-sm"
-          : "border-border hover:border-primary/40 bg-card"}`}
+          ? "border-primary bg-primary/5 shadow-sm cursor-pointer"
+          : "border-border hover:border-primary/40 bg-card cursor-pointer"}`}
       onClick={() => { if (!full) onSelect(selected ? "" : service.id); }}
     >
-      <RadioGroupItem
-        value={service.id}
-        id={`pub-svc-${service.id}`}
-        disabled={full}
-        className="flex-shrink-0"
-      />
+      {/* Custom radio indicator — no Radix, no double-fire */}
+      <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-all
+        ${selected ? "border-primary bg-primary" : "border-muted-foreground/40 bg-white"}`}>
+        {selected && <div className="w-2 h-2 rounded-full bg-white" />}
+      </div>
+
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2 flex-wrap">
-          <Label
-            htmlFor={`pub-svc-${service.id}`}
-            className={`text-sm font-bold ${full ? "cursor-not-allowed" : "cursor-pointer"}`}
-          >
+          <span className={`text-sm font-bold ${full ? "text-muted-foreground" : "text-foreground"}`}>
             {service.service_name}
-          </Label>
+          </span>
           {full && <Badge variant="outline" className="text-[10px]">Penuh</Badge>}
         </div>
         <p className="text-xs text-muted-foreground">
           Booth {service.booth_number} &bull; Kode {service.service_code}
         </p>
       </div>
+
       <div className="flex-shrink-0 text-right">
         <p className={`text-xs font-bold ${remaining <= 10 ? "text-amber-600" : "text-green-600"}`}>
           Sisa: {remaining}
@@ -418,11 +416,7 @@ export default function PublicRegistration() {
                     Pilih Layanan <span className="text-destructive">*</span>
                   </h3>
 
-                  <RadioGroup
-                    value={form.service_id}
-                    onValueChange={val => setForm(p => ({ ...p, service_id: val }))}
-                    className="space-y-3"
-                  >
+                  <div className="space-y-3">
                     {medicalServices.length > 0 && (
                       <div>
                         <div className="flex items-center gap-2 mb-2 px-2 py-1.5 rounded-lg" style={{ background: '#003D79' + '15' }}>
@@ -466,7 +460,7 @@ export default function PublicRegistration() {
                         </div>
                       </div>
                     )}
-                  </RadioGroup>
+                  </div>
 
                   {errors.service_id && (
                     <p className="text-xs text-destructive mt-2">{errors.service_id}</p>
