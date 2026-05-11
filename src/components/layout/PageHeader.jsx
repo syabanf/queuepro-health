@@ -2,7 +2,7 @@ import React from "react";
 
 export default function PageHeader({ title, subtitle, icon: Icon, action }) {
   return (
-    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
+    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
       <div className="flex items-center gap-3">
         {Icon && (
           <div className="w-11 h-11 rounded-xl bg-primary/10 flex items-center justify-center">

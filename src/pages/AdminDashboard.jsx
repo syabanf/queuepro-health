@@ -44,31 +44,27 @@ function ServiceQueueRow({ service, queues }) {
   const isEye = service.service_group === "EYE_CHECK";
 
   return (
-    <div className="flex items-center justify-between p-3 rounded-lg bg-muted/40 hover:bg-muted/70 transition-colors">
-      <div className="flex items-center gap-3">
-        <div className={`w-9 h-9 rounded-lg flex items-center justify-center text-sm font-bold flex-shrink-0
-          ${isEye ? "bg-accent/10 text-accent" : "bg-primary/10 text-primary"}`}>
-          {service.service_code}
-        </div>
-        <div>
-          <p className="text-sm font-medium leading-tight">{service.service_name}</p>
-          <p className="text-xs text-muted-foreground">Booth {service.booth_number}</p>
-        </div>
+    <div className="flex items-center gap-3 p-3 rounded-lg bg-muted/40 hover:bg-muted/70 transition-colors">
+      <div className={`w-8 h-8 rounded-lg flex items-center justify-center text-sm font-bold flex-shrink-0
+        ${isEye ? "bg-accent/10 text-accent" : "bg-primary/10 text-primary"}`}>
+        {service.service_code}
       </div>
-      <div className="flex items-center gap-4 text-xs">
-        <div className="text-center">
-          {serving ? (
-            <p className="font-mono font-black text-lg text-primary leading-none">{serving.queue_number}</p>
-          ) : (
-            <p className="font-mono text-muted-foreground/40 text-lg leading-none">—</p>
-          )}
+      <div className="flex-1 min-w-0">
+        <p className="text-sm font-medium leading-tight truncate">{service.service_name}</p>
+        <p className="text-xs text-muted-foreground">Booth {service.booth_number}</p>
+      </div>
+      <div className="flex items-center gap-3 flex-shrink-0 text-xs text-right">
+        <div className="text-center min-w-[2.5rem]">
+          <p className={`font-mono font-bold text-base leading-none ${serving ? "text-primary" : "text-muted-foreground/30"}`}>
+            {serving ? serving.queue_number : "—"}
+          </p>
           <p className="text-muted-foreground mt-0.5">Serving</p>
         </div>
-        <div className="text-center w-10">
+        <div className="text-center min-w-[2rem]">
           <p className="font-bold text-base text-amber-600 leading-none">{waiting}</p>
           <p className="text-muted-foreground mt-0.5">Tunggu</p>
         </div>
-        <div className="text-center w-10">
+        <div className="text-center min-w-[2rem]">
           <p className="font-bold text-base text-green-600 leading-none">{done}</p>
           <p className="text-muted-foreground mt-0.5">Selesai</p>
         </div>
@@ -181,7 +177,7 @@ export default function AdminDashboard() {
             <Button variant="outline" size="sm" onClick={() => setShowTestWizard(true)} className="gap-2">
               <TestTube className="w-4 h-4" /> Test Flow
             </Button>
-            <Button variant="destructive" size="sm" onClick={switchRole} disabled={switching} className="gap-2">
+            <Button variant="outline" size="sm" onClick={switchRole} disabled={switching} className="gap-2">
               <LogOut className="w-4 h-4" />
               {switching ? 'Mengganti...' : `Ganti ke ${user?.role === 'admin' ? 'Nakes' : 'Admin'}`}
             </Button>
@@ -192,41 +188,80 @@ export default function AdminDashboard() {
       <TestFlowWizard isOpen={showTestWizard} onClose={() => setShowTestWizard(false)} />
       <DataConsistencyChecker isOpen={showDataChecker} onClose={() => setShowDataChecker(false)} />
 
-      {/* Free Slot Info */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-        {services.filter(s => s.is_active).map(s => {
-          const remaining = Math.max(0, (s.free_quota || 0) - (s.used_free_quota || 0));
-          const usedPct = Math.min(100, Math.round(((s.used_free_quota || 0) / (s.free_quota || 1)) * 100));
-          const isMedical = s.service_group === "MEDICAL";
-          return (
-            <Card key={s.id} className={`border-2 ${remaining <= 0 ? "border-destructive/40" : remaining <= 20 ? "border-warning/40" : "border-success/30"}`}>
-              <CardContent className="p-4">
-                <div className="flex items-center justify-between mb-2">
-                  <div className="flex items-center gap-2">
-                    {isMedical ? <Stethoscope className="w-4 h-4 text-primary" /> : <Eye className="w-4 h-4 text-accent" />}
-                    <span className="text-sm font-semibold truncate">{s.service_name}</span>
-                  </div>
-                  {remaining <= 0 ? (
-                    <Badge className="bg-red-100 text-red-700 border-red-200 gap-1 flex-shrink-0"><AlertCircle className="w-3 h-3" />Penuh</Badge>
-                  ) : (
-                    <Badge className={`flex-shrink-0 ${remaining <= 20 ? "bg-amber-100 text-amber-700 border-amber-200" : "bg-green-100 text-green-700 border-green-200"}`}>
-                      Sisa Gratis: {remaining}
-                    </Badge>
-                  )}
-                </div>
-                <div className="flex items-center gap-3">
-                  <div className="flex-1 h-3 bg-muted rounded-full overflow-hidden">
-                    <div
-                      className={`h-full rounded-full transition-all duration-700 ${usedPct >= 100 ? "bg-destructive" : usedPct >= 80 ? "bg-warning" : "bg-success"}`}
-                      style={{ width: `${usedPct}%` }}
-                    />
-                  </div>
-                  <span className="text-xs text-muted-foreground flex-shrink-0">{s.used_free_quota || 0}/{s.free_quota || 0}</span>
-                </div>
-              </CardContent>
-            </Card>
-          );
-        })}
+      {/* Free Slot Info — grouped by provider */}
+      <div className="space-y-3">
+        {medicalServices.length > 0 && (
+          <div>
+            <div className="flex items-center gap-1.5 mb-2 px-0.5">
+              <Stethoscope className="w-3.5 h-3.5 text-primary" />
+              <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Primaya Hospital</span>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              {medicalServices.filter(s => s.is_active).map(s => {
+                const remaining = Math.max(0, (s.free_quota || 0) - (s.used_free_quota || 0));
+                const usedPct = Math.min(100, Math.round(((s.used_free_quota || 0) / (s.free_quota || 1)) * 100));
+                return (
+                  <Card key={s.id} className={`border ${remaining <= 0 ? "border-destructive/40" : remaining <= 20 ? "border-amber-200" : "border-green-200"}`}>
+                    <CardContent className="p-3">
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="text-sm font-semibold truncate">{s.service_name}</span>
+                        {remaining <= 0 ? (
+                          <Badge className="bg-red-100 text-red-700 border-red-200 text-[10px] flex-shrink-0">Penuh</Badge>
+                        ) : (
+                          <Badge className={`text-[10px] flex-shrink-0 ${remaining <= 20 ? "bg-amber-100 text-amber-700 border-amber-200" : "bg-green-100 text-green-700 border-green-200"}`}>
+                            Sisa: {remaining}
+                          </Badge>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <div className="flex-1 h-1.5 bg-muted rounded-full overflow-hidden">
+                          <div className={`h-full rounded-full transition-all duration-700 ${usedPct >= 100 ? "bg-destructive" : usedPct >= 80 ? "bg-amber-400" : "bg-green-500"}`} style={{ width: `${usedPct}%` }} />
+                        </div>
+                        <span className="text-xs text-muted-foreground flex-shrink-0">{s.used_free_quota || 0}/{s.free_quota || 0}</span>
+                      </div>
+                    </CardContent>
+                  </Card>
+                );
+              })}
+            </div>
+          </div>
+        )}
+        {eyeServices.length > 0 && (
+          <div>
+            <div className="flex items-center gap-1.5 mb-2 px-0.5">
+              <Eye className="w-3.5 h-3.5 text-accent" />
+              <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Optik Melawai</span>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {eyeServices.filter(s => s.is_active).map(s => {
+                const remaining = Math.max(0, (s.free_quota || 0) - (s.used_free_quota || 0));
+                const usedPct = Math.min(100, Math.round(((s.used_free_quota || 0) / (s.free_quota || 1)) * 100));
+                return (
+                  <Card key={s.id} className={`border ${remaining <= 0 ? "border-destructive/40" : remaining <= 20 ? "border-amber-200" : "border-green-200"}`}>
+                    <CardContent className="p-3">
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="text-sm font-semibold truncate">{s.service_name}</span>
+                        {remaining <= 0 ? (
+                          <Badge className="bg-red-100 text-red-700 border-red-200 text-[10px] flex-shrink-0">Penuh</Badge>
+                        ) : (
+                          <Badge className={`text-[10px] flex-shrink-0 ${remaining <= 20 ? "bg-amber-100 text-amber-700 border-amber-200" : "bg-green-100 text-green-700 border-green-200"}`}>
+                            Sisa: {remaining}
+                          </Badge>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <div className="flex-1 h-1.5 bg-muted rounded-full overflow-hidden">
+                          <div className={`h-full rounded-full transition-all duration-700 ${usedPct >= 100 ? "bg-destructive" : usedPct >= 80 ? "bg-amber-400" : "bg-green-500"}`} style={{ width: `${usedPct}%` }} />
+                        </div>
+                        <span className="text-xs text-muted-foreground flex-shrink-0">{s.used_free_quota || 0}/{s.free_quota || 0}</span>
+                      </div>
+                    </CardContent>
+                  </Card>
+                );
+              })}
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Capacity Bar */}
@@ -249,7 +284,7 @@ export default function AdminDashboard() {
               )}
             </div>
           </div>
-          <div className="h-3 bg-muted rounded-full overflow-hidden">
+          <div className="h-2 bg-muted rounded-full overflow-hidden">
             <div
               className={`h-full rounded-full transition-all duration-700 ${fillPct >= 100 ? "bg-destructive" : fillPct >= 80 ? "bg-warning" : "bg-success"}`}
               style={{ width: `${fillPct}%` }}
@@ -260,68 +295,61 @@ export default function AdminDashboard() {
       </Card>
 
       {/* Stats Grid */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">
-        <Card className="bg-primary text-primary-foreground col-span-2 sm:col-span-1">
-          <CardContent className="p-5">
-            <p className="text-xs font-medium text-primary-foreground/70">Terdaftar</p>
-            <p className="text-3xl font-black mt-1">{participants.length} <span className="text-lg font-normal text-primary-foreground/50">/ {totalQuota}</span></p>
-            <p className="text-xs text-primary-foreground/60 mt-1">total peserta</p>
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        <Card className="bg-primary text-primary-foreground">
+          <CardContent className="p-4">
+            <p className="text-xs font-medium text-primary-foreground/70">Total Terdaftar</p>
+            <p className="text-3xl font-black mt-1 leading-none">{participants.length}</p>
+            <p className="text-xs text-primary-foreground/50 mt-1">/ {totalQuota} kapasitas</p>
           </CardContent>
         </Card>
         <Card>
-          <CardContent className="p-5">
+          <CardContent className="p-4">
             <p className="text-xs text-muted-foreground font-medium">Selesai</p>
-            <p className="text-3xl font-black text-green-600 mt-1">{stats.completed}</p>
+            <p className="text-3xl font-black text-green-600 mt-1 leading-none">{stats.completed}</p>
             <p className="text-xs text-muted-foreground mt-1">peserta</p>
           </CardContent>
         </Card>
         <Card>
-          <CardContent className="p-5">
-            <p className="text-xs text-muted-foreground font-medium">Sebagian Selesai</p>
-            <p className="text-3xl font-black text-amber-500 mt-1">{stats.partial}</p>
-            <p className="text-xs text-muted-foreground mt-1">peserta</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-5">
+          <CardContent className="p-4">
             <p className="text-xs text-muted-foreground font-medium">Menunggu</p>
-            <p className="text-3xl font-black text-blue-600 mt-1">{stats.waiting}</p>
+            <p className="text-3xl font-black text-blue-600 mt-1 leading-none">{stats.waiting}</p>
             <p className="text-xs text-muted-foreground mt-1">antrian</p>
           </CardContent>
         </Card>
         <Card>
-          <CardContent className="p-5">
+          <CardContent className="p-4">
             <p className="text-xs text-muted-foreground font-medium">Dilayani</p>
-            <p className="text-3xl font-black text-purple-600 mt-1">{stats.serving}</p>
+            <p className="text-3xl font-black text-purple-600 mt-1 leading-none">{stats.serving}</p>
             <p className="text-xs text-muted-foreground mt-1">antrian</p>
           </CardContent>
         </Card>
         <Card>
-          <CardContent className="p-5">
+          <CardContent className="p-4">
+            <p className="text-xs text-muted-foreground font-medium">Sebagian Selesai</p>
+            <p className="text-3xl font-black text-amber-500 mt-1 leading-none">{stats.partial}</p>
+            <p className="text-xs text-muted-foreground mt-1">peserta</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-4">
             <p className="text-xs text-muted-foreground font-medium">Dilewati</p>
-            <p className="text-3xl font-black text-orange-500 mt-1">{stats.skipped}</p>
+            <p className="text-3xl font-black text-orange-500 mt-1 leading-none">{stats.skipped}</p>
             <p className="text-xs text-muted-foreground mt-1">antrian</p>
           </CardContent>
         </Card>
         <Card>
-          <CardContent className="p-5">
+          <CardContent className="p-4">
             <p className="text-xs text-muted-foreground font-medium">Dibatalkan</p>
-            <p className="text-3xl font-black text-red-500 mt-1">{stats.cancelled}</p>
+            <p className="text-3xl font-black text-red-500 mt-1 leading-none">{stats.cancelled}</p>
             <p className="text-xs text-muted-foreground mt-1">antrian</p>
           </CardContent>
         </Card>
         <Card>
-          <CardContent className="p-5">
-            <p className="text-xs text-muted-foreground font-medium">FREE CHECK</p>
-            <p className="text-3xl font-black text-green-600 mt-1">{stats.freeUsed}</p>
-            <p className="text-xs text-muted-foreground mt-1">dari {totalFreeQuota} kuota</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-5">
-            <p className="text-xs text-muted-foreground font-medium">PAYMENT</p>
-            <p className="text-3xl font-black text-orange-500 mt-1">{stats.paidUsed}</p>
-            <p className="text-xs text-muted-foreground mt-1">dari {totalPaidQuota} kuota</p>
+          <CardContent className="p-4">
+            <p className="text-xs text-muted-foreground font-medium">Gratis Terpakai</p>
+            <p className="text-3xl font-black text-green-600 mt-1 leading-none">{stats.freeUsed}</p>
+            <p className="text-xs text-muted-foreground mt-1">dari {totalFreeQuota}</p>
           </CardContent>
         </Card>
       </div>

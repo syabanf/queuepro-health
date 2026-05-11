@@ -153,24 +153,21 @@ export default function RegistrationForm({ services, participants = [], eventSet
     <Card>
       <CardHeader className="pb-4">
         {/* Logos */}
-        <div className="flex items-center justify-between mb-4 pb-4 border-b border-border">
-          <div className="flex items-center gap-2 px-3 py-2 rounded-lg" style={{ background: '#003D79' }}>
-            <img src="/logo-bri.png" alt="BRI" className="h-7 object-contain" onError={e => e.target.style.display='none'} />
+        <div className="flex items-center gap-3 mb-4 pb-4 border-b border-border flex-wrap">
+          <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg flex-shrink-0" style={{ background: '#003D79' }}>
+            <img src="/logo-bri.png" alt="BRI" className="h-6 object-contain" onError={e => e.target.style.display='none'} />
             <span className="font-black text-sm tracking-wider text-white">BRI</span>
           </div>
-          <div className="text-center">
-            <p className="text-xs text-muted-foreground font-medium">Brilian Talks Health Care 2025</p>
+          <div className="w-px h-6 bg-border flex-shrink-0" />
+          <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-blue-50 border border-blue-100 flex-shrink-0">
+            <img src="/logo-primaya.png" alt="Primaya" className="h-5 object-contain" onError={e => e.target.style.display='none'} />
+            <span className="text-[11px] font-bold text-blue-800">PRIMAYA HOSPITAL</span>
           </div>
-          <div className="flex flex-col items-end gap-1">
-            <div className="flex items-center gap-1.5 px-2 py-1 rounded bg-blue-50 border border-blue-200">
-              <img src="/logo-primaya.png" alt="Primaya" className="h-5 object-contain" onError={e => e.target.style.display='none'} />
-              <span className="text-[10px] font-bold text-blue-800">PRIMAYA HOSPITAL</span>
-            </div>
-            <div className="flex items-center gap-1.5 px-2 py-1 rounded bg-red-50 border border-red-200">
-              <img src="/logo-optik-melawai.png" alt="Optik Melawai" className="h-5 object-contain" onError={e => e.target.style.display='none'} />
-              <span className="text-[10px] font-bold text-red-700">OPTIK MELAWAI</span>
-            </div>
+          <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-red-50 border border-red-100 flex-shrink-0">
+            <img src="/logo-optik-melawai.png" alt="Optik Melawai" className="h-5 object-contain" onError={e => e.target.style.display='none'} />
+            <span className="text-[11px] font-bold text-red-700">OPTIK MELAWAI</span>
           </div>
+          <p className="text-xs text-muted-foreground ml-auto hidden sm:block">Brilian Talks Health Care 2025</p>
         </div>
         <CardTitle className="text-base flex items-center gap-2">
           <UserPlus className="w-5 h-5 text-primary" />
