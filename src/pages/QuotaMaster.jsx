@@ -13,6 +13,10 @@ import {
 import { useToast } from "@/components/ui/use-toast";
 import PageHeader from "@/components/layout/PageHeader";
 
+const UNLIMITED = 9999;
+const isUnlimited = (val) => (val || 0) >= UNLIMITED;
+const fmtQuota = (val) => isUnlimited(val) ? "∞" : String(val ?? 0);
+
 // ── Quota type definitions ────────────────────────────────────────────────────
 const QUOTA_TYPES = [
   {
@@ -60,12 +64,19 @@ const QUOTA_TYPES = [
 ];
 
 function getRemaining(svc, qt) {
-  return Math.max(0, (svc[qt.limitField] || 0) - (svc[qt.usedField] || 0));
+  const limit = svc[qt.limitField] || 0;
+  if (isUnlimited(limit)) return UNLIMITED;
+  return Math.max(0, limit - (svc[qt.usedField] || 0));
+}
+function svcIsUnlimited(svc) {
+  return QUOTA_TYPES.some(qt => isUnlimited(svc[qt.limitField]));
 }
 function getTotalRemaining(svc) {
+  if (svcIsUnlimited(svc)) return UNLIMITED;
   return QUOTA_TYPES.reduce((sum, qt) => sum + getRemaining(svc, qt), 0);
 }
 function getTotalLimit(svc) {
+  if (svcIsUnlimited(svc)) return UNLIMITED;
   return QUOTA_TYPES.reduce((sum, qt) => sum + (svc[qt.limitField] || 0), 0);
 }
 function getTotalUsed(svc) {
@@ -74,7 +85,7 @@ function getTotalUsed(svc) {
 
 // ── Progress bar ─────────────────────────────────────────────────────────────
 function QuotaBar({ used, total, barColor }) {
-  if (!total) return <div className="h-1.5 bg-muted rounded-full" />;
+  if (!total || isUnlimited(total)) return <div className="h-1.5 bg-muted rounded-full" />;
   const pct = Math.min(100, Math.round((used / total) * 100));
   return (
     <div className="h-1.5 bg-muted rounded-full overflow-hidden">
@@ -118,7 +129,9 @@ function ServiceQuotaCard({ service, onChange }) {
         </div>
         <div className="flex items-center gap-3">
           {/* Overall status badge */}
-          {totalRem <= 0 && totalLimit > 0 ? (
+          {isUnlimited(totalLimit) ? (
+            <Badge className="text-[10px] border bg-cyan-100 text-cyan-700 border-cyan-200">∞ Unlimited</Badge>
+          ) : totalRem <= 0 && totalLimit > 0 ? (
             <Badge className="text-[10px] border bg-red-100 text-red-700 border-red-200">Penuh</Badge>
           ) : totalLimit === 0 ? (
             <Badge className="text-[10px] border bg-gray-100 text-gray-600 border-gray-200">Belum diset</Badge>
@@ -138,7 +151,7 @@ function ServiceQuotaCard({ service, onChange }) {
       <div className="mb-4">
         <div className="flex items-center justify-between text-xs text-muted-foreground mb-1">
           <span>Total terpakai</span>
-          <span className="font-mono font-medium">{totalUsed} / {totalLimit}</span>
+          <span className="font-mono font-medium">{totalUsed} / {fmtQuota(totalLimit)}</span>
         </div>
         <QuotaBar used={totalUsed} total={totalLimit} barColor="bg-primary" />
       </div>
@@ -176,8 +189,8 @@ function ServiceQuotaCard({ service, onChange }) {
 
               <div className="flex items-center justify-between text-xs mb-1.5">
                 <span className="text-muted-foreground">Sisa</span>
-                <span className={`font-mono font-bold ${rem <= 0 && limit > 0 ? "text-destructive" : rem <= 10 && limit > 0 ? "text-amber-600" : "text-foreground"}`}>
-                  {rem}
+                <span className={`font-mono font-bold ${isUnlimited(rem) ? "text-cyan-600" : rem <= 0 && limit > 0 ? "text-destructive" : rem <= 10 && limit > 0 ? "text-amber-600" : "text-foreground"}`}>
+                  {fmtQuota(rem)}
                 </span>
               </div>
 
@@ -200,14 +213,17 @@ function SummaryCard({ services }) {
       <Card>
         <CardContent className="p-3 text-center">
           <p className="text-2xl font-black text-foreground">
-            {allActive.reduce((sum, s) => sum + getTotalLimit(s), 0)}
+            {allActive.some(s => svcIsUnlimited(s))
+              ? "∞"
+              : allActive.reduce((sum, s) => sum + getTotalLimit(s), 0)}
           </p>
           <p className="text-xs text-muted-foreground mt-0.5">Total Kuota</p>
         </CardContent>
       </Card>
       {QUOTA_TYPES.map(qt => {
         const QtIcon = qt.icon;
-        const total = allActive.reduce((sum, s) => sum + (s[qt.limitField] || 0), 0);
+        const hasUnlimited = allActive.some(s => isUnlimited(s[qt.limitField]));
+        const total = hasUnlimited ? UNLIMITED : allActive.reduce((sum, s) => sum + (s[qt.limitField] || 0), 0);
         const used = allActive.reduce((sum, s) => sum + (s[qt.usedField] || 0), 0);
         return (
           <Card key={qt.key}>
@@ -216,7 +232,10 @@ function SummaryCard({ services }) {
                 <QtIcon className={`w-3.5 h-3.5 ${qt.color}`} />
                 <span className={`text-xs font-bold ${qt.color}`}>{qt.shortLabel}</span>
               </div>
-              <p className="text-xl font-black text-foreground">{total - used} <span className="text-sm font-normal text-muted-foreground">/ {total}</span></p>
+              <p className="text-xl font-black text-foreground">
+                {hasUnlimited ? "∞" : total - used}
+                {" "}<span className="text-sm font-normal text-muted-foreground">/ {fmtQuota(total)}</span>
+              </p>
               <QuotaBar used={used} total={total} barColor={qt.barColor} />
             </CardContent>
           </Card>
