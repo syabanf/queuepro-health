@@ -8,8 +8,13 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel,
+  AlertDialogContent, AlertDialogDescription, AlertDialogFooter,
+  AlertDialogHeader, AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
   Users, Search, Printer, Eye, Download,
-  ChevronLeft, ChevronRight, RefreshCw, Filter
+  ChevronLeft, ChevronRight, RefreshCw, Filter, Trash2
 } from "lucide-react";
 import { format } from "date-fns";
 import PageHeader from "@/components/layout/PageHeader";
@@ -63,6 +68,7 @@ export default function Participants() {
   const queryClient = useQueryClient();
 
   const [search, setSearch] = useState("");
+  const [deleteTarget, setDeleteTarget] = useState(null);
   const [filterMedical, setFilterMedical] = useState("all");
   const [filterEye, setFilterEye] = useState("all");
   const [filterSlot, setFilterSlot] = useState("all");
@@ -158,6 +164,19 @@ export default function Participants() {
     setSearch(""); setFilterMedical("all"); setFilterEye("all");
     setFilterSlot("all"); setFilterStatus("all"); setPage(1);
   };
+
+  const deleteMutation = useMutation({
+    mutationFn: async (p) => {
+      const pQueues = queues.filter(q => q.participant_id === p.id);
+      await Promise.all(pQueues.map(q => base44.entities.Queue.delete(q.id)));
+      await base44.entities.Participant.delete(p.id);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["participants"] });
+      queryClient.invalidateQueries({ queryKey: ["queues"] });
+      setDeleteTarget(null);
+    },
+  });
 
   const handleReprint = (p) => {
     const pQueues = queues.filter(q => q.participant_id === p.id);
@@ -391,6 +410,15 @@ export default function Participants() {
                           >
                             <Printer className="w-4 h-4" />
                           </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-6 w-6 sm:h-7 sm:w-7 text-muted-foreground hover:text-destructive"
+                            title="Hapus Peserta"
+                            onClick={() => setDeleteTarget(p)}
+                          >
+                            <Trash2 className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                          </Button>
                         </div>
                       </td>
                     </tr>
@@ -419,6 +447,26 @@ export default function Participants() {
           )}
         </CardContent>
       </Card>
+      <AlertDialog open={!!deleteTarget} onOpenChange={open => { if (!open) setDeleteTarget(null); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Hapus Peserta?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Peserta <strong>{deleteTarget?.full_name}</strong> ({deleteTarget?.registration_number}) beserta seluruh data antriannya akan dihapus permanen. Tindakan ini tidak dapat dibatalkan.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleteMutation.isPending}>Batal</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              disabled={deleteMutation.isPending}
+              onClick={() => deleteMutation.mutate(deleteTarget)}
+            >
+              {deleteMutation.isPending ? "Menghapus..." : "Hapus"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
