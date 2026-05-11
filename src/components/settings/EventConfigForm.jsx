@@ -123,7 +123,7 @@ export default function EventConfigForm({ form, onChange, errors, totalParticipa
               <Label className="text-xs font-medium">URL LED Monitor</Label>
               <Input
                 className="mt-1 font-mono text-xs"
-                placeholder="https://app.base44.app/led-monitor"
+                placeholder={`${window.location.origin}/led-monitor`}
                 value={form.queue_monitor_url || ""}
                 onChange={e => set("queue_monitor_url", e.target.value)}
               />
@@ -132,7 +132,7 @@ export default function EventConfigForm({ form, onChange, errors, totalParticipa
               <Label className="text-xs font-medium">URL Mobile Monitor</Label>
               <Input
                 className="mt-1 font-mono text-xs"
-                placeholder="https://app.base44.app/mobile-monitor"
+                placeholder={`${window.location.origin}/mobile-monitor`}
                 value={form.mobile_monitor_url || ""}
                 onChange={e => set("mobile_monitor_url", e.target.value)}
               />

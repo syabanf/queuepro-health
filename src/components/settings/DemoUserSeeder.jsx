@@ -119,9 +119,8 @@ export default function DemoUserSeeder() {
         {/* Instructions */}
         <div className="text-[10px] text-amber-700 p-2.5 bg-amber-50 rounded-lg border border-amber-200 space-y-1">
           <p className="font-semibold">⚙️ Setup Awal (sekali saja):</p>
-          <p>1. Klik <strong>"Invite Demo Users"</strong> → kedua user akan diundang via email</p>
-          <p>2. Di <strong>Base44 Dashboard → Users</strong>, pilih masing-masing user → <strong>Set Password</strong> sesuai tabel di atas</p>
-          <p>3. Setelah password diset, tombol demo login di halaman utama akan langsung berfungsi</p>
+          <p>1. Klik <strong>"Invite Demo Users"</strong> → kedua user akan ditambahkan ke sistem</p>
+          <p>2. Setelah itu, tombol demo login di halaman utama akan langsung berfungsi</p>
         </div>
       </CardContent>
     </Card>
