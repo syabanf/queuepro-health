@@ -36,11 +36,11 @@ export default function RegistrationForm({ services, participants = [], eventSet
   const selectedEye = services.find(s => s.id === form.eye_service_id);
 
   // Calculate total service quotas for each tier
-  const totalFullFreeQuota = services.reduce((sum, s) => sum + (s.full_free_quota || 0), 0);
+  const totalFreeQuota = services.reduce((sum, s) => sum + (s.free_quota || 0), 0);
   const totalCcRp1Quota = services.reduce((sum, s) => sum + (s.cc_rp1_quota || 0), 0);
   const usedFullFree = participants.filter(p => p.participant_category === "FREE_CHECK").length;
   const usedCcRp1 = participants.filter(p => p.participant_category === "PAYMENT").length;
-  const fullFreeFull = totalFullFreeQuota > 0 && usedFullFree >= totalFullFreeQuota;
+  const freeFull = totalFreeQuota > 0 && usedFullFree >= totalFreeQuota;
   const ccRp1Full = totalCcRp1Quota > 0 && usedCcRp1 >= totalCcRp1Quota;
 
   // Map category to quota category (tiered)
@@ -51,11 +51,11 @@ export default function RegistrationForm({ services, participants = [], eventSet
     if (!form.participant_category) return false;
     const qcat = getQuotaCategoryForCategory(form.participant_category);
     if (qcat === "FULL_FREE") {
-      const fq = service.full_free_quota || 0;
-      return fq > 0 && (service.used_full_free || 0) >= fq;
+      const fq = service.free_quota || 0;
+      return fq > 0 && (service.used_free_quota || 0) >= fq;
     } else {
-      const pq = service.full_paid_quota || 0;
-      return pq > 0 && (service.used_full_paid || 0) >= pq;
+      const pq = service.paid_quota || 0;
+      return pq > 0 && (service.used_paid_quota || 0) >= pq;
     }
   };
 
@@ -64,18 +64,18 @@ export default function RegistrationForm({ services, participants = [], eventSet
     if (!form.participant_category) return false;
     const qcat = getQuotaCategoryForCategory(form.participant_category);
     if (qcat === "FULL_FREE") {
-      const fq = service.full_free_quota || 0;
-      return fq > 0 && (service.used_full_free || 0) >= fq;
+      const fq = service.free_quota || 0;
+      return fq > 0 && (service.used_free_quota || 0) >= fq;
     } else {
-      const pq = service.full_paid_quota || 0;
-      return pq > 0 && (service.used_full_paid || 0) >= pq;
+      const pq = service.paid_quota || 0;
+      return pq > 0 && (service.used_paid_quota || 0) >= pq;
     }
   };
 
   const isServiceFull = (service) => {
     if (!service) return false;
     if (service.is_unlimited) return false;
-    const totalUsed = (service.used_full_free || 0) + (service.used_cc_rp1 || 0) + (service.used_full_paid || 0);
+    const totalUsed = (service.used_free_quota || 0) + (service.used_free_quota || 0) + (service.used_paid_quota || 0);
     const totalSlot = service.total_slot || 0;
     return totalSlot > 0 && totalUsed >= totalSlot;
   };
@@ -98,8 +98,8 @@ export default function RegistrationForm({ services, participants = [], eventSet
       errs.global = "Kuota total peserta sudah penuh.";
 
     // Category quota
-    if (form.participant_category === "FREE_CHECK" && fullFreeFull)
-      errs.participant_category = `Kuota Tanpa Syarat sudah penuh (${usedFullFree}/${totalFullFreeQuota}).`;
+    if (form.participant_category === "FREE_CHECK" && freeFull)
+      errs.participant_category = `Kuota Tanpa Syarat sudah penuh (${usedFullFree}/${totalFreeQuota}).`;
     if (form.participant_category === "PAYMENT" && ccRp1Full)
       errs.participant_category = `Kuota Dengan CC Rp 1 sudah penuh (${usedCcRp1}/${totalCcRp1Quota}).`;
 
@@ -189,20 +189,20 @@ export default function RegistrationForm({ services, participants = [], eventSet
       // Deduct service quotas based on quota_category
       if (quotaCategory === "FULL_FREE") {
         await base44.entities.Service.update(form.medical_service_id, {
-          used_full_free: (selectedMedical.used_full_free || 0) + 1,
+          used_free_quota: (selectedMedical.used_free_quota || 0) + 1,
           used_total: (selectedMedical.used_total || 0) + 1,
         });
         await base44.entities.Service.update(form.eye_service_id, {
-          used_full_free: (selectedEye.used_full_free || 0) + 1,
+          used_free_quota: (selectedEye.used_free_quota || 0) + 1,
           used_total: (selectedEye.used_total || 0) + 1,
         });
       } else {
         await base44.entities.Service.update(form.medical_service_id, {
-          used_full_paid: (selectedMedical.used_full_paid || 0) + 1,
+          used_paid_quota: (selectedMedical.used_paid_quota || 0) + 1,
           used_total: (selectedMedical.used_total || 0) + 1,
         });
         await base44.entities.Service.update(form.eye_service_id, {
-          used_full_paid: (selectedEye.used_full_paid || 0) + 1,
+          used_paid_quota: (selectedEye.used_paid_quota || 0) + 1,
           used_total: (selectedEye.used_total || 0) + 1,
         });
       }
@@ -225,8 +225,8 @@ export default function RegistrationForm({ services, participants = [], eventSet
     }
   };
 
-  const CategoryCard = ({ value, label, icon: CatIcon, desc, fullFreeQuota, fullFreeUsed, ccRp1Quota, ccRp1Used, isFull }) => {
-    const fullFreeRemaining = Math.max(0, fullFreeQuota - fullFreeUsed);
+  const CategoryCard = ({ value, label, icon: CatIcon, desc, fullFreeQuota, freeUsed, ccRp1Quota, ccRp1Used, isFull }) => {
+    const freeRemaining = Math.max(0, fullFreeQuota - freeUsed);
     const ccRp1Remaining = Math.max(0, ccRp1Quota - ccRp1Used);
     
     return (
@@ -332,11 +332,11 @@ export default function RegistrationForm({ services, participants = [], eventSet
                    label="FREE CHECK"
                    icon={Gift}
                    desc="Pemeriksaan gratis — tidak dipungut biaya"
-                   fullFreeQuota={totalFullFreeQuota}
-                   fullFreeUsed={usedFullFree}
+                   fullFreeQuota={totalFreeQuota}
+                   freeUsed={usedFullFree}
                    ccRp1Quota={0}
                    ccRp1Used={0}
-                   isFull={fullFreeFull}
+                   isFull={freeFull}
                  />
                  <CategoryCard
                    value="PAYMENT"
@@ -344,7 +344,7 @@ export default function RegistrationForm({ services, participants = [], eventSet
                    icon={CreditCard}
                    desc="Pemeriksaan berbayar — diperlukan konfirmasi pembayaran"
                    fullFreeQuota={0}
-                   fullFreeUsed={0}
+                   freeUsed={0}
                    ccRp1Quota={totalCcRp1Quota}
                    ccRp1Used={usedCcRp1}
                    isFull={ccRp1Full}

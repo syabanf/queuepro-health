@@ -75,18 +75,18 @@ export default function DataConsistencyChecker({ isOpen, onClose }) {
       let quotaIssues = [];
       services.forEach(service => {
         const serviceQueues = queues.filter(q => q.service_id === service.id);
-        const fullFreeCount = serviceQueues.filter(q => q.quota_category === "FULL_FREE").length;
+        const freeCount = serviceQueues.filter(q => q.quota_category === "FULL_FREE").length;
         const ccRp1Count = serviceQueues.filter(q => q.quota_category === "CC_RP_1").length;
-        const fullPaidCount = serviceQueues.filter(q => q.quota_category === "FULL_PAID").length;
+        const paidCount = serviceQueues.filter(q => q.quota_category === "FULL_PAID").length;
 
-        if (fullFreeCount !== (service.used_full_free || 0)) {
-          quotaIssues.push(`${service.service_name}: FULL_FREE queue=${fullFreeCount} vs used=${service.used_full_free}`);
+        if (freeCount !== (service.used_free_quota || 0)) {
+          quotaIssues.push(`${service.service_name}: FULL_FREE queue=${freeCount} vs used=${service.used_free_quota}`);
         }
-        if (ccRp1Count !== (service.used_cc_rp1 || 0)) {
-          quotaIssues.push(`${service.service_name}: CC_RP_1 queue=${ccRp1Count} vs used=${service.used_cc_rp1}`);
+        if (ccRp1Count !== (service.used_free_quota || 0)) {
+          quotaIssues.push(`${service.service_name}: CC_RP_1 queue=${ccRp1Count} vs used=${service.used_free_quota}`);
         }
-        if (fullPaidCount !== (service.used_full_paid || 0)) {
-          quotaIssues.push(`${service.service_name}: FULL_PAID queue=${fullPaidCount} vs used=${service.used_full_paid}`);
+        if (paidCount !== (service.used_paid_quota || 0)) {
+          quotaIssues.push(`${service.service_name}: FULL_PAID queue=${paidCount} vs used=${service.used_paid_quota}`);
         }
       });
 
@@ -146,15 +146,15 @@ export default function DataConsistencyChecker({ isOpen, onClose }) {
       // Recalculate and fix service quotas
       for (const service of services) {
         const serviceQueues = queues.filter(q => q.service_id === service.id);
-        const fullFreeCount = serviceQueues.filter(q => q.quota_category === "FULL_FREE").length;
+        const freeCount = serviceQueues.filter(q => q.quota_category === "FULL_FREE").length;
         const ccRp1Count = serviceQueues.filter(q => q.quota_category === "CC_RP_1").length;
-        const fullPaidCount = serviceQueues.filter(q => q.quota_category === "FULL_PAID").length;
+        const paidCount = serviceQueues.filter(q => q.quota_category === "FULL_PAID").length;
 
         await base44.entities.Service.update(service.id, {
-          used_full_free: fullFreeCount,
-          used_cc_rp1: ccRp1Count,
-          used_full_paid: fullPaidCount,
-          used_total: fullFreeCount + ccRp1Count + fullPaidCount,
+          used_free_quota: freeCount,
+          used_free_quota: ccRp1Count,
+          used_paid_quota: paidCount,
+          used_total: freeCount + ccRp1Count + paidCount,
         });
       }
 

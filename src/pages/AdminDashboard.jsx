@@ -141,9 +141,9 @@ export default function AdminDashboard() {
   const eventMaxParticipants = event?.max_participants || 200;
 
   // Calculate quota from service definitions
-  const totalFullFreeQuota = services.reduce((sum, s) => sum + (s.full_free_quota || 0), 0);
-  const totalPaymentQuota = services.reduce((sum, s) => sum + (s.full_paid_quota || 0), 0);
-  const totalQuota = totalFullFreeQuota + totalPaymentQuota;
+  const totalFreeQuota = services.reduce((sum, s) => sum + (s.free_quota || 0), 0);
+  const totalPaidQuota = services.reduce((sum, s) => sum + (s.paid_quota || 0), 0);
+  const totalQuota = totalFreeQuota + totalPaidQuota || eventMaxParticipants;
 
   // Count actual by category
   const freeCheckParticipants = participants.filter(p => p.participant_category === "FREE_CHECK").length;
@@ -293,14 +293,14 @@ export default function AdminDashboard() {
           <CardContent className="p-5">
             <p className="text-xs text-muted-foreground font-medium">FREE CHECK</p>
             <p className="text-3xl font-black text-green-600 mt-1">{stats.freeUsed}</p>
-            <p className="text-xs text-muted-foreground mt-1">dari {totalFullFreeQuota} kuota</p>
+            <p className="text-xs text-muted-foreground mt-1">dari {totalFreeQuota} kuota</p>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="p-5">
             <p className="text-xs text-muted-foreground font-medium">PAYMENT</p>
             <p className="text-3xl font-black text-orange-500 mt-1">{stats.paidUsed}</p>
-            <p className="text-xs text-muted-foreground mt-1">dari {totalPaymentQuota} kuota</p>
+            <p className="text-xs text-muted-foreground mt-1">dari {totalPaidQuota} kuota</p>
           </CardContent>
         </Card>
       </div>

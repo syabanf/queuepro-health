@@ -44,9 +44,9 @@ export default function Registration() {
   const eventMaxParticipants = event?.max_participants || 200;
   
   // Calculate quota from services
-  const totalFullFreeQuota = services.reduce((sum, s) => sum + (s.full_free_quota || 0), 0);
-  const totalPaymentQuota = services.reduce((sum, s) => sum + (s.full_paid_quota || 0), 0);
-  const totalServiceQuota = totalFullFreeQuota + totalPaymentQuota;
+  const totalFreeQuota = services.reduce((sum, s) => sum + (s.free_quota || 0), 0);
+  const totalPaidQuota = services.reduce((sum, s) => sum + (s.paid_quota || 0), 0);
+  const totalServiceQuota = totalFreeQuota + totalPaidQuota || eventMaxParticipants;
   
   const usedSlots = participants.length;
   const remainingSlots = Math.max(0, Math.min(eventMaxParticipants, totalServiceQuota) - usedSlots);

@@ -8,25 +8,25 @@ import PageHeader from "@/components/layout/PageHeader";
 
 function QuotaTableRow({ service, isEye }) {
   // Full Free tier
-  const fullFreeTotal = service.full_free_quota || 0;
-  const fullFreeUsed = service.used_full_free || 0;
-  const fullFreeRem = fullFreeTotal - fullFreeUsed;
-  const fullFreePct = fullFreeTotal > 0 ? Math.min(100, (fullFreeUsed / fullFreeTotal) * 100) : 0;
+  const freeTotal = service.free_quota || 0;
+  const freeUsed = service.used_free_quota || 0;
+  const freeRem = freeTotal - freeUsed;
+  const fullFreePct = freeTotal > 0 ? Math.min(100, (freeUsed / freeTotal) * 100) : 0;
 
   // CC Rp 1 tier
   const ccRp1Total = service.cc_rp1_quota || 0;
-  const ccRp1Used = service.used_cc_rp1 || 0;
+  const ccRp1Used = service.used_free_quota || 0;
   const ccRp1Rem = ccRp1Total - ccRp1Used;
   const ccRp1Pct = ccRp1Total > 0 ? Math.min(100, (ccRp1Used / ccRp1Total) * 100) : 0;
 
   // Full Paid tier
-  const fullPaidTotal = service.full_paid_quota || 0;
-  const fullPaidUsed = service.used_full_paid || 0;
-  const fullPaidRem = fullPaidTotal - fullPaidUsed;
-  const fullPaidPct = fullPaidTotal > 0 ? Math.min(100, (fullPaidUsed / fullPaidTotal) * 100) : 0;
+  const paidTotal = service.paid_quota || 0;
+  const paidUsed = service.used_paid_quota || 0;
+  const fullPaidRem = paidTotal - paidUsed;
+  const fullPaidPct = paidTotal > 0 ? Math.min(100, (paidUsed / paidTotal) * 100) : 0;
 
   const totalSlot = service.total_slot || 0;
-  const totalUsed = fullFreeUsed + ccRp1Used + fullPaidUsed;
+  const totalUsed = freeUsed + ccRp1Used + paidUsed;
   const isUnlimited = service.is_unlimited;
 
   const renderQuota = (total, used, pct) => {
@@ -58,17 +58,17 @@ function QuotaTableRow({ service, isEye }) {
         <p className="text-xs text-muted-foreground">Booth {service.booth_number}</p>
       </td>
       {/* Tanpa Syarat (Full Free) */}
-      <td className="py-3 px-4 text-center text-sm font-medium">{fullFreeTotal}</td>
-      <td className="py-3 px-4 text-center text-sm font-bold text-green-700">{fullFreeUsed}</td>
-      <td className="py-3 px-4">{renderQuota(fullFreeTotal, fullFreeUsed, fullFreePct)}</td>
+      <td className="py-3 px-4 text-center text-sm font-medium">{freeTotal}</td>
+      <td className="py-3 px-4 text-center text-sm font-bold text-green-700">{freeUsed}</td>
+      <td className="py-3 px-4">{renderQuota(freeTotal, freeUsed, fullFreePct)}</td>
       {/* Dengan CC Rp 1 */}
       <td className="py-3 px-4 text-center text-sm font-medium">{ccRp1Total || "-"}</td>
       <td className="py-3 px-4 text-center text-sm font-bold text-blue-700">{ccRp1Used}</td>
       <td className="py-3 px-4">{ccRp1Total > 0 ? renderQuota(ccRp1Total, ccRp1Used, ccRp1Pct) : "-"}</td>
       {/* Berbayar Penuh */}
-      <td className="py-3 px-4 text-center text-sm font-medium">{fullPaidTotal || "-"}</td>
-      <td className="py-3 px-4 text-center text-sm font-bold text-orange-600">{fullPaidUsed}</td>
-      <td className="py-3 px-4">{fullPaidTotal > 0 ? renderQuota(fullPaidTotal, fullPaidUsed, fullPaidPct) : "-"}</td>
+      <td className="py-3 px-4 text-center text-sm font-medium">{paidTotal || "-"}</td>
+      <td className="py-3 px-4 text-center text-sm font-bold text-orange-600">{paidUsed}</td>
+      <td className="py-3 px-4">{paidTotal > 0 ? renderQuota(paidTotal, paidUsed, fullPaidPct) : "-"}</td>
       {/* Total Slot */}
       <td className="py-3 px-4 text-center text-sm font-medium">{isUnlimited ? "Unlimited" : totalSlot}</td>
     </tr>
@@ -113,12 +113,12 @@ export default function QuotaDashboard() {
 
   const medical = services.filter(s => s.service_group === "MEDICAL");
   const eye = services.filter(s => s.service_group === "EYE_CHECK");
-  const totalFullFreeUsed = services.reduce((a, s) => a + (s.used_full_free || 0), 0);
-  const totalCcRp1Used = services.reduce((a, s) => a + (s.used_cc_rp1 || 0), 0);
-  const totalFullPaidUsed = services.reduce((a, s) => a + (s.used_full_paid || 0), 0);
-  const totalFullFreeQuota = services.reduce((a, s) => a + (s.full_free_quota || 0), 0);
+  const totalFullFreeUsed = services.reduce((a, s) => a + (s.used_free_quota || 0), 0);
+  const totalCcRp1Used = services.reduce((a, s) => a + (s.used_free_quota || 0), 0);
+  const totalFullPaidUsed = services.reduce((a, s) => a + (s.used_paid_quota || 0), 0);
+  const totalFreeQuota = services.reduce((a, s) => a + (s.free_quota || 0), 0);
   const totalCcRp1Quota = services.reduce((a, s) => a + (s.cc_rp1_quota || 0), 0);
-  const totalFullPaidQuota = services.reduce((a, s) => a + (s.full_paid_quota || 0), 0);
+  const totalPaidQuota = services.reduce((a, s) => a + (s.paid_quota || 0), 0);
   const activeBooths = services.filter(s => s.is_active).length;
   const lastUpdatedStr = dataUpdatedAt ? new Date(dataUpdatedAt).toLocaleTimeString("id-ID") : "—";
 
@@ -175,7 +175,7 @@ export default function QuotaDashboard() {
           <CardContent className="p-5">
             <p className="text-xs text-muted-foreground font-medium">Tanpa Syarat</p>
             <p className="text-3xl font-black text-green-600 mt-1">{totalFullFreeUsed}</p>
-            <p className="text-xs text-muted-foreground mt-1">dari {totalFullFreeQuota} total</p>
+            <p className="text-xs text-muted-foreground mt-1">dari {totalFreeQuota} total</p>
           </CardContent>
         </Card>
         <Card>
@@ -189,7 +189,7 @@ export default function QuotaDashboard() {
           <CardContent className="p-5">
             <p className="text-xs text-muted-foreground font-medium">Berbayar Penuh</p>
             <p className="text-3xl font-black text-orange-600 mt-1">{totalFullPaidUsed}</p>
-            <p className="text-xs text-muted-foreground mt-1">dari {totalFullPaidQuota} total</p>
+            <p className="text-xs text-muted-foreground mt-1">dari {totalPaidQuota} total</p>
           </CardContent>
         </Card>
         <Card>

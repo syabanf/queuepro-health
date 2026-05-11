@@ -24,7 +24,7 @@ function StatusBadge({ service }) {
     return <Badge className="text-xs bg-purple-100 text-purple-700 border-purple-200">Unlimited</Badge>;
   }
   
-  const totalUsed = (service.used_full_free || 0) + (service.used_cc_rp1 || 0) + (service.used_full_paid || 0);
+  const totalUsed = (service.used_free_quota || 0) + (service.used_free_quota || 0) + (service.used_paid_quota || 0);
   const totalSlot = service.total_slot || 0;
   
   if (totalSlot <= 0) return <Badge variant="outline" className="text-xs">Belum Diset</Badge>;
@@ -39,8 +39,8 @@ export default function QuotaTable({ services }) {
 
   const renderRows = (list) =>
     list.map(s => {
-      const fullFreeRem = (s.full_free_quota || 0) - (s.used_full_free || 0);
-      const ccRp1Rem = (s.cc_rp1_quota || 0) - (s.used_cc_rp1 || 0);
+      const freeRem = (s.free_quota || 0) - (s.used_free_quota || 0);
+      const ccRp1Rem = (s.cc_rp1_quota || 0) - (s.used_free_quota || 0);
       return (
         <tr key={s.id} className="border-b border-border last:border-0 hover:bg-muted/30 transition-colors">
           <td className="py-2.5 px-3">
@@ -52,12 +52,12 @@ export default function QuotaTable({ services }) {
             </div>
           </td>
           <td className="py-2.5 px-3 text-center">
-            <div className="text-xs font-semibold text-foreground">{fullFreeRem}</div>
-            <QuotaBar used={s.used_full_free || 0} total={s.full_free_quota || 0} color="bg-green-500" />
+            <div className="text-xs font-semibold text-foreground">{freeRem}</div>
+            <QuotaBar used={s.used_free_quota || 0} total={s.free_quota || 0} color="bg-green-500" />
           </td>
           <td className="py-2.5 px-3 text-center">
             <div className="text-xs font-semibold text-foreground">{ccRp1Rem}</div>
-            <QuotaBar used={s.used_cc_rp1 || 0} total={s.cc_rp1_quota || 0} color="bg-blue-500" />
+            <QuotaBar used={s.used_free_quota || 0} total={s.cc_rp1_quota || 0} color="bg-blue-500" />
           </td>
           <td className="py-2.5 px-3 text-center">
             <StatusBadge service={s} />
