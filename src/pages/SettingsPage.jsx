@@ -10,6 +10,7 @@ import { useToast } from "@/components/ui/use-toast";
 import PageHeader from "@/components/layout/PageHeader";
 import EventConfigForm from "@/components/settings/EventConfigForm";
 import EventPreviewCard from "@/components/settings/EventPreviewCard";
+import * as XLSX from "xlsx";
 
 const DEFAULT_EVENT = {
   event_name: "Brilian Talks Health Care",
@@ -100,16 +101,112 @@ export default function SettingsPage() {
     setIsDirty(false);
   };
 
+  // ── Export to Excel (used before reset) ──────────────────────────────────
+  const exportToExcel = async () => {
+    const [allParticipants, allQueues, allServices, allSettings] = await Promise.all([
+      base44.entities.Participant.list(),
+      base44.entities.Queue.list(),
+      base44.entities.Service.list(),
+      base44.entities.EventSetting.list(),
+    ]);
+
+    const svcMap = Object.fromEntries(allServices.map(s => [s.id, s]));
+    const event = allSettings[0];
+
+    const QUOTA_LABELS = {
+      FREE: "Free Tanpa Syarat",
+      RP1_BRI: "Rp 1 BRI",
+      SPECIAL_PRICE: "Special Price",
+    };
+    const STATUS_LABELS = {
+      WAITING: "Menunggu",
+      CALLED: "Dipanggil",
+      QR_VERIFIED: "Terverifikasi",
+      SERVING: "Dilayani",
+      DONE: "Selesai",
+      SKIPPED: "Dilewati",
+      CANCELLED: "Dibatalkan",
+    };
+    const PARTICIPANT_STATUS_LABELS = {
+      REGISTERED: "Terdaftar",
+      PARTIALLY_COMPLETED: "Sebagian Selesai",
+      COMPLETED: "Selesai",
+      CANCELLED: "Dibatalkan",
+    };
+
+    // Sheet 1: Participant list
+    const participantRows = allParticipants.map((p, idx) => {
+      const queue = allQueues.find(q => q.participant_id === p.id);
+      const svc = svcMap[p.service_id] || svcMap[queue?.service_id] || {};
+      return {
+        "No.": idx + 1,
+        "No. Reg": p.registration_number || "",
+        "Nama": p.full_name || "",
+        "No. Telp": p.phone_number || "",
+        "Unit/Divisi": p.unit_division || "",
+        "Layanan": svc.service_name || "",
+        "Booth": svc.booth_number || "",
+        "Status Kuota": QUOTA_LABELS[p.quota_status] || p.quota_status || "",
+        "No. Antrian": queue?.queue_number || "",
+        "Status Antrian": STATUS_LABELS[queue?.status] || queue?.status || "",
+        "Status Peserta": PARTICIPANT_STATUS_LABELS[p.participant_status] || p.participant_status || "",
+        "Waktu Daftar": p.registered_at
+          ? new Date(p.registered_at).toLocaleString("id-ID")
+          : "",
+      };
+    });
+
+    // Sheet 2: Quota summary per service
+    const quotaRows = allServices.map(svc => ({
+      "Kode": svc.service_code || "",
+      "Nama Layanan": svc.service_name || "",
+      "Booth": svc.booth_number || "",
+      "Limit Free": svc.free_quota || 0,
+      "Terpakai Free": svc.used_free_quota || 0,
+      "Sisa Free": Math.max(0, (svc.free_quota || 0) - (svc.used_free_quota || 0)),
+      "Limit Rp1 BRI": svc.rp1_quota || 0,
+      "Terpakai Rp1 BRI": svc.used_rp1_quota || 0,
+      "Sisa Rp1 BRI": Math.max(0, (svc.rp1_quota || 0) - (svc.used_rp1_quota || 0)),
+      "Limit Special": svc.special_quota || 0,
+      "Terpakai Special": svc.used_special_quota || 0,
+      "Sisa Special": Math.max(0, (svc.special_quota || 0) - (svc.used_special_quota || 0)),
+    }));
+
+    const wb = XLSX.utils.book_new();
+
+    const ws1 = XLSX.utils.json_to_sheet(participantRows);
+    ws1["!cols"] = [
+      { wch: 5 }, { wch: 12 }, { wch: 28 }, { wch: 16 }, { wch: 22 },
+      { wch: 22 }, { wch: 8 }, { wch: 20 }, { wch: 12 }, { wch: 16 },
+      { wch: 20 }, { wch: 20 },
+    ];
+    XLSX.utils.book_append_sheet(wb, ws1, "Data Peserta");
+
+    const ws2 = XLSX.utils.json_to_sheet(quotaRows);
+    ws2["!cols"] = [
+      { wch: 8 }, { wch: 24 }, { wch: 8 },
+      { wch: 12 }, { wch: 14 }, { wch: 10 },
+      { wch: 14 }, { wch: 16 }, { wch: 12 },
+      { wch: 14 }, { wch: 16 }, { wch: 12 },
+    ];
+    XLSX.utils.book_append_sheet(wb, ws2, "Rekap Kuota");
+
+    const eventName = event?.event_name?.replace(/\s+/g, "-") || "brilian-talks";
+    const ts = new Date().toLocaleDateString("id-ID", { day: "2-digit", month: "2-digit", year: "numeric" }).replace(/\//g, "");
+    XLSX.writeFile(wb, `laporan-${eventName}-${ts}.xlsx`);
+  };
+
   // ── Reset usage ───────────────────────────────────────────────────────────
   const [resettingUsage, setResettingUsage] = useState(false);
 
   const handleResetUsage = async () => {
     const confirmed = window.confirm(
-      "Reset usage kuota?\n\nIni akan mengembalikan semua counter usage ke 0.\nData antrian dan peserta TIDAK dihapus."
+      "Reset usage kuota?\n\nSebelum reset, data peserta akan diekspor otomatis ke Excel.\nCounter usage akan dikembalikan ke 0. Data antrian dan peserta TIDAK dihapus."
     );
     if (!confirmed) return;
     setResettingUsage(true);
     try {
+      await exportToExcel();
       for (const svc of services) {
         await base44.entities.Service.update(svc.id, {
           used_free_quota: 0,
@@ -118,7 +215,7 @@ export default function SettingsPage() {
         });
       }
       queryClient.invalidateQueries({ queryKey: ["services"] });
-      toast({ title: "Usage kuota berhasil direset ke 0!" });
+      toast({ title: "Data diekspor & usage kuota direset ke 0!" });
     } catch (err) {
       toast({ title: "Gagal reset usage", description: err.message, variant: "destructive" });
     } finally {
