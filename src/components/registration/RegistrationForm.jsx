@@ -3,115 +3,49 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Badge } from "@/components/ui/badge";
-import { UserPlus, Loader2, AlertCircle, Gift, CreditCard } from "lucide-react";
+import { UserPlus, Loader2, AlertCircle, Stethoscope, Eye } from "lucide-react";
 import { base44 } from "@/api/client";
-import { getServicePrefix, formatQueueNumber, getNextQueueSequence, generateRegistrationNumber } from "@/lib/registrationUtils";
+import { formatQueueNumber, getNextQueueSequence, generateRegistrationNumber } from "@/lib/registrationUtils";
 import { generateQrToken, buildQrCodeUrl } from "@/lib/qrUtils";
-
-const PAYMENT_OPTIONS = [
-  { value: "VERIFIED_OUTSIDE_SYSTEM", label: "Terverifikasi (Luar Sistem)" },
-  { value: "PENDING_MANUAL_CONFIRMATION", label: "Menunggu Konfirmasi Manual" },
-  { value: "NOT_REQUIRED", label: "Tidak Diperlukan" },
-];
 
 export default function RegistrationForm({ services, participants = [], eventSetting, onSuccess }) {
   const [form, setForm] = useState({
     full_name: "",
     phone_number: "",
     unit_division: "",
-    participant_category: "",
-    medical_service_id: "",
-    eye_service_id: "",
-    payment_status: "NOT_REQUIRED",
+    service_id: "",
   });
   const [errors, setErrors] = useState({});
   const [submitting, setSubmitting] = useState(false);
 
-  const medicalServices = services.filter(s => s.service_group === "MEDICAL" && s.is_active && s.service_code && s.service_name);
-  const eyeServices = services.filter(s => s.service_group === "EYE_CHECK" && s.is_active && s.service_code && s.service_name);
-  const selectedMedical = services.find(s => s.id === form.medical_service_id);
-  const selectedEye = services.find(s => s.id === form.eye_service_id);
+  const activeServices = services.filter(s => s.is_active && s.service_code && s.service_name);
+  const selectedService = services.find(s => s.id === form.service_id);
 
-  // Calculate total service quotas for each tier
-  const totalFreeQuota = services.reduce((sum, s) => sum + (s.free_quota || 0), 0);
-  const totalCcRp1Quota = services.reduce((sum, s) => sum + (s.cc_rp1_quota || 0), 0);
-  const usedFullFree = participants.filter(p => p.participant_category === "FREE_CHECK").length;
-  const usedCcRp1 = participants.filter(p => p.participant_category === "PAYMENT").length;
-  const freeFull = totalFreeQuota > 0 && usedFullFree >= totalFreeQuota;
-  const ccRp1Full = totalCcRp1Quota > 0 && usedCcRp1 >= totalCcRp1Quota;
-
-  // Map category to quota category (tiered)
-  const getQuotaCategoryForCategory = (cat) => cat === "FREE_CHECK" ? "FULL_FREE" : "FULL_PAID";
-
-  const isMedicalFull = (service) => {
-    if (!service) return false;
-    if (!form.participant_category) return false;
-    const qcat = getQuotaCategoryForCategory(form.participant_category);
-    if (qcat === "FULL_FREE") {
-      const fq = service.free_quota || 0;
-      return fq > 0 && (service.used_free_quota || 0) >= fq;
-    } else {
-      const pq = service.paid_quota || 0;
-      return pq > 0 && (service.used_paid_quota || 0) >= pq;
-    }
+  const getRemainingSlots = (service) => {
+    const total = service.free_quota || 0;
+    const used = service.used_free_quota || 0;
+    return Math.max(0, total - used);
   };
 
-  const isEyeFull = (service) => {
-    if (!service) return false;
-    if (!form.participant_category) return false;
-    const qcat = getQuotaCategoryForCategory(form.participant_category);
-    if (qcat === "FULL_FREE") {
-      const fq = service.free_quota || 0;
-      return fq > 0 && (service.used_free_quota || 0) >= fq;
-    } else {
-      const pq = service.paid_quota || 0;
-      return pq > 0 && (service.used_paid_quota || 0) >= pq;
-    }
-  };
-
-  const isServiceFull = (service) => {
-    if (!service) return false;
-    if (service.is_unlimited) return false;
-    const totalUsed = (service.used_free_quota || 0) + (service.used_paid_quota || 0);
-    const totalSlot = service.total_slot || 0;
-    return totalSlot > 0 && totalUsed >= totalSlot;
-  };
+  const isServiceFull = (service) => getRemainingSlots(service) <= 0;
 
   const validate = () => {
     const errs = {};
     if (!form.full_name.trim()) errs.full_name = "Nama lengkap wajib diisi.";
     if (!form.phone_number.trim()) errs.phone_number = "Nomor telepon wajib diisi.";
     if (!form.unit_division.trim()) errs.unit_division = "Unit / Divisi wajib diisi.";
-    if (!form.participant_category) errs.participant_category = "Kategori peserta wajib dipilih.";
-    if (!form.medical_service_id) errs.medical_service_id = "Layanan medis wajib dipilih.";
-    if (!form.eye_service_id) errs.eye_service_id = "Layanan mata wajib dipilih.";
+    if (!form.service_id) errs.service_id = "Pilih salah satu layanan.";
 
-    // Event status check
     if (eventSetting?.event_status === "DRAFT") errs.global = "Event belum dibuka. Status masih DRAFT.";
     if (eventSetting?.event_status === "CLOSED") errs.global = "Event sudah ditutup. Pendaftaran tidak dapat dilakukan.";
 
-    // Total capacity
     if (eventSetting?.max_participants && participants.length >= eventSetting.max_participants)
       errs.global = "Kuota total peserta sudah penuh.";
 
-    // Category quota
-    if (form.participant_category === "FREE_CHECK" && freeFull)
-      errs.participant_category = `Kuota Tanpa Syarat sudah penuh (${usedFullFree}/${totalFreeQuota}).`;
-    if (form.participant_category === "PAYMENT" && ccRp1Full)
-      errs.participant_category = `Kuota Dengan CC Rp 1 sudah penuh (${usedCcRp1}/${totalCcRp1Quota}).`;
-
-    // Service slot quota
-    if (form.medical_service_id && form.participant_category && isMedicalFull(selectedMedical)) {
-      const qcat = getQuotaCategoryForCategory(form.participant_category);
-      errs.medical_service_id = `Kuota ${qcat === "FULL_FREE" ? "Tanpa Syarat" : "Berbayar"} layanan medis ini sudah habis.`;
-    }
-    if (form.eye_service_id && form.participant_category && isEyeFull(selectedEye)) {
-      const qcat = getQuotaCategoryForCategory(form.participant_category);
-      errs.eye_service_id = `Kuota ${qcat === "FULL_FREE" ? "Tanpa Syarat" : "Berbayar"} layanan mata ini sudah habis.`;
-    }
+    if (form.service_id && selectedService && isServiceFull(selectedService))
+      errs.service_id = "Kuota layanan ini sudah penuh.";
 
     return errs;
   };
@@ -124,100 +58,45 @@ export default function RegistrationForm({ services, participants = [], eventSet
     setSubmitting(true);
 
     try {
-      const quotaCategory = getQuotaCategoryForCategory(form.participant_category);
-      const paymentDisplayStatus = form.participant_category === "FREE_CHECK" ? "FREE" : "PAID";
-      
       const allParticipants = await base44.entities.Participant.list();
       const regNumber = generateRegistrationNumber(allParticipants.length + 1);
 
-      const medSeq = await getNextQueueSequence(form.medical_service_id);
-      const eyeSeq = await getNextQueueSequence(form.eye_service_id);
-      const medPrefix = selectedMedical.service_code;
-      const eyePrefix = selectedEye.service_code;
-      const medQueueNum = formatQueueNumber(medPrefix, medSeq);
-      const eyeQueueNum = formatQueueNumber(eyePrefix, eyeSeq);
+      const seq = await getNextQueueSequence(form.service_id);
+      const prefix = selectedService.service_code;
+      const queueNum = formatQueueNumber(prefix, seq);
 
-      // Create participant
       const participant = await base44.entities.Participant.create({
         registration_number: regNumber,
         full_name: form.full_name.trim(),
         phone_number: form.phone_number.trim(),
         unit_division: form.unit_division.trim(),
-        participant_category: form.participant_category,
-        medical_service_id: form.medical_service_id,
-        eye_service_id: form.eye_service_id,
-        payment_status: form.participant_category === "PAYMENT"
-          ? form.payment_status
-          : "NOT_REQUIRED",
+        participant_category: "FREE_CHECK",
+        service_id: form.service_id,
+        payment_status: "NOT_REQUIRED",
         participant_status: "REGISTERED",
         registered_by: (await base44.auth.me())?.email,
         registered_at: new Date().toISOString(),
       });
 
-      // Generate QR tokens for each queue
-      const medQrToken = generateQrToken();
-      const eyeQrToken = generateQrToken();
-      const medQrCodeUrl = buildQrCodeUrl(medQrToken, 120);
-      const eyeQrCodeUrl = buildQrCodeUrl(eyeQrToken, 120);
+      const qrToken = generateQrToken();
+      const qrCodeUrl = buildQrCodeUrl(qrToken, 120);
 
-      // Create queues with quota_category and payment_display_status
-      const medicalQueue = await base44.entities.Queue.create({
+      const queue = await base44.entities.Queue.create({
         participant_id: participant.id,
-        service_id: form.medical_service_id,
-        queue_number: medQueueNum,
-        queue_sequence: medSeq,
-        quota_category: quotaCategory,
-        payment_display_status: paymentDisplayStatus,
+        service_id: form.service_id,
+        queue_number: queueNum,
+        queue_sequence: seq,
+        quota_category: "FULL_FREE",
+        payment_display_status: "FREE",
         status: "WAITING",
-        qr_token: medQrToken,
-        qr_code_url: medQrCodeUrl,
-        qr_verification_status: "NOT_SCANNED",
-      });
-      const eyeQueue = await base44.entities.Queue.create({
-        participant_id: participant.id,
-        service_id: form.eye_service_id,
-        queue_number: eyeQueueNum,
-        queue_sequence: eyeSeq,
-        quota_category: quotaCategory,
-        payment_display_status: paymentDisplayStatus,
-        status: "WAITING",
-        qr_token: eyeQrToken,
-        qr_code_url: eyeQrCodeUrl,
+        qr_token: qrToken,
+        qr_code_url: qrCodeUrl,
         qr_verification_status: "NOT_SCANNED",
       });
 
-      // Deduct service quotas based on quota_category
-      if (quotaCategory === "FULL_FREE") {
-        await base44.entities.Service.update(form.medical_service_id, {
-          used_free_quota: (selectedMedical.used_free_quota || 0) + 1,
-          used_total: (selectedMedical.used_total || 0) + 1,
-        });
-        await base44.entities.Service.update(form.eye_service_id, {
-          used_free_quota: (selectedEye.used_free_quota || 0) + 1,
-          used_total: (selectedEye.used_total || 0) + 1,
-        });
-      } else {
-        await base44.entities.Service.update(form.medical_service_id, {
-          used_paid_quota: (selectedMedical.used_paid_quota || 0) + 1,
-          used_total: (selectedMedical.used_total || 0) + 1,
-        });
-        await base44.entities.Service.update(form.eye_service_id, {
-          used_paid_quota: (selectedEye.used_paid_quota || 0) + 1,
-          used_total: (selectedEye.used_total || 0) + 1,
-        });
-      }
+      onSuccess({ participant, queue, service: selectedService });
 
-      onSuccess({ participant, medicalQueue, eyeQueue, medicalService: selectedMedical, eyeService: selectedEye });
-
-      setForm({
-        full_name: "",
-        phone_number: "",
-        unit_division: "",
-        participant_category: "",
-        medical_service_id: "",
-        eye_service_id: "",
-        payment_status: "NOT_REQUIRED",
-      });
+      setForm({ full_name: "", phone_number: "", unit_division: "", service_id: "" });
     } catch (err) {
       setErrors({ global: err.message || "Terjadi kesalahan. Silakan coba lagi." });
     } finally {
@@ -225,43 +104,25 @@ export default function RegistrationForm({ services, participants = [], eventSet
     }
   };
 
-  const CategoryCard = ({ value, label, icon: CatIcon, desc, fullFreeQuota, freeUsed, ccRp1Quota, ccRp1Used, isFull }) => {
-    const freeRemaining = Math.max(0, fullFreeQuota - freeUsed);
-    const ccRp1Remaining = Math.max(0, ccRp1Quota - ccRp1Used);
-    
-    return (
-      <div
-        className={`flex items-start gap-3 px-4 py-3 rounded-xl border-2 cursor-pointer transition-all
-          ${isFull ? "opacity-50 cursor-not-allowed border-border bg-muted/20" :
-            form.participant_category === value
-              ? "border-primary bg-primary/5"
-              : "border-border hover:border-primary/40 bg-card"}`}
-        onClick={() => {
-          if (isFull) return;
-          setForm(p => ({ ...p, participant_category: value, medical_service_id: "", eye_service_id: "" }));
-          setErrors(p => ({ ...p, participant_category: undefined }));
-        }}
-      >
-        <RadioGroupItem value={value} id={`cat-${value}`} disabled={isFull} className="mt-0.5" />
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2">
-            <CatIcon className="w-4 h-4 text-primary flex-shrink-0" />
-            <Label htmlFor={`cat-${value}`} className={`text-sm font-semibold ${isFull ? "cursor-not-allowed" : "cursor-pointer"}`}>
-              {label}
-            </Label>
-            {isFull && <Badge variant="outline" className="text-[10px]">Penuh</Badge>}
-          </div>
-          <p className="text-xs text-muted-foreground mt-0.5">{desc}</p>
-        </div>
-      </div>
-    );
-  };
-
   const isEventBlocked = eventSetting?.event_status === "DRAFT" || eventSetting?.event_status === "CLOSED";
 
   return (
     <Card>
       <CardHeader className="pb-4">
+        {/* Logos BRI & Danantara */}
+        <div className="flex items-center justify-between mb-4 pb-4 border-b border-border">
+          <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-[#003D79] text-white">
+            <img src="/logo-bri.png" alt="BRI" className="h-7 object-contain" onError={e => e.target.style.display='none'} />
+            <span className="font-black text-sm tracking-wider">BRI</span>
+          </div>
+          <div className="text-center">
+            <p className="text-xs text-muted-foreground font-medium">Brilian Talks Health Care 2025</p>
+          </div>
+          <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-[#1B5E20] text-white">
+            <img src="/logo-danantara.png" alt="Danantara" className="h-7 object-contain" onError={e => e.target.style.display='none'} />
+            <span className="font-black text-sm tracking-wider">Danantara</span>
+          </div>
+        </div>
         <CardTitle className="text-base flex items-center gap-2">
           <UserPlus className="w-5 h-5 text-primary" />
           Form Registrasi Peserta
@@ -319,111 +180,57 @@ export default function RegistrationForm({ services, participants = [], eventSet
 
             <div className="border-t border-border" />
 
-            {/* Category */}
+            {/* Service Selection */}
             <div>
               <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-3">
-                Kategori Peserta <span className="text-destructive">*</span>
+                Pilih Layanan <span className="text-destructive">*</span>
               </h3>
-              <RadioGroup value={form.participant_category}
-                onValueChange={val => { setForm(p => ({ ...p, participant_category: val, medical_service_id: "", eye_service_id: "" })); setErrors(p => ({ ...p, participant_category: undefined })); }}
-                className="space-y-2">
-                <CategoryCard
-                   value="FREE_CHECK"
-                   label="FREE CHECK"
-                   icon={Gift}
-                   desc="Pemeriksaan gratis — tidak dipungut biaya"
-                   fullFreeQuota={totalFreeQuota}
-                   freeUsed={usedFullFree}
-                   ccRp1Quota={0}
-                   ccRp1Used={0}
-                   isFull={freeFull}
-                 />
-                 <CategoryCard
-                   value="PAYMENT"
-                   label="PAYMENT"
-                   icon={CreditCard}
-                   desc="Pemeriksaan berbayar — diperlukan konfirmasi pembayaran"
-                   fullFreeQuota={0}
-                   freeUsed={0}
-                   ccRp1Quota={totalCcRp1Quota}
-                   ccRp1Used={usedCcRp1}
-                   isFull={ccRp1Full}
-                 />
-              </RadioGroup>
-              {errors.participant_category && <p className="text-xs text-destructive mt-1">{errors.participant_category}</p>}
-            </div>
-
-            {form.participant_category && (
-              <>
-                <div className="border-t border-border" />
-
-                {/* Medical Service */}
-                <div>
-                  <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-3">Layanan Medis</h3>
-                  <Label className="text-xs font-medium">Pilih Layanan Medis <span className="text-destructive">*</span></Label>
-                  <Select value={form.medical_service_id}
-                    onValueChange={val => { setForm(p => ({ ...p, medical_service_id: val })); setErrors(p => ({ ...p, medical_service_id: undefined })); }}>
-                    <SelectTrigger className={`mt-1 ${errors.medical_service_id ? "border-destructive" : ""}`}>
-                      <SelectValue placeholder="Pilih layanan medis..." />
-                    </SelectTrigger>
-                    <SelectContent>
-                       {medicalServices.map(s => (
-                         <SelectItem key={s.id} value={s.id} disabled={isServiceFull(s)}>
-                           <div className="flex items-center gap-2">
-                             <span className="w-5 h-5 rounded bg-primary/10 text-primary text-[10px] font-bold flex items-center justify-center">{s.service_code}</span>
-                             <span>{s.service_name}</span>
-                             {isServiceFull(s) && <Badge variant="outline" className="text-[10px] ml-1">Penuh</Badge>}
-                           </div>
-                         </SelectItem>
-                       ))}
-                     </SelectContent>
-                  </Select>
-                  {errors.medical_service_id && <p className="text-xs text-destructive mt-1">{errors.medical_service_id}</p>}
-                </div>
-
-                <div className="border-t border-border" />
-
-                {/* Eye Service */}
-                <div>
-                  <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-3">Pemeriksaan Mata</h3>
-                  <Label className="text-xs font-medium">Pilih Layanan Mata <span className="text-destructive">*</span></Label>
-                  <Select value={form.eye_service_id}
-                    onValueChange={val => { setForm(p => ({ ...p, eye_service_id: val })); setErrors(p => ({ ...p, eye_service_id: undefined })); }}>
-                    <SelectTrigger className={`mt-1 ${errors.eye_service_id ? "border-destructive" : ""}`}>
-                      <SelectValue placeholder="Pilih layanan pemeriksaan mata..." />
-                    </SelectTrigger>
-                    <SelectContent>
-                       {eyeServices.map(s => (
-                         <SelectItem key={s.id} value={s.id} disabled={isServiceFull(s)}>
-                           <div className="flex items-center gap-2">
-                             <span className="w-5 h-5 rounded bg-accent/10 text-accent text-[10px] font-bold flex items-center justify-center">{s.service_code}</span>
-                             <span>{s.service_name}</span>
-                             {isServiceFull(s) && <Badge variant="outline" className="text-[10px] ml-1">Penuh</Badge>}
-                           </div>
-                         </SelectItem>
-                       ))}
-                     </SelectContent>
-                  </Select>
-                  {errors.eye_service_id && <p className="text-xs text-destructive mt-1">{errors.eye_service_id}</p>}
-                </div>
-
-                {/* Payment Note (only for PAYMENT category) */}
-                {form.participant_category === "PAYMENT" && (
-                  <>
-                    <div className="border-t border-border" />
-                    <div>
-                      <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-3">Catatan Pembayaran</h3>
-                      <Select value={form.payment_status} onValueChange={val => setForm(p => ({ ...p, payment_status: val }))}>
-                        <SelectTrigger><SelectValue /></SelectTrigger>
-                        <SelectContent>
-                          {PAYMENT_OPTIONS.map(o => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}
-                        </SelectContent>
-                      </Select>
+              <RadioGroup
+                value={form.service_id}
+                onValueChange={val => { setForm(p => ({ ...p, service_id: val })); setErrors(p => ({ ...p, service_id: undefined })); }}
+                className="space-y-2"
+              >
+                {activeServices.map(service => {
+                  const remaining = getRemainingSlots(service);
+                  const full = isServiceFull(service);
+                  const isMedical = service.service_group === "MEDICAL";
+                  const Icon = isMedical ? Stethoscope : Eye;
+                  return (
+                    <div
+                      key={service.id}
+                      className={`flex items-start gap-3 px-4 py-3 rounded-xl border-2 cursor-pointer transition-all
+                        ${full ? "opacity-50 cursor-not-allowed border-border bg-muted/20" :
+                          form.service_id === service.id
+                            ? "border-primary bg-primary/5"
+                            : "border-border hover:border-primary/40 bg-card"}`}
+                      onClick={() => {
+                        if (full) return;
+                        setForm(p => ({ ...p, service_id: service.id }));
+                        setErrors(p => ({ ...p, service_id: undefined }));
+                      }}
+                    >
+                      <RadioGroupItem value={service.id} id={`svc-${service.id}`} disabled={full} className="mt-0.5" />
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <Icon className={`w-4 h-4 flex-shrink-0 ${isMedical ? "text-primary" : "text-accent"}`} />
+                          <Label htmlFor={`svc-${service.id}`} className={`text-sm font-semibold ${full ? "cursor-not-allowed" : "cursor-pointer"}`}>
+                            {service.service_name}
+                          </Label>
+                          {full && <Badge variant="outline" className="text-[10px]">Penuh</Badge>}
+                        </div>
+                        <p className="text-xs text-muted-foreground mt-0.5">
+                          Booth {service.booth_number} &bull; Kode {service.service_code}
+                        </p>
+                        <p className={`text-xs font-semibold mt-1 ${remaining <= 10 ? "text-amber-600" : "text-green-600"}`}>
+                          Sisa slot gratis: {remaining}
+                        </p>
+                      </div>
                     </div>
-                  </>
-                )}
-              </>
-            )}
+                  );
+                })}
+              </RadioGroup>
+              {errors.service_id && <p className="text-xs text-destructive mt-1">{errors.service_id}</p>}
+            </div>
 
             <Button type="submit" disabled={submitting} className="w-full">
               {submitting ? (

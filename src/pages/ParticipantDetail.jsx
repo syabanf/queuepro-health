@@ -162,8 +162,10 @@ export default function ParticipantDetail() {
   const eventSetting = eventSettings[0];
 
   const handleReprint = () => {
-    if (!medicalQueue || !eyeQueue || !medicalService || !eyeService) return;
-    printCoupon({ participant, medicalQueue, eyeQueue, medicalService, eyeService, eventSetting });
+    const queue = allQueues.find(q => q.participant_id === participant.id);
+    const service = serviceMap[queue?.service_id || participant.service_id];
+    if (!queue || !service) return;
+    printCoupon({ participant, queue, service, eventSetting });
   };
 
   return (

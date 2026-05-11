@@ -9,7 +9,7 @@ import { useToast } from "@/components/ui/use-toast";
 import {
   Monitor, PhoneCall, PlayCircle, CheckCircle2,
   SkipForward, XCircle, RotateCcw, Clock, Stethoscope, Eye, User, QrCode, Barcode,
-  ShieldCheck, ShieldX, Shield
+  ShieldCheck, ShieldX, Shield, CreditCard, Gift
 } from "lucide-react";
 import QrScannerModal from "@/components/booth/QrScannerModal";
 import QrVerificationCard from "@/components/booth/QrVerificationCard";
@@ -141,14 +141,13 @@ export default function NakesBooth() {
       }[newStatus];
       const update = { status: newStatus, ...extraFields };
       if (timeField) update[timeField] = now;
-      
+
       try {
         await base44.entities.Queue.update(queue.id, update);
       } catch (e) {
-        // If mock auth fails, silently continue with logging
         console.warn("Queue update failed, continuing with logging:", e);
       }
-      
+
       try {
         await logQueueEvent({
           queue_id: queue.id,
@@ -161,15 +160,21 @@ export default function NakesBooth() {
       } catch (e) {
         console.warn("Event logging failed:", e);
       }
-      
+
       if (newStatus === "DONE") {
         try {
-          const allQueues = await base44.entities.Queue.filter({ participant_id: queue.participant_id });
-          const updated = allQueues.map(q => q.id === queue.id ? { ...q, status: "DONE" } : q);
-          const allDone = updated.every(q => q.status === "DONE" || q.status === "CANCELLED");
-          const anyDone = updated.some(q => q.status === "DONE");
-          const newParticipantStatus = allDone ? "COMPLETED" : anyDone ? "PARTIALLY_COMPLETED" : "REGISTERED";
-          await base44.entities.Participant.update(queue.participant_id, { participant_status: newParticipantStatus });
+          // Deduct quota from service when examination is complete
+          const svc = services.find(s => s.id === queue.service_id);
+          if (svc) {
+            await base44.entities.Service.update(svc.id, {
+              used_free_quota: (svc.used_free_quota || 0) + 1,
+            });
+          }
+        } catch (e) {
+          console.warn("Quota deduction failed:", e);
+        }
+        try {
+          await base44.entities.Participant.update(queue.participant_id, { participant_status: "COMPLETED" });
         } catch (e) {
           console.warn("Participant status update failed:", e);
         }
@@ -465,8 +470,8 @@ export default function NakesBooth() {
                             ) : null;
                           })()}
                           <p className="text-sm text-muted-foreground mt-1">
-                            Kategori: <span className={`font-semibold ${activeQueue.quota_category === "FULL_FREE" ? "text-green-600" : activeQueue.quota_category === "CC_RP_1" ? "text-blue-600" : "text-orange-600"}`}>
-                              {activeQueue.quota_category === "FULL_FREE" ? "Tanpa Syarat" : activeQueue.quota_category === "CC_RP_1" ? "CC Rp 1" : "Berbayar"}
+                            Status: <span className={`font-semibold ${activeQueue.payment_display_status === "FREE" ? "text-green-600" : "text-orange-600"}`}>
+                              {activeQueue.payment_display_status === "FREE" ? "GRATIS" : "BERBAYAR"}
                             </span>
                           </p>
                         </div>
@@ -482,6 +487,22 @@ export default function NakesBooth() {
 
                       {/* Action Buttons - Simplified Flow */}
                                       <div className="space-y-2 pt-2 border-t border-border">
+                                        {/* Payment Toggle by Nakes */}
+                                        <Button
+                                          variant="outline"
+                                          className={`w-full gap-2 ${activeQueue.payment_display_status === "FREE" ? "text-orange-600 border-orange-300 hover:bg-orange-50" : "text-green-600 border-green-300 hover:bg-green-50"}`}
+                                          onClick={async () => {
+                                            const newPayment = activeQueue.payment_display_status === "FREE" ? "PAID" : "FREE";
+                                            await base44.entities.Queue.update(activeQueue.id, { payment_display_status: newPayment });
+                                            queryClient.invalidateQueries({ queryKey: ["booth-queues", selectedServiceId] });
+                                          }}
+                                          disabled={updateQueue.isPending}
+                                        >
+                                          {activeQueue.payment_display_status === "FREE"
+                                            ? <><CreditCard className="w-4 h-4" /> Ubah ke Berbayar</>
+                                            : <><Gift className="w-4 h-4" /> Ubah ke Gratis</>}
+                                        </Button>
+
                                         {/* Scan Barcode Button */}
                                         <Button
                                           className="w-full gap-2 bg-blue-600 hover:bg-blue-700"
@@ -574,7 +595,7 @@ export default function NakesBooth() {
                       })()}
                       {nextWaiting && (
                         <p className="text-xs text-muted-foreground mt-0.5">
-                          {nextWaiting.quota_category === "FULL_FREE" ? "Tanpa Syarat" : nextWaiting.quota_category === "CC_RP_1" ? "CC Rp 1" : "Berbayar"}
+                          {nextWaiting.payment_display_status === "FREE" ? "Gratis" : "Berbayar"}
                         </p>
                       )}
                     </div>
@@ -624,8 +645,8 @@ export default function NakesBooth() {
                           <div key={q.id} className={`flex items-center gap-2 px-2 py-1.5 rounded-md text-sm ${i === 0 ? "bg-primary/5 border border-primary/20" : "bg-muted/40"}`}>
                             <span className="font-mono font-bold w-14 flex-shrink-0">{q.queue_number}</span>
                             <span className="text-xs text-muted-foreground truncate flex-1">{p?.full_name || "—"}</span>
-                            <span className={`text-[10px] font-bold flex-shrink-0 ${q.quota_category === "FULL_FREE" ? "text-green-600" : q.quota_category === "CC_RP_1" ? "text-blue-600" : "text-orange-600"}`}>
-                              {q.quota_category === "FULL_FREE" ? "TS" : q.quota_category === "CC_RP_1" ? "CC" : "BP"}
+                            <span className={`text-[10px] font-bold flex-shrink-0 ${q.payment_display_status === "FREE" ? "text-green-600" : "text-orange-600"}`}>
+                              {q.payment_display_status === "FREE" ? "GRS" : "BYR"}
                             </span>
                           </div>
                         );
@@ -683,7 +704,7 @@ export default function NakesBooth() {
                               <ShieldCheck className="w-3 h-3 text-green-500" title="QR Verified" />
                             )}
                             <span className={`text-[10px] font-bold ${q.quota_category === "FULL_FREE" ? "text-green-600" : q.quota_category === "CC_RP_1" ? "text-blue-600" : "text-orange-600"}`}>
-                               {q.quota_category === "FULL_FREE" ? "Tanpa Syarat" : q.quota_category === "CC_RP_1" ? "CC Rp 1" : "Berbayar"}
+                               {q.payment_display_status === "FREE" ? "Gratis" : "Berbayar"}
                              </span>
                           </div>
                         </div>

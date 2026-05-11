@@ -102,11 +102,24 @@ const DEMO_USERS = [
 ];
 
 const SEED_SERVICES = [
-  { id: 'svc-a', service_code: 'A', service_name: 'MCU Dokter Umum 1', service_group: 'MEDICAL', booth_number: 1, free_quota: 50, paid_quota: 30, used_free_quota: 0, used_paid_quota: 0, quota_status: 'AVAILABLE', is_active: true, created_date: new Date().toISOString() },
-  { id: 'svc-b', service_code: 'B', service_name: 'MCU Dokter Umum 2', service_group: 'MEDICAL', booth_number: 2, free_quota: 50, paid_quota: 30, used_free_quota: 0, used_paid_quota: 0, quota_status: 'AVAILABLE', is_active: true, created_date: new Date().toISOString() },
-  { id: 'svc-c', service_code: 'C', service_name: 'MCU Dokter Umum 3', service_group: 'MEDICAL', booth_number: 3, free_quota: 50, paid_quota: 30, used_free_quota: 0, used_paid_quota: 0, quota_status: 'AVAILABLE', is_active: true, created_date: new Date().toISOString() },
-  { id: 'svc-d', service_code: 'D', service_name: 'Pemeriksaan Mata 1', service_group: 'EYE_CHECK', booth_number: 4, free_quota: 50, paid_quota: 30, used_free_quota: 0, used_paid_quota: 0, quota_status: 'AVAILABLE', is_active: true, created_date: new Date().toISOString() },
-  { id: 'svc-e', service_code: 'E', service_name: 'Pemeriksaan Mata 2', service_group: 'EYE_CHECK', booth_number: 5, free_quota: 50, paid_quota: 30, used_free_quota: 0, used_paid_quota: 0, quota_status: 'AVAILABLE', is_active: true, created_date: new Date().toISOString() },
+  {
+    id: 'svc-a', service_code: 'A',
+    service_name: 'Layanan Medis Umum - Primaya Hospital',
+    service_group: 'MEDICAL', booth_number: 1,
+    free_quota: 200, paid_quota: 0,
+    used_free_quota: 0, used_paid_quota: 0,
+    quota_status: 'AVAILABLE', is_active: true,
+    created_date: new Date().toISOString(),
+  },
+  {
+    id: 'svc-b', service_code: 'B',
+    service_name: 'Pemeriksaan Mata Umum - Optik Melawai',
+    service_group: 'EYE_CHECK', booth_number: 2,
+    free_quota: 200, paid_quota: 0,
+    used_free_quota: 0, used_paid_quota: 0,
+    quota_status: 'AVAILABLE', is_active: true,
+    created_date: new Date().toISOString(),
+  },
 ];
 
 const SEED_EVENT = {
@@ -116,9 +129,9 @@ const SEED_EVENT = {
   event_tagline: 'Healthy People, Healthy Performance',
   location: 'Aula Utama',
   event_date: new Date().toISOString().split('T')[0],
-  max_participants: 200,
-  free_check_quota: 100,
-  payment_quota: 100,
+  max_participants: 400,
+  free_check_quota: 400,
+  payment_quota: 0,
   queue_monitor_url: typeof window !== 'undefined' ? window.location.origin + '/led-monitor' : '/led-monitor',
   mobile_monitor_url: typeof window !== 'undefined' ? window.location.origin + '/mobile-monitor' : '/mobile-monitor',
   event_status: 'ACTIVE',
@@ -131,9 +144,16 @@ function seedIfEmpty(name, data) {
   }
 }
 
+const DATA_VERSION = '3.0';
+
 function initSeeds() {
-  seedIfEmpty('Service', SEED_SERVICES);
-  seedIfEmpty('EventSetting', [SEED_EVENT]);
+  const storedVersion = localStorage.getItem(DB_PREFIX + 'data_version');
+  if (storedVersion !== DATA_VERSION) {
+    // Re-seed master data on version change (preserves Queue/Participant data)
+    localStorage.setItem(DB_PREFIX + 'Service', JSON.stringify(SEED_SERVICES));
+    localStorage.setItem(DB_PREFIX + 'EventSetting', JSON.stringify([SEED_EVENT]));
+    localStorage.setItem(DB_PREFIX + 'data_version', DATA_VERSION);
+  }
   seedIfEmpty('Queue', []);
   seedIfEmpty('Participant', []);
   seedIfEmpty('QueueEvent', []);

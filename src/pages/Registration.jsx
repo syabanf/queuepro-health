@@ -60,7 +60,7 @@ export default function Registration() {
     queryClient.invalidateQueries({ queryKey: ["services"] });
     toast({
       title: "Pendaftaran Berhasil!",
-      description: `${result.participant.full_name} — Antrian: ${result.medicalQueue.queue_number} & ${result.eyeQueue.queue_number}`,
+      description: `${result.participant.full_name} — Antrian: ${result.queue.queue_number}`,
     });
   }, [queryClient, toast]);
 
@@ -70,8 +70,8 @@ export default function Registration() {
 
   const handlePrint = useCallback(() => {
     if (!lastResult) return;
-    const { participant, medicalQueue, eyeQueue, medicalService, eyeService } = lastResult;
-    printCoupon({ participant, medicalQueue, eyeQueue, medicalService, eyeService, eventSetting: eventSettings[0] });
+    const { participant, queue, service } = lastResult;
+    printCoupon({ participant, queue, service, eventSetting: eventSettings[0] });
   }, [lastResult, eventSettings]);
 
   if (loadingServices) {

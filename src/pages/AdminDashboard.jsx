@@ -192,13 +192,50 @@ export default function AdminDashboard() {
       <TestFlowWizard isOpen={showTestWizard} onClose={() => setShowTestWizard(false)} />
       <DataConsistencyChecker isOpen={showDataChecker} onClose={() => setShowDataChecker(false)} />
 
+      {/* Free Slot Info */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        {services.filter(s => s.is_active).map(s => {
+          const remaining = Math.max(0, (s.free_quota || 0) - (s.used_free_quota || 0));
+          const usedPct = Math.min(100, Math.round(((s.used_free_quota || 0) / (s.free_quota || 1)) * 100));
+          const isMedical = s.service_group === "MEDICAL";
+          return (
+            <Card key={s.id} className={`border-2 ${remaining <= 0 ? "border-destructive/40" : remaining <= 20 ? "border-warning/40" : "border-success/30"}`}>
+              <CardContent className="p-4">
+                <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center gap-2">
+                    {isMedical ? <Stethoscope className="w-4 h-4 text-primary" /> : <Eye className="w-4 h-4 text-accent" />}
+                    <span className="text-sm font-semibold truncate">{s.service_name}</span>
+                  </div>
+                  {remaining <= 0 ? (
+                    <Badge className="bg-red-100 text-red-700 border-red-200 gap-1 flex-shrink-0"><AlertCircle className="w-3 h-3" />Penuh</Badge>
+                  ) : (
+                    <Badge className={`flex-shrink-0 ${remaining <= 20 ? "bg-amber-100 text-amber-700 border-amber-200" : "bg-green-100 text-green-700 border-green-200"}`}>
+                      Sisa Gratis: {remaining}
+                    </Badge>
+                  )}
+                </div>
+                <div className="flex items-center gap-3">
+                  <div className="flex-1 h-3 bg-muted rounded-full overflow-hidden">
+                    <div
+                      className={`h-full rounded-full transition-all duration-700 ${usedPct >= 100 ? "bg-destructive" : usedPct >= 80 ? "bg-warning" : "bg-success"}`}
+                      style={{ width: `${usedPct}%` }}
+                    />
+                  </div>
+                  <span className="text-xs text-muted-foreground flex-shrink-0">{s.used_free_quota || 0}/{s.free_quota || 0}</span>
+                </div>
+              </CardContent>
+            </Card>
+          );
+        })}
+      </div>
+
       {/* Capacity Bar */}
       <Card className={`border-2 ${fillPct >= 100 ? "border-destructive/40" : fillPct >= 80 ? "border-warning/40" : "border-success/30"}`}>
         <CardContent className="p-4">
           <div className="flex items-center justify-between mb-2">
             <div className="flex items-center gap-2">
               <Users className="w-4 h-4 text-primary" />
-              <span className="text-sm font-semibold">Kapasitas Peserta</span>
+              <span className="text-sm font-semibold">Total Peserta Terdaftar</span>
             </div>
             <div className="flex items-center gap-2">
               <span className="text-sm font-black">{participants.length}</span>

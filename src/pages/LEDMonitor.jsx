@@ -31,35 +31,35 @@ function ServiceCard({ service, queues, participants }) {
   const participant = serving ? participants.find(p => p.id === serving.participant_id) : null;
 
   return (
-    <div className={`flex flex-col rounded-2xl overflow-hidden border transition-all duration-300
-      ${flash ? "border-white/60 shadow-2xl shadow-white/20 scale-[1.01]" : "border-white/10 bg-white/5 backdrop-blur-sm"}`}>
+    <div className={`flex flex-col rounded-3xl overflow-hidden border-2 transition-all duration-300
+      ${flash ? "border-white/80 shadow-2xl shadow-white/30 scale-[1.01]" : "border-white/15 bg-white/5 backdrop-blur-sm"}`}>
       {/* Card Header */}
-      <div className={`flex items-center gap-2 px-4 py-3 ${isMedical ? "bg-blue-500/30" : "bg-cyan-500/30"}`}>
-        <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${isMedical ? "bg-blue-400/40" : "bg-cyan-400/40"}`}>
-          <Icon className="w-4 h-4 text-white" />
+      <div className={`flex items-center gap-3 px-6 py-4 ${isMedical ? "bg-blue-500/30" : "bg-cyan-500/30"}`}>
+        <div className={`w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0 ${isMedical ? "bg-blue-400/40" : "bg-cyan-400/40"}`}>
+          <Icon className="w-6 h-6 text-white" />
         </div>
         <div className="flex-1 min-w-0">
-          <p className="text-white/60 text-xs font-bold uppercase tracking-widest">Kode {service.service_code}</p>
-          <p className="text-white font-bold text-sm leading-tight truncate">{service.service_name}</p>
+          <p className="text-white/60 text-sm font-bold uppercase tracking-widest">Kode {service.service_code}</p>
+          <p className="text-white font-bold text-xl leading-tight truncate">{service.service_name}</p>
         </div>
         <div className="text-right flex-shrink-0">
-          <p className="text-white/50 text-xs">Booth</p>
-          <p className="text-white font-bold text-lg leading-none">{service.booth_number}</p>
+          <p className="text-white/50 text-sm">Booth</p>
+          <p className="text-white font-black text-3xl leading-none">{service.booth_number}</p>
         </div>
       </div>
 
       {/* Now Serving */}
-      <div className={`flex-1 flex flex-col items-center justify-center py-5 px-3 transition-all duration-300
+      <div className={`flex-1 flex flex-col items-center justify-center py-8 px-4 transition-all duration-300
         ${flash ? "bg-white/15" : "bg-white/5"}`}>
-        <p className="text-white/40 text-xs uppercase tracking-[0.2em] mb-1">Now Serving</p>
+        <p className="text-white/50 text-base uppercase tracking-[0.3em] mb-3">Now Serving</p>
         <p className={`font-black tracking-widest leading-none transition-all duration-300
-          ${serving ? "text-5xl text-white" : "text-4xl text-white/20"}
+          ${serving ? "text-[7rem] text-white" : "text-7xl text-white/20"}
           ${flash ? "scale-110" : ""}`}>
           {serving ? serving.queue_number : "—"}
         </p>
         {serving && (
           <>
-            <div className={`mt-2 px-3 py-0.5 rounded-full text-xs font-bold ${
+            <div className={`mt-4 px-5 py-1.5 rounded-full text-base font-bold ${
               serving.status === "SERVING" ? "bg-green-400/20 text-green-300 border border-green-400/30"
               : serving.status === "QR_VERIFIED" ? "bg-blue-400/20 text-blue-300 border border-blue-400/30"
               : "bg-amber-400/20 text-amber-300 border border-amber-400/30"
@@ -67,29 +67,30 @@ function ServiceCard({ service, queues, participants }) {
               {serving.status === "SERVING" ? "● DILAYANI" : serving.status === "QR_VERIFIED" ? "● TERVERIFIKASI" : "● DIPANGGIL"}
             </div>
             {participant && (
-              <p className="text-white/50 text-xs mt-2 font-medium truncate max-w-full px-2 text-center">
+              <p className="text-white/60 text-lg mt-3 font-semibold truncate max-w-full px-4 text-center">
                 {participant.full_name}
               </p>
             )}
           </>
         )}
+        {!serving && <p className="text-white/25 text-lg mt-4">Belum ada antrian aktif</p>}
       </div>
 
       {/* Stats Row */}
-      <div className="grid grid-cols-3 border-t border-white/10">
-        <div className="flex flex-col items-center justify-center py-2 px-2 border-r border-white/10">
-          <p className="text-white/40 text-[10px] uppercase">Berikutnya</p>
-          <p className={`font-bold font-mono text-base ${next ? "text-white/70" : "text-white/20"}`}>
+      <div className="grid grid-cols-3 border-t-2 border-white/10">
+        <div className="flex flex-col items-center justify-center py-4 px-3 border-r-2 border-white/10">
+          <p className="text-white/40 text-sm uppercase tracking-wider">Berikutnya</p>
+          <p className={`font-black font-mono text-3xl mt-1 ${next ? "text-white/80" : "text-white/20"}`}>
             {next ? next.queue_number : "—"}
           </p>
         </div>
-        <div className="flex flex-col items-center justify-center py-2 px-2 border-r border-white/10">
-          <p className="text-white/40 text-[10px] uppercase">Tunggu</p>
-          <p className="font-bold text-white text-base">{waiting.length}</p>
+        <div className="flex flex-col items-center justify-center py-4 px-3 border-r-2 border-white/10">
+          <p className="text-white/40 text-sm uppercase tracking-wider">Menunggu</p>
+          <p className="font-black text-white text-3xl mt-1">{waiting.length}</p>
         </div>
-        <div className="flex flex-col items-center justify-center py-2 px-2">
-          <p className="text-white/40 text-[10px] uppercase">Selesai</p>
-          <p className="font-bold text-green-300 text-base">{doneCount}</p>
+        <div className="flex flex-col items-center justify-center py-4 px-3">
+          <p className="text-white/40 text-sm uppercase tracking-wider">Selesai</p>
+          <p className="font-black text-green-300 text-3xl mt-1">{doneCount}</p>
         </div>
       </div>
     </div>
@@ -162,34 +163,34 @@ export default function LEDMonitor() {
 
       <div className="relative h-full flex flex-col px-6 pt-4 pb-4">
         {/* Top Bar */}
-        <div className="flex items-center justify-between mb-4 flex-shrink-0 gap-4">
+        <div className="flex items-center justify-between mb-5 flex-shrink-0 gap-4">
           <div className="min-w-0">
-            <p className="text-cyan-300 text-xs font-bold uppercase tracking-[0.3em] truncate">{eventHeadline}</p>
-            <h1 className="text-white font-black text-2xl leading-tight tracking-wide">{eventName}</h1>
+            <p className="text-cyan-300 text-sm font-bold uppercase tracking-[0.3em] truncate">{eventHeadline}</p>
+            <h1 className="text-white font-black text-3xl leading-tight tracking-wide">{eventName}</h1>
           </div>
-          <div className="flex items-center gap-6 text-white/60 text-sm flex-shrink-0">
+          <div className="flex items-center gap-8 text-white/60 flex-shrink-0">
             <div className="text-center">
-              <p className="text-white font-bold text-xl">{totalWaiting}</p>
-              <p className="text-xs">Menunggu</p>
+              <p className="text-white font-black text-3xl">{totalWaiting}</p>
+              <p className="text-sm">Menunggu</p>
             </div>
             <div className="text-center">
-              <p className="text-green-300 font-bold text-xl">{totalServed}</p>
-              <p className="text-xs">Selesai</p>
+              <p className="text-green-300 font-black text-3xl">{totalServed}</p>
+              <p className="text-sm">Selesai</p>
             </div>
             <div className="text-right">
               <div className="flex items-center gap-1.5 justify-end">
-                <Clock className="w-3.5 h-3.5" />
-                <span className="font-mono font-bold text-white text-lg">{timeStr}</span>
-                <RefreshCw className={`w-3 h-3 ml-1 ${isRefreshing ? "animate-spin" : ""}`} />
+                <Clock className="w-4 h-4" />
+                <span className="font-mono font-black text-white text-2xl">{timeStr}</span>
+                <RefreshCw className={`w-4 h-4 ml-1 ${isRefreshing ? "animate-spin" : ""}`} />
               </div>
-              <p className="text-[10px] text-white/40">{dateStr}</p>
+              <p className="text-xs text-white/40 mt-0.5">{dateStr}</p>
             </div>
           </div>
         </div>
 
         {/* Service Cards */}
-        <div className="flex-1 grid gap-4 min-h-0" style={{
-          gridTemplateColumns: `repeat(${Math.min(services.length || 1, 5)}, 1fr)`
+        <div className="flex-1 grid gap-6 min-h-0" style={{
+          gridTemplateColumns: `repeat(${Math.min(services.length || 1, 3)}, 1fr)`
         }}>
           {services.map(service => (
             <ServiceCard

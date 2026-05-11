@@ -160,11 +160,11 @@ export default function Participants() {
   };
 
   const handleReprint = (p) => {
-    const { medQueue, eyeQueue } = p;
-    const medSvc = serviceMap[p.medical_service_id];
-    const eyeSvc = serviceMap[p.eye_service_id];
-    if (!medQueue || !eyeQueue || !medSvc || !eyeSvc) return;
-    printCoupon({ participant: p, medicalQueue: medQueue, eyeQueue, medicalService: medSvc, eyeService: eyeSvc, eventSetting });
+    const pQueues = queues.filter(q => q.participant_id === p.id);
+    const queue = pQueues[0];
+    const service = serviceMap[queue?.service_id || p.service_id];
+    if (!queue || !service) return;
+    printCoupon({ participant: p, queue, service, eventSetting });
   };
 
   const handleExportCSV = () => {
