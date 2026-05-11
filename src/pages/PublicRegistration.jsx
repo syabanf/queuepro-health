@@ -184,7 +184,7 @@ export default function PublicRegistration() {
 
       const allParticipants = await base44.entities.Participant.list();
       const samePhone = allParticipants.filter(
-        p => p.phone_number.trim() === form.phone_number.trim()
+        p => (p.phone_number || '').trim() === form.phone_number.trim()
       );
 
       if (samePhone.length > 0) {
