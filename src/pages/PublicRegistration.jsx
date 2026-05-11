@@ -22,10 +22,9 @@ const SERVICE_VISUAL = {
   'svc-e': { grad: ['#003D79', '#005BAB'], Icon: Eye,      label: 'AUTOREF',          provider: 'OPTIK MELAWAI' },
 };
 
-function ServiceOption({ service, form, setForm, setErrors, getRemainingSlots, isServiceFull }) {
+function ServiceOption({ service, selected, onSelect, getRemainingSlots, isServiceFull, groupKey }) {
   const remaining = getRemainingSlots(service);
   const full = isServiceFull(service);
-  const selected = form.service_id === service.id;
 
   return (
     <div
@@ -35,17 +34,18 @@ function ServiceOption({ service, form, setForm, setErrors, getRemainingSlots, i
           : selected
           ? "border-primary bg-primary/5 shadow-sm"
           : "border-border hover:border-primary/40 bg-card"}`}
-      onClick={() => {
-        if (full) return;
-        setForm(p => ({ ...p, service_id: service.id }));
-        setErrors(p => ({ ...p, service_id: undefined }));
-      }}
+      onClick={() => { if (!full) onSelect(service.id); }}
     >
-      <RadioGroupItem value={service.id} id={`pub-svc-${service.id}`} disabled={full} className="flex-shrink-0" />
+      <RadioGroupItem
+        value={service.id}
+        id={`pub-${groupKey}-${service.id}`}
+        disabled={full}
+        className="flex-shrink-0"
+      />
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2 flex-wrap">
           <Label
-            htmlFor={`pub-svc-${service.id}`}
+            htmlFor={`pub-${groupKey}-${service.id}`}
             className={`text-sm font-bold ${full ? "cursor-not-allowed" : "cursor-pointer"}`}
           >
             {service.service_name}
@@ -65,11 +65,55 @@ function ServiceOption({ service, form, setForm, setErrors, getRemainingSlots, i
   );
 }
 
+function QueueTicket({ queue, service }) {
+  const vis = SERVICE_VISUAL[service?.id] || SERVICE_VISUAL['svc-a'];
+  const { grad: [c1, c2], Icon, label, provider } = vis;
+
+  return (
+    <Card className="overflow-hidden shadow-lg border-0">
+      <div className="px-4 py-2.5 bg-white border-b">
+        <p className="text-xs text-muted-foreground font-medium uppercase tracking-wide">{provider}</p>
+        <p className="text-sm font-bold">{service?.service_name}</p>
+      </div>
+      <div className="px-4 pt-4 pb-5" style={{ background: `linear-gradient(160deg, ${c1} 0%, ${c2} 100%)` }}>
+        <div className="flex items-center justify-between mb-3">
+          <span className="text-white font-black text-xs tracking-widest">BRI</span>
+          <span className="text-white/70 text-[10px] font-bold tracking-wider">{provider}</span>
+        </div>
+        <div className="flex items-center justify-center gap-4">
+          <div className="w-10 h-10 rounded-lg bg-white/20 border border-white/30 flex flex-col items-center justify-center">
+            <span className="text-white font-black text-xl leading-none">{service?.service_code}</span>
+            <span className="text-white/50 text-[8px] uppercase tracking-wide">{label}</span>
+          </div>
+          <Icon className="w-7 h-7 text-white/40" strokeWidth={1.5} />
+          <span className="text-white font-black tracking-widest" style={{ fontSize: '3.5rem', lineHeight: 1 }}>
+            {queue.queue_number}
+          </span>
+        </div>
+        <p className="text-center text-white/50 text-[9px] font-bold uppercase tracking-[0.2em] mt-4 pt-3 border-t border-white/15">
+          SILAKAN MENUNGGU PANGGILAN DI LAYAR
+        </p>
+      </div>
+      <div className="px-4 py-2 bg-white text-center">
+        <p className="text-xs text-muted-foreground">
+          Booth <span className="font-bold text-foreground">{service?.booth_number}</span>
+        </p>
+      </div>
+    </Card>
+  );
+}
+
 export default function PublicRegistration() {
-  const [form, setForm] = useState({ full_name: "", phone_number: "", unit_division: "", service_id: "" });
+  const [form, setForm] = useState({
+    full_name: "",
+    phone_number: "",
+    unit_division: "",
+    medical_service_id: "",
+    eye_service_id: "",
+  });
   const [errors, setErrors] = useState({});
   const [submitting, setSubmitting] = useState(false);
-  const [result, setResult] = useState(null);
+  const [result, setResult] = useState(null); // { participant, queues: [{queue, service}] }
   const queryClient = useQueryClient();
 
   const { data: services = [], isLoading: loadingServices } = useQuery({
@@ -93,7 +137,6 @@ export default function PublicRegistration() {
   const activeServices = services.filter(s => s.is_active && s.service_code && s.service_name);
   const medicalServices = activeServices.filter(s => s.service_group === "MEDICAL");
   const eyeServices = activeServices.filter(s => s.service_group === "EYE_CHECK");
-  const selectedService = services.find(s => s.id === form.service_id);
 
   const getRemainingSlots = (s) => Math.max(0, (s.free_quota || 0) - (s.used_free_quota || 0));
   const isServiceFull = (s) => getRemainingSlots(s) <= 0;
@@ -108,11 +151,20 @@ export default function PublicRegistration() {
     if (!form.full_name.trim()) errs.full_name = "Nama lengkap wajib diisi.";
     if (!form.phone_number.trim()) errs.phone_number = "Nomor telepon wajib diisi.";
     if (!form.unit_division.trim()) errs.unit_division = "Unit / Divisi wajib diisi.";
-    if (!form.service_id) errs.service_id = "Pilih salah satu layanan.";
+    if (!form.medical_service_id && !form.eye_service_id)
+      errs.service = "Pilih minimal satu layanan.";
     if (event?.event_status === "DRAFT") errs.global = "Event belum dibuka.";
     if (event?.event_status === "CLOSED") errs.global = "Event sudah ditutup.";
-    if (form.service_id && selectedService && isServiceFull(selectedService))
-      errs.service_id = "Kuota layanan ini sudah penuh.";
+
+    const checkFull = (svcId) => {
+      const svc = services.find(s => s.id === svcId);
+      return svc && isServiceFull(svc);
+    };
+    if (form.medical_service_id && checkFull(form.medical_service_id))
+      errs.medical = "Kuota layanan ini sudah penuh.";
+    if (form.eye_service_id && checkFull(form.eye_service_id))
+      errs.eye = "Kuota layanan ini sudah penuh.";
+
     return errs;
   };
 
@@ -122,11 +174,13 @@ export default function PublicRegistration() {
     if (Object.keys(errs).length > 0) { setErrors(errs); return; }
     setErrors({});
     setSubmitting(true);
+
     try {
       const allParticipants = await base44.entities.Participant.list();
       const regNumber = generateRegistrationNumber(allParticipants.length + 1);
-      const seq = await getNextQueueSequence(form.service_id);
-      const queueNum = formatQueueNumber(selectedService.service_code, seq);
+
+      // Primary service = medical if selected, else eye
+      const primaryServiceId = form.medical_service_id || form.eye_service_id;
 
       const participant = await base44.entities.Participant.create({
         registration_number: regNumber,
@@ -134,30 +188,40 @@ export default function PublicRegistration() {
         phone_number: form.phone_number.trim(),
         unit_division: form.unit_division.trim(),
         participant_category: "FREE_CHECK",
-        service_id: form.service_id,
+        service_id: primaryServiceId,
         payment_status: "NOT_REQUIRED",
         participant_status: "REGISTERED",
         registered_by: "self",
         registered_at: new Date().toISOString(),
       });
 
-      const qrToken = generateQrToken();
-      const qrCodeUrl = buildQrCodeUrl(qrToken, 120);
+      // Create a queue for each selected service
+      const selectedServiceIds = [form.medical_service_id, form.eye_service_id].filter(Boolean);
+      const queues = [];
 
-      const queue = await base44.entities.Queue.create({
-        participant_id: participant.id,
-        service_id: form.service_id,
-        queue_number: queueNum,
-        queue_sequence: seq,
-        quota_category: "FULL_FREE",
-        payment_display_status: "FREE",
-        status: "WAITING",
-        qr_token: qrToken,
-        qr_code_url: qrCodeUrl,
-        qr_verification_status: "NOT_SCANNED",
-      });
+      for (const svcId of selectedServiceIds) {
+        const svc = services.find(s => s.id === svcId);
+        const seq = await getNextQueueSequence(svcId);
+        const queueNum = formatQueueNumber(svc.service_code, seq);
+        const qrToken = generateQrToken();
+        const qrCodeUrl = buildQrCodeUrl(qrToken, 120);
 
-      setResult({ participant, queue, service: selectedService });
+        const queue = await base44.entities.Queue.create({
+          participant_id: participant.id,
+          service_id: svcId,
+          queue_number: queueNum,
+          queue_sequence: seq,
+          quota_category: "FULL_FREE",
+          payment_display_status: "FREE",
+          status: "WAITING",
+          qr_token: qrToken,
+          qr_code_url: qrCodeUrl,
+          qr_verification_status: "NOT_SCANNED",
+        });
+        queues.push({ queue, service: svc });
+      }
+
+      setResult({ participant, queues });
       queryClient.invalidateQueries({ queryKey: ["pub-services"] });
       queryClient.invalidateQueries({ queryKey: ["pub-participants"] });
     } catch (err) {
@@ -169,70 +233,43 @@ export default function PublicRegistration() {
 
   const handleRegisterAnother = () => {
     setResult(null);
-    setForm({ full_name: "", phone_number: "", unit_division: "", service_id: "" });
+    setForm({ full_name: "", phone_number: "", unit_division: "", medical_service_id: "", eye_service_id: "" });
     window.scrollTo(0, 0);
   };
 
   // ---- Success screen ----
   if (result) {
-    const { participant, queue, service } = result;
-    const vis = SERVICE_VISUAL[service?.id] || SERVICE_VISUAL['svc-a'];
-    const { grad: [c1, c2], Icon, label, provider } = vis;
-
+    const { participant, queues } = result;
     return (
       <div className="min-h-screen bg-muted/30 flex flex-col items-center justify-center p-4">
-        <div className="w-full max-w-sm">
-          <div className="text-center mb-5">
+        <div className="w-full max-w-sm space-y-4">
+          <div className="text-center">
             <div className="w-16 h-16 rounded-full bg-green-100 flex items-center justify-center mx-auto mb-3">
               <CheckCircle2 className="w-8 h-8 text-green-600" />
             </div>
             <h1 className="text-xl font-black text-foreground">Pendaftaran Berhasil!</h1>
-            <p className="text-sm text-muted-foreground mt-1">Simpan nomor antrian Anda</p>
+            <p className="text-sm text-muted-foreground mt-1">
+              {queues.length > 1 ? "Anda terdaftar di 2 layanan" : "Simpan nomor antrian Anda"}
+            </p>
           </div>
 
-          <Card className="overflow-hidden shadow-xl border-0">
-            <div className="px-4 py-3 bg-white border-b">
+          {/* Participant strip */}
+          <Card>
+            <CardContent className="p-3">
               <p className="text-xs text-muted-foreground">Peserta</p>
               <p className="text-base font-bold">{participant.full_name}</p>
               <p className="text-xs font-mono text-muted-foreground">
                 {participant.registration_number} &bull; {participant.unit_division}
               </p>
-            </div>
-
-            <div className="px-4 pt-4 pb-5" style={{ background: `linear-gradient(160deg, ${c1} 0%, ${c2} 100%)` }}>
-              <div className="flex items-center justify-between mb-3">
-                <span className="text-white font-black text-xs tracking-widest">BRI</span>
-                <span className="text-white/70 text-[10px] font-bold tracking-wider">{provider}</span>
-              </div>
-              <p className="text-white font-black text-sm text-center uppercase tracking-wide mb-4">
-                {service?.service_name}
-              </p>
-              <div className="flex items-center justify-center gap-4">
-                <div className="w-10 h-10 rounded-lg bg-white/20 border border-white/30 flex flex-col items-center justify-center">
-                  <span className="text-white font-black text-xl leading-none">{service?.service_code}</span>
-                  <span className="text-white/50 text-[8px] uppercase tracking-wide">{label}</span>
-                </div>
-                <Icon className="w-7 h-7 text-white/40" strokeWidth={1.5} />
-                <span
-                  className="text-white font-black tracking-widest"
-                  style={{ fontSize: '3.5rem', lineHeight: 1 }}
-                >
-                  {queue.queue_number}
-                </span>
-              </div>
-              <p className="text-center text-white/50 text-[9px] font-bold uppercase tracking-[0.2em] mt-4 pt-3 border-t border-white/15">
-                SILAKAN MENUNGGU PANGGILAN DI LAYAR
-              </p>
-            </div>
-
-            <div className="px-4 py-3 bg-white text-center">
-              <p className="text-xs text-muted-foreground">
-                Booth <span className="font-bold text-foreground">{service?.booth_number}</span>
-              </p>
-            </div>
+            </CardContent>
           </Card>
 
-          <Button className="w-full mt-4" variant="outline" onClick={handleRegisterAnother}>
+          {/* Queue tickets */}
+          {queues.map(({ queue, service }) => (
+            <QueueTicket key={queue.id} queue={queue} service={service} />
+          ))}
+
+          <Button className="w-full" variant="outline" onClick={handleRegisterAnother}>
             <ArrowLeft className="w-4 h-4 mr-2" /> Daftarkan Peserta Lain
           </Button>
         </div>
@@ -364,64 +401,88 @@ export default function PublicRegistration() {
 
                 <div className="border-t border-border" />
 
-                {/* Service selection */}
-                <div>
-                  <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">
-                    Pilih Layanan <span className="text-destructive">*</span>
+                {/* Service selection — two independent groups */}
+                <div className="space-y-4">
+                  <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+                    Pilih Layanan <span className="text-muted-foreground/60 normal-case font-normal">(pilih minimal 1)</span>
                   </h3>
-                  <RadioGroup
-                    value={form.service_id}
-                    onValueChange={val => {
-                      setForm(p => ({ ...p, service_id: val }));
-                      setErrors(p => ({ ...p, service_id: undefined }));
-                    }}
-                    className="space-y-2"
-                  >
-                    {medicalServices.length > 0 && (
-                      <div>
-                        <div className="flex items-center gap-1.5 mb-1.5">
-                          <div className="w-4 h-4 rounded flex items-center justify-center" style={{ background: '#003D79' }}>
-                            <Stethoscope className="w-2.5 h-2.5 text-white" />
-                          </div>
-                          <span className="text-[10px] font-bold text-[#003D79] uppercase tracking-wide">
-                            Primaya Hospital
-                          </span>
-                        </div>
-                        <div className="space-y-1.5 pl-1">
-                          {medicalServices.map(s => (
-                            <ServiceOption
-                              key={s.id} service={s} form={form}
-                              setForm={setForm} setErrors={setErrors}
-                              getRemainingSlots={getRemainingSlots} isServiceFull={isServiceFull}
-                            />
-                          ))}
-                        </div>
-                      </div>
-                    )}
+                  {errors.service && (
+                    <p className="text-xs text-destructive -mt-2">{errors.service}</p>
+                  )}
 
-                    {eyeServices.length > 0 && (
-                      <div>
-                        <div className="flex items-center gap-1.5 mb-1.5 mt-2">
-                          <div className="w-4 h-4 rounded bg-red-600 flex items-center justify-center">
-                            <Eye className="w-2.5 h-2.5 text-white" />
-                          </div>
-                          <span className="text-[10px] font-bold text-red-700 uppercase tracking-wide">
-                            Optik Melawai
-                          </span>
+                  {/* Primaya Hospital */}
+                  {medicalServices.length > 0 && (
+                    <div>
+                      <div className="flex items-center gap-2 mb-2 p-2 rounded-lg" style={{ background: '#003D79' + '15' }}>
+                        <div className="w-5 h-5 rounded flex items-center justify-center" style={{ background: '#003D79' }}>
+                          <Stethoscope className="w-3 h-3 text-white" />
                         </div>
-                        <div className="space-y-1.5 pl-1">
-                          {eyeServices.map(s => (
-                            <ServiceOption
-                              key={s.id} service={s} form={form}
-                              setForm={setForm} setErrors={setErrors}
-                              getRemainingSlots={getRemainingSlots} isServiceFull={isServiceFull}
-                            />
-                          ))}
-                        </div>
+                        <span className="text-xs font-bold text-[#003D79] uppercase tracking-wide">Primaya Hospital</span>
+                        <span className="text-[10px] text-muted-foreground ml-auto">Pilih 1</span>
                       </div>
-                    )}
-                  </RadioGroup>
-                  {errors.service_id && <p className="text-xs text-destructive mt-1">{errors.service_id}</p>}
+                      <RadioGroup
+                        value={form.medical_service_id}
+                        onValueChange={val => {
+                          setForm(p => ({ ...p, medical_service_id: val }));
+                          setErrors(p => ({ ...p, service: undefined, medical: undefined }));
+                        }}
+                        className="space-y-1.5"
+                      >
+                        {medicalServices.map(s => (
+                          <ServiceOption
+                            key={s.id}
+                            service={s}
+                            selected={form.medical_service_id === s.id}
+                            onSelect={val => {
+                              setForm(p => ({ ...p, medical_service_id: val }));
+                              setErrors(p => ({ ...p, service: undefined, medical: undefined }));
+                            }}
+                            getRemainingSlots={getRemainingSlots}
+                            isServiceFull={isServiceFull}
+                            groupKey="medical"
+                          />
+                        ))}
+                      </RadioGroup>
+                      {errors.medical && <p className="text-xs text-destructive mt-1">{errors.medical}</p>}
+                    </div>
+                  )}
+
+                  {/* Optik Melawai */}
+                  {eyeServices.length > 0 && (
+                    <div>
+                      <div className="flex items-center gap-2 mb-2 p-2 rounded-lg bg-red-50">
+                        <div className="w-5 h-5 rounded bg-red-600 flex items-center justify-center">
+                          <Eye className="w-3 h-3 text-white" />
+                        </div>
+                        <span className="text-xs font-bold text-red-700 uppercase tracking-wide">Optik Melawai</span>
+                        <span className="text-[10px] text-muted-foreground ml-auto">Pilih 1</span>
+                      </div>
+                      <RadioGroup
+                        value={form.eye_service_id}
+                        onValueChange={val => {
+                          setForm(p => ({ ...p, eye_service_id: val }));
+                          setErrors(p => ({ ...p, service: undefined, eye: undefined }));
+                        }}
+                        className="space-y-1.5"
+                      >
+                        {eyeServices.map(s => (
+                          <ServiceOption
+                            key={s.id}
+                            service={s}
+                            selected={form.eye_service_id === s.id}
+                            onSelect={val => {
+                              setForm(p => ({ ...p, eye_service_id: val }));
+                              setErrors(p => ({ ...p, service: undefined, eye: undefined }));
+                            }}
+                            getRemainingSlots={getRemainingSlots}
+                            isServiceFull={isServiceFull}
+                            groupKey="eye"
+                          />
+                        ))}
+                      </RadioGroup>
+                      {errors.eye && <p className="text-xs text-destructive mt-1">{errors.eye}</p>}
+                    </div>
+                  )}
                 </div>
 
                 <Button type="submit" disabled={submitting} className="w-full">
