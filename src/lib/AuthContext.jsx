@@ -1,7 +1,5 @@
 import React, { createContext, useState, useContext, useEffect } from 'react';
 import { base44 } from '@/api/base44Client';
-import { appParams } from '@/lib/app-params';
-import { createAxiosClient } from '@base44/sdk/dist/utils/axios-client';
 
 const AuthContext = createContext();
 
@@ -31,8 +29,7 @@ export const AuthProvider = ({ children }) => {
       setAuthError(null);
       
       // Check if user has stored token
-      const storedToken = typeof window !== 'undefined' ? window.localStorage.getItem('token') : null;
-      const token = storedToken || appParams.token;
+      const token = typeof window !== 'undefined' ? window.localStorage.getItem('token') : null;
       
       // If no token, redirect to login
       if (!token) {
