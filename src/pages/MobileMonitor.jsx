@@ -141,22 +141,6 @@ export default function MobileMonitor() {
         </div>
       </div>
 
-      {/* Summary Stats */}
-      <div className="flex-shrink-0 grid grid-cols-3 gap-1.5 px-3 pt-2 pb-1.5">
-        <div className="rounded-lg bg-white/8 border border-white/10 py-1.5 text-center">
-          <p className="text-white font-black text-xl leading-none">{totalWaiting}</p>
-          <p className="text-white/50 text-[10px] mt-0.5">Menunggu</p>
-        </div>
-        <div className="rounded-lg bg-white/8 border border-white/10 py-1.5 text-center">
-          <p className="text-amber-300 font-black text-xl leading-none">{totalServing}</p>
-          <p className="text-white/50 text-[10px] mt-0.5">Dilayani</p>
-        </div>
-        <div className="rounded-lg bg-white/8 border border-white/10 py-1.5 text-center">
-          <p className="text-green-300 font-black text-xl leading-none">{totalDone}</p>
-          <p className="text-white/50 text-[10px] mt-0.5">Selesai</p>
-        </div>
-      </div>
-
       {/* Service Cards */}
       <div className="flex-1 px-3 pb-2 flex flex-col gap-1.5 min-h-0">
         {services.length === 0 ? (

@@ -3,9 +3,9 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { UserPlus, Loader2, AlertCircle, Stethoscope, Eye, Activity, Syringe } from "lucide-react";
+import { UserPlus, Loader2, AlertCircle, Stethoscope, Eye, Activity, Syringe, Gift, CreditCard, Tag } from "lucide-react";
 import { base44 } from "@/api/client";
 import { formatQueueNumber, getNextQueueSequence, generateRegistrationNumber } from "@/lib/registrationUtils";
 import { generateQrToken, buildQrCodeUrl } from "@/lib/qrUtils";
@@ -19,21 +19,29 @@ const SERVICE_ICONS = {
 };
 
 const SERVICE_COLORS = {
-  'svc-a': { bg: 'bg-[#003D79]', text: 'text-white', light: 'bg-[#003D79]/10 text-[#003D79]' },
-  'svc-b': { bg: 'bg-[#005BAB]', text: 'text-white', light: 'bg-[#005BAB]/10 text-[#005BAB]' },
-  'svc-c': { bg: 'bg-[#0077CC]', text: 'text-white', light: 'bg-[#0077CC]/10 text-[#0077CC]' },
-  'svc-d': { bg: 'bg-[#005BAB]', text: 'text-white', light: 'bg-[#005BAB]/10 text-[#005BAB]' },
-  'svc-e': { bg: 'bg-[#0095E8]', text: 'text-white', light: 'bg-[#0095E8]/10 text-[#0095E8]' },
+  'svc-a': { bg: 'bg-[#003D79]', text: 'text-white' },
+  'svc-b': { bg: 'bg-[#005BAB]', text: 'text-white' },
+  'svc-c': { bg: 'bg-[#0077CC]', text: 'text-white' },
+  'svc-d': { bg: 'bg-[#005BAB]', text: 'text-white' },
+  'svc-e': { bg: 'bg-[#0095E8]', text: 'text-white' },
 };
 
+const QUOTA_STATUS_OPTIONS = [
+  { value: 'FREE',          label: 'Free Tanpa Syarat', icon: Gift,       color: 'text-green-700',  bg: 'bg-green-50',  border: 'border-green-200' },
+  { value: 'RP1_BRI',      label: 'Rp 1 BRI',          icon: CreditCard, color: 'text-blue-700',   bg: 'bg-blue-50',   border: 'border-blue-200' },
+  { value: 'SPECIAL_PRICE',label: 'Special Price',      icon: Tag,        color: 'text-purple-700', bg: 'bg-purple-50', border: 'border-purple-200' },
+];
+
 export default function RegistrationForm({ services, participants = [], eventSetting, onSuccess }) {
-  const [form, setForm] = useState({ full_name: "", phone_number: "", unit_division: "", service_id: "" });
+  const [form, setForm] = useState({
+    full_name: "", phone_number: "", unit_division: "",
+    service_id: "", quota_status: "FREE",
+  });
   const [errors, setErrors] = useState({});
   const [submitting, setSubmitting] = useState(false);
 
   const activeServices = services.filter(s => s.is_active && s.service_code && s.service_name);
   const selectedService = services.find(s => s.id === form.service_id);
-
   const medicalServices = activeServices.filter(s => s.service_group === "MEDICAL");
   const eyeServices = activeServices.filter(s => s.service_group === "EYE_CHECK");
 
@@ -67,6 +75,10 @@ export default function RegistrationForm({ services, participants = [], eventSet
       const seq = await getNextQueueSequence(form.service_id);
       const queueNum = formatQueueNumber(selectedService.service_code, seq);
 
+      const paymentDisplay = form.quota_status === "FREE" ? "FREE"
+        : form.quota_status === "RP1_BRI" ? "RP1 BRI"
+        : "SPECIAL PRICE";
+
       const participant = await base44.entities.Participant.create({
         registration_number: regNumber,
         full_name: form.full_name.trim(),
@@ -74,6 +86,7 @@ export default function RegistrationForm({ services, participants = [], eventSet
         unit_division: form.unit_division.trim(),
         participant_category: "FREE_CHECK",
         service_id: form.service_id,
+        quota_status: form.quota_status,
         payment_status: "NOT_REQUIRED",
         participant_status: "REGISTERED",
         registered_by: (await base44.auth.me())?.email,
@@ -88,16 +101,21 @@ export default function RegistrationForm({ services, participants = [], eventSet
         service_id: form.service_id,
         queue_number: queueNum,
         queue_sequence: seq,
-        quota_category: "FULL_FREE",
-        payment_display_status: "FREE",
+        quota_category: form.quota_status === "FREE" ? "FULL_FREE" : "PAID",
+        payment_display_status: paymentDisplay,
         status: "WAITING",
         qr_token: qrToken,
         qr_code_url: qrCodeUrl,
         qr_verification_status: "NOT_SCANNED",
       });
 
+      // Increment used quota on the service
+      await base44.entities.Service.update(form.service_id, {
+        used_free_quota: (selectedService.used_free_quota || 0) + 1,
+      });
+
       onSuccess({ participant, queue, service: selectedService });
-      setForm({ full_name: "", phone_number: "", unit_division: "", service_id: "" });
+      setForm({ full_name: "", phone_number: "", unit_division: "", service_id: "", quota_status: "FREE" });
     } catch (err) {
       setErrors({ global: err.message || "Terjadi kesalahan. Silakan coba lagi." });
     } finally {
@@ -116,29 +134,33 @@ export default function RegistrationForm({ services, participants = [], eventSet
 
     return (
       <div
-        className={`flex items-center gap-3 px-4 py-3 rounded-xl border-2 cursor-pointer transition-all
-          ${full ? "opacity-50 cursor-not-allowed border-border bg-muted/20" :
-            selected ? "border-primary bg-primary/5 shadow-sm" :
-            "border-border hover:border-primary/40 bg-card"}`}
+        className={`flex items-center gap-3 px-4 py-3 rounded-xl border-2 transition-all select-none
+          ${full ? "opacity-50 cursor-not-allowed border-border bg-muted/20"
+            : selected ? "border-primary bg-primary/5 shadow-sm cursor-pointer"
+            : "border-border hover:border-primary/40 bg-card cursor-pointer"}`}
         onClick={() => {
           if (full) return;
-          setForm(p => ({ ...p, service_id: service.id }));
+          setForm(p => ({ ...p, service_id: selected ? "" : service.id }));
           setErrors(p => ({ ...p, service_id: undefined }));
         }}
       >
-        <RadioGroupItem value={service.id} id={`svc-${service.id}`} disabled={full} className="flex-shrink-0" />
-        <div className={`w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0 ${selected ? colors.bg : colors.bg + '/10'}`}>
-          <Icon className={`w-5 h-5 ${selected ? 'text-white' : colors.text.replace('text-white', 'text-' + colors.bg.replace('bg-[','').replace(']',''))}`}
-            style={{ color: selected ? 'white' : undefined }} />
+        <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-all
+          ${selected ? "border-primary bg-primary" : "border-muted-foreground/40 bg-white"}`}>
+          {selected && <div className="w-2 h-2 rounded-full bg-white" />}
+        </div>
+        <div className={`w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0 ${colors.bg}`}>
+          <Icon className="w-5 h-5 text-white" />
         </div>
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 flex-wrap">
-            <Label htmlFor={`svc-${service.id}`} className={`text-sm font-bold ${full ? "cursor-not-allowed" : "cursor-pointer"}`}>
+            <span className={`text-sm font-bold ${full ? "text-muted-foreground" : "text-foreground"}`}>
               {service.service_name}
-            </Label>
+            </span>
             {full && <Badge variant="outline" className="text-[10px]">Penuh</Badge>}
           </div>
-          <p className="text-xs text-muted-foreground mt-0.5">Booth {service.booth_number} &bull; Kode {service.service_code}</p>
+          <p className="text-xs text-muted-foreground mt-0.5">
+            Booth {service.booth_number} &bull; Kode {service.service_code}
+          </p>
         </div>
         <div className="flex-shrink-0 text-right">
           <p className={`text-xs font-bold ${remaining <= 10 ? "text-amber-600" : "text-green-600"}`}>
@@ -215,6 +237,40 @@ export default function RegistrationForm({ services, participants = [], eventSet
                     className={`mt-1 ${errors.unit_division ? "border-destructive" : ""}`} />
                   {errors.unit_division && <p className="text-xs text-destructive mt-1">{errors.unit_division}</p>}
                 </div>
+
+                {/* Status Kuota */}
+                <div>
+                  <Label className="text-xs font-medium">Status Kuota <span className="text-destructive">*</span></Label>
+                  <Select value={form.quota_status} onValueChange={v => setForm(p => ({ ...p, quota_status: v }))}>
+                    <SelectTrigger className="mt-1">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {QUOTA_STATUS_OPTIONS.map(opt => {
+                        const Icon = opt.icon;
+                        return (
+                          <SelectItem key={opt.value} value={opt.value}>
+                            <div className="flex items-center gap-2">
+                              <Icon className={`w-3.5 h-3.5 ${opt.color}`} />
+                              <span>{opt.label}</span>
+                            </div>
+                          </SelectItem>
+                        );
+                      })}
+                    </SelectContent>
+                  </Select>
+                  {/* Badge preview */}
+                  {(() => {
+                    const opt = QUOTA_STATUS_OPTIONS.find(o => o.value === form.quota_status);
+                    if (!opt) return null;
+                    const Icon = opt.icon;
+                    return (
+                      <div className={`inline-flex items-center gap-1.5 mt-1.5 px-2 py-1 rounded-md border text-xs font-medium ${opt.bg} ${opt.border} ${opt.color}`}>
+                        <Icon className="w-3 h-3" /> {opt.label}
+                      </div>
+                    );
+                  })()}
+                </div>
               </div>
             </div>
 
@@ -225,11 +281,8 @@ export default function RegistrationForm({ services, participants = [], eventSet
               <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-3">
                 Pilih Layanan <span className="text-destructive">*</span>
               </h3>
-              <RadioGroup
-                value={form.service_id}
-                onValueChange={val => { setForm(p => ({ ...p, service_id: val })); setErrors(p => ({ ...p, service_id: undefined })); }}
-                className="space-y-3"
-              >
+
+              <div className="space-y-3">
                 {/* Primaya Hospital group */}
                 {medicalServices.length > 0 && (
                   <div>
@@ -259,7 +312,8 @@ export default function RegistrationForm({ services, participants = [], eventSet
                     </div>
                   </div>
                 )}
-              </RadioGroup>
+              </div>
+
               {errors.service_id && <p className="text-xs text-destructive mt-1">{errors.service_id}</p>}
             </div>
 

@@ -239,6 +239,11 @@ export default function PublicRegistration() {
         qr_verification_status: "NOT_SCANNED",
       });
 
+      // Increment used quota on the service
+      await base44.entities.Service.update(form.service_id, {
+        used_free_quota: (selectedService.used_free_quota || 0) + 1,
+      });
+
       setResult({ participant, queue, service: selectedService });
       queryClient.invalidateQueries({ queryKey: ["pub-services"] });
       queryClient.invalidateQueries({ queryKey: ["pub-participants"] });

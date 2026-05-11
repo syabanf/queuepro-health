@@ -4,7 +4,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { Calendar, MapPin, Users, Globe, Tag, FileText } from "lucide-react";
+import { Calendar, MapPin, Globe, Image } from "lucide-react";
 
 const STATUS_COLORS = {
   DRAFT: "bg-gray-100 text-gray-700 border-gray-200",
@@ -136,6 +136,74 @@ export default function EventConfigForm({ form, onChange, errors, totalParticipa
                 value={form.mobile_monitor_url || ""}
                 onChange={e => set("mobile_monitor_url", e.target.value)}
               />
+            </div>
+          </div>
+        </div>
+
+        <div className="border-t border-border pt-3">
+          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-3 flex items-center gap-1.5">
+            <Image className="w-3.5 h-3.5" /> Logo Acara
+          </p>
+          <p className="text-[11px] text-muted-foreground mb-3">
+            Isi URL gambar untuk mengganti logo. Kosongkan untuk pakai logo default.
+          </p>
+          <div className="space-y-3">
+            <div>
+              <Label className="text-xs font-medium">Logo BRI (URL)</Label>
+              <div className="flex gap-2 mt-1">
+                <Input
+                  className="font-mono text-xs flex-1"
+                  placeholder="/logo-bri.png"
+                  value={form.logo_bri_url || ""}
+                  onChange={e => set("logo_bri_url", e.target.value)}
+                />
+                {(form.logo_bri_url || '/logo-bri.png') && (
+                  <img
+                    src={form.logo_bri_url || '/logo-bri.png'}
+                    alt="BRI"
+                    className="h-9 w-16 object-contain border rounded-md bg-[#003D79] p-1 flex-shrink-0"
+                    onError={e => e.target.style.opacity = '0.2'}
+                  />
+                )}
+              </div>
+            </div>
+            <div>
+              <Label className="text-xs font-medium">Logo Primaya Hospital (URL)</Label>
+              <div className="flex gap-2 mt-1">
+                <Input
+                  className="font-mono text-xs flex-1"
+                  placeholder="/logo-primaya.png"
+                  value={form.logo_primaya_url || ""}
+                  onChange={e => set("logo_primaya_url", e.target.value)}
+                />
+                {(form.logo_primaya_url || '/logo-primaya.png') && (
+                  <img
+                    src={form.logo_primaya_url || '/logo-primaya.png'}
+                    alt="Primaya"
+                    className="h-9 w-16 object-contain border rounded-md bg-white p-1 flex-shrink-0"
+                    onError={e => e.target.style.opacity = '0.2'}
+                  />
+                )}
+              </div>
+            </div>
+            <div>
+              <Label className="text-xs font-medium">Logo Optik Melawai (URL)</Label>
+              <div className="flex gap-2 mt-1">
+                <Input
+                  className="font-mono text-xs flex-1"
+                  placeholder="/logo-optik-melawai.png"
+                  value={form.logo_optik_melawai_url || ""}
+                  onChange={e => set("logo_optik_melawai_url", e.target.value)}
+                />
+                {(form.logo_optik_melawai_url || '/logo-optik-melawai.png') && (
+                  <img
+                    src={form.logo_optik_melawai_url || '/logo-optik-melawai.png'}
+                    alt="Optik Melawai"
+                    className="h-9 w-16 object-contain border rounded-md bg-white p-1 flex-shrink-0"
+                    onError={e => e.target.style.opacity = '0.2'}
+                  />
+                )}
+              </div>
             </div>
           </div>
         </div>
