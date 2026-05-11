@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef } from "react";
+import React, { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { base44 } from "@/api/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -85,12 +85,26 @@ export default function NakesBooth() {
     queryFn: () => base44.entities.Participant.list(),
   });
 
-  const selectedService = services.find(s => s.id === selectedServiceId);
+  const isMergedMedical = selectedServiceId === "merged-medical";
+  const isMergedEye     = selectedServiceId === "merged-eye";
+  const isMerged        = isMergedMedical || isMergedEye;
+
+  const selectedService = isMerged ? null : services.find(s => s.id === selectedServiceId);
+
+  const effectiveServiceIds = useMemo(() => {
+    if (isMergedMedical) return services.filter(s => s.service_group === "MEDICAL" && s.is_active).map(s => s.id);
+    if (isMergedEye)     return services.filter(s => s.service_group === "EYE_CHECK" && s.is_active).map(s => s.id);
+    return selectedServiceId ? [selectedServiceId] : [];
+  }, [isMergedMedical, isMergedEye, selectedServiceId, services]);
 
   const { data: queues = [], isLoading } = useQuery({
     queryKey: ["booth-queues", selectedServiceId],
-    queryFn: () => base44.entities.Queue.filter({ service_id: selectedServiceId }),
-    enabled: !!selectedServiceId,
+    queryFn: async () => {
+      if (!effectiveServiceIds.length) return [];
+      const results = await Promise.all(effectiveServiceIds.map(id => base44.entities.Queue.filter({ service_id: id })));
+      return results.flat();
+    },
+    enabled: effectiveServiceIds.length > 0,
     refetchInterval: 5000,
   });
 
@@ -379,12 +393,26 @@ export default function NakesBooth() {
               <SelectValue placeholder="Pilih booth layanan..." />
             </SelectTrigger>
             <SelectContent>
+              {/* Merged options */}
+              <SelectItem value="merged-medical">
+                <div className="flex items-center gap-2 font-semibold">
+                  <Stethoscope className="w-3.5 h-3.5 text-primary" />
+                  Primaya Hospital — Semua Medis (A+B+C)
+                </div>
+              </SelectItem>
+              <SelectItem value="merged-eye">
+                <div className="flex items-center gap-2 font-semibold">
+                  <Eye className="w-3.5 h-3.5 text-accent" />
+                  Optik Melawai — Semua Mata (D+E)
+                </div>
+              </SelectItem>
+              {/* Individual services */}
               {services.filter(s => s.is_active).map(s => (
                 <SelectItem key={s.id} value={s.id}>
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2 text-muted-foreground">
                     {s.service_group === "MEDICAL"
-                      ? <Stethoscope className="w-3.5 h-3.5 text-primary" />
-                      : <Eye className="w-3.5 h-3.5 text-accent" />}
+                      ? <Stethoscope className="w-3.5 h-3.5" />
+                      : <Eye className="w-3.5 h-3.5" />}
                     [{s.service_code}] {s.service_name} — Booth {s.booth_number}
                   </div>
                 </SelectItem>
@@ -406,12 +434,20 @@ export default function NakesBooth() {
         <>
           {/* Service Info Bar */}
           <div className="flex flex-wrap items-center gap-3 p-4 rounded-xl bg-primary text-primary-foreground">
-            {selectedService?.service_group === "MEDICAL"
-              ? <Stethoscope className="w-5 h-5 flex-shrink-0" />
-              : <Eye className="w-5 h-5 flex-shrink-0" />}
+            {(isMergedEye || selectedService?.service_group === "EYE_CHECK")
+              ? <Eye className="w-5 h-5 flex-shrink-0" />
+              : <Stethoscope className="w-5 h-5 flex-shrink-0" />}
             <div className="flex-1 min-w-0">
-              <p className="font-bold text-lg leading-tight">{selectedService?.service_name}</p>
-              <p className="text-primary-foreground/70 text-sm">Booth {selectedService?.booth_number} &bull; Kode: {selectedService?.service_code}</p>
+              <p className="font-bold text-lg leading-tight">
+                {isMergedMedical ? "Primaya Hospital — Gabungan Medis (A+B+C)"
+                  : isMergedEye ? "Optik Melawai — Gabungan Mata (D+E)"
+                  : selectedService?.service_name}
+              </p>
+              <p className="text-primary-foreground/70 text-sm">
+                {isMerged
+                  ? `${effectiveServiceIds.length} layanan aktif`
+                  : `Booth ${selectedService?.booth_number} · Kode: ${selectedService?.service_code}`}
+              </p>
             </div>
             <div className="flex gap-6 text-sm text-center">
               <div>

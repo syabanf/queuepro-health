@@ -1,8 +1,15 @@
 import React from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Ticket, Printer, CheckCircle2, Stethoscope, Eye } from "lucide-react";
+import { Ticket, Printer, CheckCircle2, Activity, Syringe, Eye } from "lucide-react";
+
+const SERVICE_VISUAL = {
+  'svc-a': { grad: ['#003D79', '#005BAB'], Icon: Activity,  label: 'MINI MCU',          provider: 'PRIMAYA HOSPITAL' },
+  'svc-b': { grad: ['#004D8C', '#0069C0'], Icon: Syringe,   label: 'VITAMIN C',          provider: 'PRIMAYA HOSPITAL' },
+  'svc-c': { grad: ['#005BAB', '#0077CC'], Icon: Syringe,   label: 'VAKSIN INFLUENZA',   provider: 'PRIMAYA HOSPITAL' },
+  'svc-d': { grad: ['#004D8C', '#006BB3'], Icon: Eye,       label: 'AIRDOC',             provider: 'OPTIK MELAWAI' },
+  'svc-e': { grad: ['#003D79', '#005BAB'], Icon: Eye,       label: 'AUTOREF',            provider: 'OPTIK MELAWAI' },
+};
 
 export default function QueuePreviewCard({ result, onPrint, onReset }) {
   if (!result) {
@@ -20,46 +27,67 @@ export default function QueuePreviewCard({ result, onPrint, onReset }) {
   }
 
   const { participant, queue, service } = result;
-  const isMedical = service?.service_group === "MEDICAL";
-  const Icon = isMedical ? Stethoscope : Eye;
+  const vis = SERVICE_VISUAL[service?.id] || SERVICE_VISUAL['svc-a'];
+  const { grad: [c1, c2], Icon, label, provider } = vis;
 
   return (
-    <Card className="border-success/30 bg-success/5">
-      <CardHeader className="pb-3">
-        <CardTitle className="text-sm flex items-center gap-2 text-success">
-          <CheckCircle2 className="w-4 h-4" />
-          Registrasi Berhasil
-        </CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        <div className="p-3 rounded-lg bg-card border">
-          <p className="text-xs text-muted-foreground mb-0.5">Nama Peserta</p>
-          <p className="text-sm font-semibold">{participant.full_name}</p>
-          <p className="text-xs text-muted-foreground mt-1 font-mono">{participant.registration_number}</p>
+    <Card className="overflow-hidden border-green-200 shadow-md">
+      {/* Success header */}
+      <div className="flex items-center gap-2 px-4 py-2.5 bg-green-50 border-b border-green-100">
+        <CheckCircle2 className="w-4 h-4 text-green-600" />
+        <span className="text-sm font-semibold text-green-700">Registrasi Berhasil</span>
+      </div>
+
+      {/* Participant info */}
+      <div className="px-4 py-3 bg-white border-b">
+        <p className="text-xs text-muted-foreground">Peserta</p>
+        <p className="text-sm font-bold">{participant.full_name}</p>
+        <p className="text-xs font-mono text-muted-foreground">{participant.registration_number}</p>
+      </div>
+
+      {/* Key visual banner */}
+      <div
+        className="px-4 pt-3 pb-4"
+        style={{ background: `linear-gradient(160deg, ${c1} 0%, ${c2} 100%)` }}
+      >
+        {/* BRI + Provider */}
+        <div className="flex items-center justify-between mb-2">
+          <span className="text-white font-black text-xs tracking-widest">BRI</span>
+          <span className="text-white/70 text-[10px] font-bold tracking-wider">{provider}</span>
         </div>
 
-        <div className={`rounded-xl border-2 p-4 flex flex-col items-center gap-2 ${isMedical ? "border-primary/20 bg-primary/5" : "border-accent/30 bg-accent/5"}`}>
-          <div className="flex items-center gap-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-            <Icon className={`w-4 h-4 ${isMedical ? "text-primary" : "text-accent"}`} />
-            {isMedical ? "Layanan Medis" : "Pemeriksaan Mata"}
+        {/* Service name */}
+        <p className="text-white font-black text-sm text-center uppercase tracking-wide mb-3">
+          {service?.service_name}
+        </p>
+
+        {/* Code badge + icon + queue number */}
+        <div className="flex items-center justify-center gap-4">
+          <div className="w-10 h-10 rounded-lg bg-white/20 border border-white/30 flex flex-col items-center justify-center flex-shrink-0">
+            <span className="text-white font-black text-xl leading-none">{service?.service_code}</span>
+            <span className="text-white/50 text-[8px] uppercase tracking-wide">{label}</span>
           </div>
-          <div className={`text-5xl font-black tracking-widest ${isMedical ? "text-primary" : "text-accent"}`}>
+          <Icon className="w-7 h-7 text-white/40 flex-shrink-0" strokeWidth={1.5} />
+          <span className="text-white font-black tracking-widest" style={{ fontSize: '3.5rem', lineHeight: 1 }}>
             {queue.queue_number}
-          </div>
-          <p className="text-xs font-medium text-foreground text-center">{service?.service_name}</p>
-          <Badge className="bg-green-100 text-green-700 border-green-200 text-xs">GRATIS</Badge>
+          </span>
         </div>
 
-        <div className="flex gap-2">
-          <Button variant="outline" size="sm" className="flex-1 gap-1.5 text-xs" onClick={onPrint}>
-            <Printer className="w-3.5 h-3.5" />
-            Cetak Kupon
-          </Button>
-          <Button size="sm" className="flex-1 gap-1.5 text-xs" onClick={onReset}>
-            Daftar Berikutnya
-          </Button>
-        </div>
-      </CardContent>
+        <p className="text-center text-white/50 text-[9px] font-bold uppercase tracking-[0.2em] mt-3 pt-2 border-t border-white/15">
+          SILAKAN MENUNGGU PANGGILAN DI LAYAR
+        </p>
+      </div>
+
+      {/* Actions */}
+      <div className="flex gap-2 p-3 bg-white">
+        <Button variant="outline" size="sm" className="flex-1 gap-1.5 text-xs" onClick={onPrint}>
+          <Printer className="w-3.5 h-3.5" />
+          Cetak Kupon
+        </Button>
+        <Button size="sm" className="flex-1 text-xs" onClick={onReset}>
+          Daftar Berikutnya
+        </Button>
+      </div>
     </Card>
   );
 }

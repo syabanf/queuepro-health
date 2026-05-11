@@ -102,24 +102,11 @@ const DEMO_USERS = [
 ];
 
 const SEED_SERVICES = [
-  {
-    id: 'svc-a', service_code: 'A',
-    service_name: 'Layanan Medis Umum - Primaya Hospital',
-    service_group: 'MEDICAL', booth_number: 1,
-    free_quota: 200, paid_quota: 0,
-    used_free_quota: 0, used_paid_quota: 0,
-    quota_status: 'AVAILABLE', is_active: true,
-    created_date: new Date().toISOString(),
-  },
-  {
-    id: 'svc-b', service_code: 'B',
-    service_name: 'Pemeriksaan Mata Umum - Optik Melawai',
-    service_group: 'EYE_CHECK', booth_number: 2,
-    free_quota: 200, paid_quota: 0,
-    used_free_quota: 0, used_paid_quota: 0,
-    quota_status: 'AVAILABLE', is_active: true,
-    created_date: new Date().toISOString(),
-  },
+  { id: 'svc-a', service_code: 'A', service_name: 'Mini MCU',             service_group: 'MEDICAL',    booth_number: 1, free_quota: 150, paid_quota: 0, used_free_quota: 0, used_paid_quota: 0, quota_status: 'AVAILABLE', is_active: true, provider: 'Primaya Hospital', created_date: new Date().toISOString() },
+  { id: 'svc-b', service_code: 'B', service_name: 'Vitamin C Injection',   service_group: 'MEDICAL',    booth_number: 2, free_quota: 150, paid_quota: 0, used_free_quota: 0, used_paid_quota: 0, quota_status: 'AVAILABLE', is_active: true, provider: 'Primaya Hospital', created_date: new Date().toISOString() },
+  { id: 'svc-c', service_code: 'C', service_name: 'Influenza Vaccine',     service_group: 'MEDICAL',    booth_number: 3, free_quota: 150, paid_quota: 0, used_free_quota: 0, used_paid_quota: 0, quota_status: 'AVAILABLE', is_active: true, provider: 'Primaya Hospital', created_date: new Date().toISOString() },
+  { id: 'svc-d', service_code: 'D', service_name: 'Eye Check (Airdoc)',    service_group: 'EYE_CHECK',  booth_number: 4, free_quota: 150, paid_quota: 0, used_free_quota: 0, used_paid_quota: 0, quota_status: 'AVAILABLE', is_active: true, provider: 'Optik Melawai',   created_date: new Date().toISOString() },
+  { id: 'svc-e', service_code: 'E', service_name: 'Eye Check (Autoref)',   service_group: 'EYE_CHECK',  booth_number: 5, free_quota: 150, paid_quota: 0, used_free_quota: 0, used_paid_quota: 0, quota_status: 'AVAILABLE', is_active: true, provider: 'Optik Melawai',   created_date: new Date().toISOString() },
 ];
 
 const SEED_EVENT = {
@@ -129,8 +116,8 @@ const SEED_EVENT = {
   event_tagline: 'Healthy People, Healthy Performance',
   location: 'Aula Utama',
   event_date: new Date().toISOString().split('T')[0],
-  max_participants: 400,
-  free_check_quota: 400,
+  max_participants: 750,
+  free_check_quota: 750,
   payment_quota: 0,
   queue_monitor_url: typeof window !== 'undefined' ? window.location.origin + '/led-monitor' : '/led-monitor',
   mobile_monitor_url: typeof window !== 'undefined' ? window.location.origin + '/mobile-monitor' : '/mobile-monitor',
@@ -144,7 +131,7 @@ function seedIfEmpty(name, data) {
   }
 }
 
-const DATA_VERSION = '3.0';
+const DATA_VERSION = '4.0';
 
 function initSeeds() {
   const storedVersion = localStorage.getItem(DB_PREFIX + 'data_version');

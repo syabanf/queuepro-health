@@ -1,15 +1,23 @@
+const SERVICE_VISUAL = {
+  'svc-a': { grad: ['#003D79', '#005BAB'], icon: '♥', label: 'MINI MCU' },
+  'svc-b': { grad: ['#004D8C', '#0069C0'], icon: '💉', label: 'VITAMIN C' },
+  'svc-c': { grad: ['#005BAB', '#0077CC'], icon: '💉', label: 'VAKSIN INFLUENZA' },
+  'svc-d': { grad: ['#004D8C', '#006BB3'], icon: '👁', label: 'AIRDOC' },
+  'svc-e': { grad: ['#003D79', '#005BAB'], icon: '👁', label: 'AUTOREF' },
+};
+
 export function printCoupon({ participant, queue, service, eventSetting }) {
-  const eventName = eventSetting?.event_name || "Brilian Talks Health Care";
-  const eventLocation = eventSetting?.location || "Aula Utama";
-  const registeredAt = participant.registered_at
+  const eventName     = eventSetting?.event_name || "Brilian Talks Health Care";
+  const eventLocation = eventSetting?.location   || "Aula Utama";
+  const registeredAt  = participant.registered_at
     ? new Date(participant.registered_at).toLocaleString("id-ID", { dateStyle: "medium", timeStyle: "short" })
     : new Date().toLocaleString("id-ID", { dateStyle: "medium", timeStyle: "short" });
 
-  function buildFallbackQr(data) {
-    return `https://api.qrserver.com/v1/create-qr-code/?size=120x120&data=${encodeURIComponent("QUEUE:" + data)}&margin=4`;
-  }
+  const qrUrl = queue.qr_code_url ||
+    `https://api.qrserver.com/v1/create-qr-code/?size=120x120&data=${encodeURIComponent("QUEUE:" + queue.qr_token || queue.queue_number)}&margin=4`;
 
-  const qrUrl = queue.qr_code_url || buildFallbackQr(queue.qr_token || queue.queue_number);
+  const vis = SERVICE_VISUAL[service?.id] || SERVICE_VISUAL['svc-a'];
+  const [c1, c2] = vis.grad;
   const isMedical = service?.service_group === "MEDICAL";
 
   const html = `<!DOCTYPE html>
@@ -19,190 +27,163 @@ export function printCoupon({ participant, queue, service, eventSetting }) {
   <title>Kupon Antrian - ${participant.full_name}</title>
   <style>
     @media print {
-      @page { margin: 4mm; size: 80mm auto; }
+      @page { margin: 0; size: 80mm 120mm; }
       body { margin: 0; }
     }
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body {
       font-family: Arial, Helvetica, sans-serif;
       background: #fff;
-      color: #000;
-      width: 76mm;
+      width: 80mm;
       margin: 0 auto;
-      padding: 4mm 3mm;
-      font-size: 11px;
     }
-    .header {
-      text-align: center;
-      padding-bottom: 8px;
-      border-bottom: 2px dashed #000;
-      margin-bottom: 8px;
+
+    /* ── KEY VISUAL BANNER ── */
+    .banner {
+      background: linear-gradient(160deg, ${c1} 0%, ${c2} 100%);
+      padding: 8px 10px 6px;
+      color: white;
     }
-    .logos {
+    .banner-top {
       display: flex;
-      justify-content: space-between;
       align-items: center;
-      margin-bottom: 6px;
-    }
-    .logo-badge {
-      font-size: 8px;
-      font-weight: 900;
-      padding: 2px 8px;
-      border-radius: 4px;
-      letter-spacing: 1px;
-    }
-    .logo-bri { background: #003D79; color: #fff; }
-    .logo-danantara { background: #1B5E20; color: #fff; }
-    .header .logo-line {
-      font-size: 7px;
-      letter-spacing: 2px;
-      font-weight: bold;
-      text-transform: uppercase;
-      color: #555;
-      margin-bottom: 3px;
-    }
-    .header h1 {
-      font-size: 13px;
-      font-weight: 900;
-      color: #003D79;
-      line-height: 1.2;
-    }
-    .header .location { font-size: 9px; color: #444; margin-top: 2px; }
-    .header .reg-time { font-size: 8px; color: #666; margin-top: 3px; }
-    .section-label {
-      font-size: 7px;
-      font-weight: bold;
-      text-transform: uppercase;
-      letter-spacing: 1px;
-      color: #888;
-      margin-bottom: 3px;
-    }
-    .participant-block {
-      border: 1px solid #ccc;
-      border-radius: 4px;
-      padding: 6px 8px;
-      margin-bottom: 8px;
-      background: #f8f9fa;
-    }
-    .participant-block .p-name { font-size: 13px; font-weight: bold; color: #000; }
-    .participant-block .p-reg { font-size: 9px; color: #555; font-family: monospace; margin-top: 1px; }
-    .participant-block .p-detail { font-size: 9px; color: #444; margin-top: 3px; }
-    .p-category {
-      display: inline-block;
-      font-size: 8px;
-      font-weight: bold;
-      padding: 2px 7px;
-      border-radius: 20px;
-      margin-top: 4px;
-      background: #d1fae5;
-      color: #065f46;
-      border: 1px solid #6ee7b7;
-    }
-    .queue-section {
-      border: 2px solid;
-      border-radius: 6px;
-      padding: 8px;
-      margin-bottom: 8px;
-    }
-    .queue-section.medical { border-color: #003D79; }
-    .queue-section.eye { border-color: #0284c7; }
-    .qs-header {
-      font-size: 7px;
-      font-weight: bold;
-      text-transform: uppercase;
-      letter-spacing: 0.5px;
-      color: #888;
+      justify-content: space-between;
       margin-bottom: 4px;
     }
-    .qs-body { display: flex; align-items: center; gap: 8px; }
-    .qs-info { flex: 1; min-width: 0; }
-    .qs-number {
-      font-size: 36px;
+    .brand-bri {
+      font-size: 10px;
       font-weight: 900;
+      letter-spacing: 2px;
+      color: white;
+    }
+    .brand-provider {
+      font-size: 8px;
+      font-weight: bold;
+      color: rgba(255,255,255,0.7);
+      letter-spacing: 1px;
+    }
+    .service-name {
+      text-align: center;
+      font-size: 14px;
+      font-weight: 900;
+      color: white;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      margin: 4px 0;
+    }
+    .queue-row {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      padding: 6px 0 8px;
+    }
+    .code-badge {
+      width: 36px;
+      height: 36px;
+      border-radius: 8px;
+      background: rgba(255,255,255,0.2);
+      border: 1px solid rgba(255,255,255,0.3);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+    }
+    .code-badge .letter { font-size: 20px; font-weight: 900; color: white; line-height: 1; }
+    .code-badge .sub { font-size: 5px; font-weight: bold; color: rgba(255,255,255,0.6); text-transform: uppercase; }
+    .queue-icon { font-size: 22px; }
+    .queue-num {
+      font-size: 40px;
+      font-weight: 900;
+      color: white;
       letter-spacing: 2px;
       line-height: 1;
     }
-    .queue-section.medical .qs-number { color: #003D79; }
-    .queue-section.eye .qs-number { color: #0284c7; }
-    .qs-service { font-size: 9px; font-weight: 700; color: #333; margin-top: 3px; line-height: 1.3; }
-    .qs-booth { font-size: 8px; color: #777; margin-top: 1px; }
-    .qs-slot {
-      display: inline-block;
-      font-size: 8px;
-      font-weight: bold;
-      padding: 1px 5px;
-      border-radius: 20px;
-      margin-top: 4px;
-      background: #d1fae5;
-      color: #065f46;
-      border: 1px solid #6ee7b7;
-    }
-    .qs-qr { flex-shrink: 0; text-align: center; }
-    .qs-qr img { width: 72px; height: 72px; display: block; }
-    .qs-qr span { font-size: 6px; color: #999; display: block; margin-top: 2px; }
-    .footer {
-      border-top: 1px dashed #999;
-      padding-top: 6px;
+    .instruction {
       text-align: center;
+      font-size: 7px;
+      font-weight: bold;
+      color: rgba(255,255,255,0.6);
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      padding: 4px 0 6px;
+      border-top: 1px solid rgba(255,255,255,0.15);
     }
-    .footer .instruction { font-size: 8px; color: #333; line-height: 1.6; margin-bottom: 4px; font-weight: 600; }
-    .footer .instruction-sub { font-size: 7.5px; color: #555; line-height: 1.5; margin-bottom: 4px; }
-    .footer .timestamp { font-size: 7px; color: #999; }
+
+    /* ── PARTICIPANT INFO ── */
+    .info-section {
+      padding: 6px 10px;
+      background: #fff;
+      border-bottom: 1px dashed #ccc;
+    }
+    .info-row { display: flex; gap: 6px; margin-bottom: 2px; }
+    .info-label { font-size: 7px; color: #888; text-transform: uppercase; letter-spacing: 0.5px; width: 60px; flex-shrink: 0; }
+    .info-value { font-size: 9px; color: #222; font-weight: 600; flex: 1; }
+    .info-reg { font-size: 8px; font-family: monospace; color: #555; }
+
+    /* ── QR + FOOTER ── */
+    .qr-section {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 10px;
+    }
+    .qr-section img { width: 60px; height: 60px; flex-shrink: 0; }
+    .qr-info { flex: 1; }
+    .qr-info p { font-size: 7.5px; color: #444; line-height: 1.5; }
+    .qr-label { font-size: 6px; color: #999; text-align: center; display: block; }
+    .timestamp { text-align: center; font-size: 6.5px; color: #bbb; padding: 2px 0 4px; }
   </style>
 </head>
 <body>
-  <div class="header">
-    <div class="logos">
-      <span class="logo-badge logo-bri">BRI</span>
-      <span class="logo-line">Kupon Antrian Peserta</span>
-      <span class="logo-badge logo-danantara">Danantara</span>
+
+  <!-- KEY VISUAL BANNER -->
+  <div class="banner">
+    <div class="banner-top">
+      <span class="brand-bri">BRI</span>
+      <span class="brand-provider">${isMedical ? 'PRIMAYA HOSPITAL' : 'OPTIK MELAWAI'}</span>
     </div>
-    <h1>${eventName}</h1>
-    <div class="location">${eventLocation}</div>
-    <div class="reg-time">Waktu Daftar: ${registeredAt}</div>
-  </div>
-
-  <div class="section-label">Data Peserta</div>
-  <div class="participant-block">
-    <div class="p-name">${participant.full_name}</div>
-    <div class="p-reg">${participant.registration_number}</div>
-    <div class="p-detail">${participant.phone_number} &nbsp;&bull;&nbsp; ${participant.unit_division}</div>
-    <span class="p-category">GRATIS</span>
-  </div>
-
-  <div class="section-label">${isMedical ? "Layanan Medis" : "Pemeriksaan Mata"}</div>
-  <div class="queue-section ${isMedical ? "medical" : "eye"}">
-    <div class="qs-header">${isMedical ? "Layanan Medis" : "Pemeriksaan Mata"} — Booth ${service?.booth_number || "-"}</div>
-    <div class="qs-body">
-      <div class="qs-info">
-        <div class="qs-number">${queue.queue_number}</div>
-        <div class="qs-service">${service?.service_name || ""}</div>
-        <div class="qs-booth">Booth ${service?.booth_number || "-"} &bull; Kode ${service?.service_code || "-"}</div>
-        <span class="qs-slot">GRATIS</span>
+    <div class="service-name">${service?.service_name || ''}</div>
+    <div class="queue-row">
+      <div class="code-badge">
+        <span class="letter">${service?.service_code || '?'}</span>
+        <span class="sub">${vis.label}</span>
       </div>
-      <div class="qs-qr">
-        <img src="${qrUrl}" alt="QR Code" />
-        <span>Scan untuk verifikasi</span>
-      </div>
+      <span class="queue-icon">${vis.icon}</span>
+      <span class="queue-num">${queue.queue_number}</span>
     </div>
+    <div class="instruction">SILAKAN MENUNGGU PANGGILAN DI LAYAR</div>
   </div>
 
-  <div class="footer">
-    <div class="instruction">Harap bawa kupon ini ke booth layanan.</div>
-    <div class="instruction-sub">
-      Petugas akan melakukan scan QR sebelum pemeriksaan dimulai.<br/>
-      Datang ke booth ketika nomor Anda tampil sebagai <strong>Now Serving</strong>.
-    </div>
-    <div class="timestamp">Dicetak: ${new Date().toLocaleString("id-ID")}</div>
+  <!-- PARTICIPANT INFO -->
+  <div class="info-section">
+    <div class="info-row"><span class="info-label">Nama</span><span class="info-value">${participant.full_name}</span></div>
+    <div class="info-row"><span class="info-label">No. Reg</span><span class="info-value info-reg">${participant.registration_number}</span></div>
+    <div class="info-row"><span class="info-label">Telepon</span><span class="info-value">${participant.phone_number}</span></div>
+    <div class="info-row"><span class="info-label">Unit</span><span class="info-value">${participant.unit_division}</span></div>
+    <div class="info-row"><span class="info-label">Event</span><span class="info-value">${eventName}</span></div>
+    <div class="info-row"><span class="info-label">Waktu</span><span class="info-value">${registeredAt}</span></div>
   </div>
 
-  <script>window.onload = function() { window.print(); setTimeout(function(){ window.close(); }, 1000); }</script>
+  <!-- QR + NOTE -->
+  <div class="qr-section">
+    <div>
+      <img src="${qrUrl}" alt="QR" />
+      <span class="qr-label">Scan untuk verifikasi</span>
+    </div>
+    <div class="qr-info">
+      <p><strong>Booth ${service?.booth_number || '-'}</strong> — Kode ${service?.service_code || '-'}</p>
+      <p>${eventLocation}</p>
+      <p>Harap bawa kupon ini dan tunjukkan ke petugas booth.</p>
+      <p>Datang ke booth saat nomor Anda tampil sebagai <strong>Now Serving</strong>.</p>
+    </div>
+  </div>
+  <div class="timestamp">Dicetak: ${new Date().toLocaleString("id-ID")}</div>
+
+  <script>window.onload = function() { window.print(); setTimeout(function(){ window.close(); }, 1200); }</script>
 </body>
 </html>`;
 
-  const win = window.open("", "_blank", "width=360,height=650");
-  if (win) {
-    win.document.write(html);
-    win.document.close();
-  }
+  const win = window.open("", "_blank", "width=360,height=580");
+  if (win) { win.document.write(html); win.document.close(); }
 }
