@@ -8,29 +8,29 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useToast } from "@/components/ui/use-toast";
 import {
   Monitor, PhoneCall, PlayCircle, CheckCircle2,
-  SkipForward, XCircle, RotateCcw, Clock, Stethoscope, Eye, User, QrCode, Barcode,
+  SkipForward, XCircle, RotateCcw, Clock, Stethoscope, Eye, User, Barcode,
   ShieldCheck, ShieldX, Shield, CreditCard, Gift
 } from "lucide-react";
 import QrScannerModal from "@/components/booth/QrScannerModal";
 import QrVerificationCard from "@/components/booth/QrVerificationCard";
 
 const QUEUE_STATUS_CONFIG = {
-  WAITING:     { label: "Menunggu",       color: "bg-slate-100 text-slate-600 border-slate-200" },
-  CALLED:      { label: "Dipanggil",      color: "bg-amber-100 text-amber-700 border-amber-200" },
+  WAITING:     { label: "Menunggu",         color: "bg-slate-100 text-slate-600 border-slate-200" },
+  CALLED:      { label: "Dipanggil",        color: "bg-amber-100 text-amber-700 border-amber-200" },
   QR_VERIFIED: { label: "QR Terverifikasi", color: "bg-blue-100 text-blue-700 border-blue-200" },
-  SERVING:     { label: "Dilayani",       color: "bg-purple-100 text-purple-700 border-purple-200" },
-  DONE:        { label: "Selesai",        color: "bg-green-100 text-green-700 border-green-200" },
-  SKIPPED:     { label: "Dilewati",       color: "bg-orange-100 text-orange-700 border-orange-200" },
-  CANCELLED:   { label: "Batal",         color: "bg-red-100 text-red-700 border-red-200" },
+  SERVING:     { label: "Dilayani",         color: "bg-purple-100 text-purple-700 border-purple-200" },
+  DONE:        { label: "Selesai",          color: "bg-green-100 text-green-700 border-green-200" },
+  SKIPPED:     { label: "Dilewati",         color: "bg-orange-100 text-orange-700 border-orange-200" },
+  CANCELLED:   { label: "Batal",            color: "bg-red-100 text-red-700 border-red-200" },
 };
 
 const QR_BADGE_CONFIG = {
-  NOT_SCANNED: { label: "Belum Di-scan", color: "bg-slate-100 text-slate-500 border-slate-200", icon: Shield },
-  VERIFIED:    { label: "QR Terverifikasi", color: "bg-green-100 text-green-700 border-green-200", icon: ShieldCheck },
-  INVALID:     { label: "QR Tidak Valid", color: "bg-red-100 text-red-700 border-red-200", icon: ShieldX },
-  WRONG_SERVICE: { label: "Booth Salah", color: "bg-orange-100 text-orange-700 border-orange-200", icon: ShieldX },
-  ALREADY_COMPLETED: { label: "Sudah Selesai", color: "bg-purple-100 text-purple-700 border-purple-200", icon: ShieldX },
-  CANCELLED:   { label: "Dibatalkan", color: "bg-red-100 text-red-700 border-red-200", icon: ShieldX },
+  NOT_SCANNED:        { label: "Belum Di-scan",     color: "bg-slate-100 text-slate-500 border-slate-200",   icon: Shield },
+  VERIFIED:           { label: "QR Terverifikasi",  color: "bg-green-100 text-green-700 border-green-200",   icon: ShieldCheck },
+  INVALID:            { label: "QR Tidak Valid",    color: "bg-red-100 text-red-700 border-red-200",         icon: ShieldX },
+  WRONG_SERVICE:      { label: "Booth Salah",       color: "bg-orange-100 text-orange-700 border-orange-200",icon: ShieldX },
+  ALREADY_COMPLETED:  { label: "Sudah Selesai",     color: "bg-purple-100 text-purple-700 border-purple-200",icon: ShieldX },
+  CANCELLED:          { label: "Dibatalkan",         color: "bg-red-100 text-red-700 border-red-200",         icon: ShieldX },
 };
 
 async function logQueueEvent({ queue_id, event_type, previous_status, new_status, performed_by, notes }) {
@@ -42,35 +42,637 @@ async function logQueueEvent({ queue_id, event_type, previous_status, new_status
   });
 }
 
-export default function NakesBooth() {
+// ── Single-service booth panel (used both standalone and in merged grid) ──────
+
+function BoothPanel({ service, participants, services, currentUser, compact = false }) {
   const queryClient = useQueryClient();
   const { toast } = useToast();
-  const [selectedServiceId, setSelectedServiceId] = useState("");
-  const [currentUser, setCurrentUser] = useState(null);
   const prevActiveRef = useRef(null);
   const [flashActive, setFlashActive] = useState(false);
   const [scannerOpen, setScannerOpen] = useState(false);
   const [verificationResult, setVerificationResult] = useState(null);
 
+  const { data: queues = [] } = useQuery({
+    queryKey: ["booth-queues", service.id],
+    queryFn: () => base44.entities.Queue.filter({ service_id: service.id }),
+    refetchInterval: 5000,
+  });
+
+  useEffect(() => {
+    const unsub = base44.entities.Queue.subscribe(() => {
+      queryClient.invalidateQueries({ queryKey: ["booth-queues", service.id] });
+    });
+    return unsub;
+  }, [service.id, queryClient]);
+
+  const sorted = [...queues].sort((a, b) => (a.queue_sequence || 0) - (b.queue_sequence || 0));
+  const waiting    = sorted.filter(q => q.status === "WAITING");
+  const called     = sorted.find(q => q.status === "CALLED");
+  const qrVerified = sorted.find(q => q.status === "QR_VERIFIED");
+  const serving    = sorted.find(q => q.status === "SERVING");
+  const skipped    = sorted.filter(q => q.status === "SKIPPED");
+  const done       = sorted.filter(q => q.status === "DONE");
+  const nextWaiting = waiting[0];
+  const activeQueue = serving || qrVerified || called;
+
+  useEffect(() => {
+    const current = activeQueue?.queue_number;
+    if (current && current !== prevActiveRef.current) {
+      prevActiveRef.current = current;
+      setFlashActive(true);
+      setTimeout(() => setFlashActive(false), 800);
+    }
+  }, [activeQueue?.queue_number]);
+
+  useEffect(() => { setVerificationResult(null); }, [activeQueue?.id]);
+
+  const updateQueue = useMutation({
+    mutationFn: async ({ queue, newStatus, eventType, notes, extraFields }) => {
+      const now = new Date().toISOString();
+      const timeField = {
+        CALLED: "called_at", SERVING: "serving_at",
+        DONE: "done_at", SKIPPED: "skipped_at", CANCELLED: "cancelled_at",
+      }[newStatus];
+      const update = { status: newStatus, ...extraFields };
+      if (timeField) update[timeField] = now;
+      await base44.entities.Queue.update(queue.id, update).catch(e => console.warn(e));
+      await logQueueEvent({
+        queue_id: queue.id, event_type: eventType,
+        previous_status: queue.status, new_status: newStatus,
+        performed_by: currentUser?.email || "mock-user", notes,
+      }).catch(e => console.warn(e));
+      if (newStatus === "DONE") {
+        const svc = services.find(s => s.id === queue.service_id);
+        if (svc) await base44.entities.Service.update(svc.id, { used_free_quota: (svc.used_free_quota || 0) + 1 }).catch(e => console.warn(e));
+        await base44.entities.Participant.update(queue.participant_id, { participant_status: "COMPLETED" }).catch(e => console.warn(e));
+        setVerificationResult(null);
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["booth-queues", service.id] });
+      queryClient.invalidateQueries({ queryKey: ["queues"] });
+      queryClient.invalidateQueries({ queryKey: ["participants"] });
+      toast({ title: "Berhasil", description: "Status antrian diperbarui" });
+    },
+  });
+
+  const handleAction = (queue, newStatus, eventType, notes = "", extraFields = {}) => {
+    if (!queue) return;
+    updateQueue.mutate({ queue, newStatus, eventType, notes, extraFields });
+  };
+
+  const handleQrScan = useCallback(async (token) => {
+    setScannerOpen(false);
+    let allQueues = [];
+    try { allQueues = await base44.entities.Queue.list(); } catch {}
+    const matchedQueue = allQueues.find(q => q.qr_token === token);
+
+    if (!matchedQueue) {
+      setVerificationResult({ status: "INVALID", message: "QR code tidak valid. Token tidak ditemukan dalam sistem." });
+      toast({ title: "QR Tidak Valid", description: "Token tidak ditemukan.", variant: "destructive" });
+      return;
+    }
+
+    const participant = participants.find(p => p.id === matchedQueue.participant_id);
+    const queueService = services.find(s => s.id === matchedQueue.service_id);
+
+    if (matchedQueue.service_id !== service.id) {
+      setVerificationResult({ status: "WRONG_SERVICE", message: `QR valid, tetapi peserta ini terdaftar di booth lain (${queueService?.service_name || "layanan lain"} — Booth ${queueService?.booth_number || "?"}).`, queue: matchedQueue, participant, service: queueService });
+      toast({ title: "Booth Salah", description: "Peserta ini bukan untuk booth ini.", variant: "destructive" });
+      return;
+    }
+    if (matchedQueue.status === "DONE") {
+      setVerificationResult({ status: "ALREADY_COMPLETED", message: "Antrian ini sudah selesai dilayani.", queue: matchedQueue, participant, service: queueService });
+      toast({ title: "Sudah Selesai", variant: "destructive" });
+      return;
+    }
+    if (matchedQueue.status === "CANCELLED") {
+      setVerificationResult({ status: "CANCELLED", message: "Antrian ini sudah dibatalkan.", queue: matchedQueue, participant, service: queueService });
+      toast({ title: "Dibatalkan", variant: "destructive" });
+      return;
+    }
+    if (matchedQueue.status === "WAITING") {
+      setVerificationResult({ status: "INVALID", message: `Antrian ${matchedQueue.queue_number} belum dipanggil.`, queue: matchedQueue, participant, service: queueService });
+      toast({ title: "Belum Dipanggil", variant: "destructive" });
+      return;
+    }
+    if (matchedQueue.status === "QR_VERIFIED" || matchedQueue.status === "SERVING") {
+      setVerificationResult({ status: "VERIFIED", message: "Peserta sudah terverifikasi.", queue: matchedQueue, participant, service: queueService });
+      toast({ title: "Sudah Terverifikasi" });
+      return;
+    }
+
+    const now = new Date().toISOString();
+    await base44.entities.Queue.update(matchedQueue.id, { status: "QR_VERIFIED", qr_verification_status: "VERIFIED", qr_verified_at: now, qr_verified_by: currentUser?.email || "mock-user" }).catch(e => console.warn(e));
+    await logQueueEvent({ queue_id: matchedQueue.id, event_type: "QR_VERIFIED", previous_status: matchedQueue.status, new_status: "QR_VERIFIED", performed_by: currentUser?.email || "mock-user", notes: "QR code verified successfully" }).catch(e => console.warn(e));
+
+    const verifiedQueue = { ...matchedQueue, status: "QR_VERIFIED", qr_verification_status: "VERIFIED" };
+    setVerificationResult({ status: "VERIFIED", message: "QR terverifikasi. Identitas peserta valid.", queue: verifiedQueue, participant, service: queueService });
+    queryClient.invalidateQueries({ queryKey: ["booth-queues", service.id] });
+    toast({ title: "✓ QR Terverifikasi", description: "Peserta dapat dilayani." });
+  }, [service.id, participants, services, currentUser, queryClient, toast]);
+
+  const getParticipant = (id) => participants.find(p => p.id === id);
+  const isMedical = service.service_group === "MEDICAL";
+  const Icon = isMedical ? Stethoscope : Eye;
+  const qrBadgeCfg = activeQueue ? QR_BADGE_CONFIG[activeQueue.qr_verification_status || "NOT_SCANNED"] : null;
+
+  // ── Compact layout (used in merged grid) ────────────────────────────────────
+  if (compact) {
+    return (
+      <>
+        <Card className={`border-2 transition-all flex flex-col ${flashActive ? "border-primary shadow-lg shadow-primary/20" : "border-border"}`}>
+          {/* Service header */}
+          <div className={`flex items-center justify-between px-4 py-2.5 rounded-t-xl text-white ${isMedical ? "bg-primary" : "bg-[#005BAB]"}`}>
+            <div className="flex items-center gap-2 min-w-0">
+              <Icon className="w-4 h-4 flex-shrink-0" />
+              <div className="min-w-0">
+                <p className="font-bold text-sm leading-tight truncate">{service.service_name}</p>
+                <p className="text-white/60 text-[11px]">Booth {service.booth_number} · Kode {service.service_code}</p>
+              </div>
+            </div>
+            <div className="flex gap-3 text-center flex-shrink-0 ml-2">
+              <div>
+                <p className="font-bold text-lg leading-none">{waiting.length}</p>
+                <p className="text-white/60 text-[10px]">Tunggu</p>
+              </div>
+              <div>
+                <p className="font-bold text-lg leading-none text-green-300">{done.length}</p>
+                <p className="text-white/60 text-[10px]">Selesai</p>
+              </div>
+              <div>
+                <p className="font-bold text-lg leading-none text-orange-300">{skipped.length}</p>
+                <p className="text-white/60 text-[10px]">Lewati</p>
+              </div>
+            </div>
+          </div>
+
+          <CardContent className="p-3 space-y-3 flex-1">
+            {/* Now Serving */}
+            <div className={`p-3 rounded-lg border-2 transition-all ${flashActive ? "border-primary bg-primary/5" : "border-border"}`}>
+              <div className="flex items-start justify-between gap-2 mb-1">
+                <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Now Serving</p>
+                {qrBadgeCfg && activeQueue && (
+                  <Badge className={`text-[10px] px-1.5 py-0.5 border gap-1 ${qrBadgeCfg.color}`}>
+                    <qrBadgeCfg.icon className="w-2.5 h-2.5" />
+                    {qrBadgeCfg.label}
+                  </Badge>
+                )}
+              </div>
+
+              {activeQueue ? (
+                <>
+                  <p className={`text-4xl font-black tracking-widest leading-none text-primary ${flashActive ? "scale-105" : ""} transition-all`}>
+                    {activeQueue.queue_number}
+                  </p>
+                  {(() => {
+                    const p = getParticipant(activeQueue.participant_id);
+                    return p ? (
+                      <p className="text-xs text-muted-foreground mt-1 flex items-center gap-1 truncate">
+                        <User className="w-3 h-3 flex-shrink-0" /> {p.full_name}
+                      </p>
+                    ) : null;
+                  })()}
+                  <div className="flex items-center gap-1.5 mt-1.5 flex-wrap">
+                    <Badge className={`text-[10px] border ${QUEUE_STATUS_CONFIG[activeQueue.status]?.color}`}>
+                      {QUEUE_STATUS_CONFIG[activeQueue.status]?.label}
+                    </Badge>
+                    <span className={`text-[10px] font-semibold ${activeQueue.payment_display_status === "FREE" ? "text-green-600" : "text-orange-600"}`}>
+                      {activeQueue.payment_display_status === "FREE" ? "Gratis" : "Berbayar"}
+                    </span>
+                  </div>
+
+                  {verificationResult && <div className="mt-2"><QrVerificationCard result={verificationResult} /></div>}
+
+                  {/* Actions */}
+                  <div className="mt-2.5 space-y-1.5 pt-2.5 border-t border-border">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className={`w-full gap-1.5 text-xs h-7 ${activeQueue.payment_display_status === "FREE" ? "text-orange-600 border-orange-300 hover:bg-orange-50" : "text-green-600 border-green-300 hover:bg-green-50"}`}
+                      onClick={async () => {
+                        const newPayment = activeQueue.payment_display_status === "FREE" ? "PAID" : "FREE";
+                        await base44.entities.Queue.update(activeQueue.id, { payment_display_status: newPayment });
+                        queryClient.invalidateQueries({ queryKey: ["booth-queues", service.id] });
+                      }}
+                      disabled={updateQueue.isPending}
+                    >
+                      {activeQueue.payment_display_status === "FREE"
+                        ? <><CreditCard className="w-3 h-3" /> Ubah ke Berbayar</>
+                        : <><Gift className="w-3 h-3" /> Ubah ke Gratis</>}
+                    </Button>
+
+                    <Button
+                      size="sm"
+                      className="w-full gap-1.5 text-xs h-7 bg-blue-600 hover:bg-blue-700"
+                      onClick={() => setScannerOpen(true)}
+                      disabled={updateQueue.isPending}
+                    >
+                      <Barcode className="w-3.5 h-3.5" /> Scan Barcode
+                    </Button>
+
+                    {(activeQueue.status === "CALLED" || activeQueue.status === "QR_VERIFIED") && (
+                      <Button
+                        size="sm"
+                        className="w-full gap-1.5 text-xs h-7 bg-green-600 hover:bg-green-700"
+                        onClick={() => handleAction(activeQueue, "SERVING", "SERVICE_STARTED")}
+                        disabled={updateQueue.isPending}
+                      >
+                        <PlayCircle className="w-3.5 h-3.5" /> Mulai Layanan
+                      </Button>
+                    )}
+
+                    {activeQueue.status === "SERVING" && (
+                      <Button
+                        size="sm"
+                        className="w-full gap-1.5 text-xs h-7 bg-green-600 hover:bg-green-700"
+                        onClick={() => {
+                          handleAction(activeQueue, "DONE", "SERVICE_DONE");
+                          setTimeout(() => {
+                            if (nextWaiting && !called && !qrVerified && !serving)
+                              handleAction(nextWaiting, "CALLED", "CALLED");
+                          }, 800);
+                        }}
+                        disabled={updateQueue.isPending}
+                      >
+                        <CheckCircle2 className="w-3.5 h-3.5" /> Selesai & Lanjut
+                      </Button>
+                    )}
+
+                    <div className="grid grid-cols-2 gap-1.5">
+                      {(activeQueue.status === "CALLED" || activeQueue.status === "QR_VERIFIED" || activeQueue.status === "SERVING") && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="gap-1 text-[11px] h-7 text-orange-600 border-orange-300 hover:bg-orange-50"
+                          onClick={() => handleAction(activeQueue, "SKIPPED", "SKIPPED")}
+                          disabled={updateQueue.isPending}
+                        >
+                          <SkipForward className="w-3 h-3" /> Lewati
+                        </Button>
+                      )}
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="gap-1 text-[11px] h-7 text-red-600 border-red-300 hover:bg-red-50"
+                        onClick={() => handleAction(activeQueue, "CANCELLED", "CANCELLED")}
+                        disabled={updateQueue.isPending}
+                      >
+                        <XCircle className="w-3 h-3" /> Batalkan
+                      </Button>
+                    </div>
+                  </div>
+                </>
+              ) : (
+                <div className="py-4 text-center">
+                  <p className="text-3xl font-black text-muted-foreground/20">—</p>
+                  <p className="text-xs text-muted-foreground mt-1">Belum ada antrian aktif</p>
+                </div>
+              )}
+            </div>
+
+            {/* Next Queue */}
+            <div className="flex items-center justify-between gap-2 px-3 py-2 rounded-lg bg-muted/40">
+              <div className="min-w-0">
+                <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Berikutnya</p>
+                <p className="text-xl font-black text-foreground/60 leading-none">{nextWaiting ? nextWaiting.queue_number : "—"}</p>
+                {nextWaiting && (() => {
+                  const p = getParticipant(nextWaiting.participant_id);
+                  return p ? <p className="text-[10px] text-muted-foreground truncate">{p.full_name}</p> : null;
+                })()}
+              </div>
+              <Button
+                size="sm"
+                className="gap-1 text-xs flex-shrink-0 h-8"
+                disabled={!nextWaiting || !!called || !!qrVerified || !!serving || updateQueue.isPending}
+                onClick={() => nextWaiting && handleAction(nextWaiting, "CALLED", "CALLED")}
+              >
+                <PhoneCall className="w-3.5 h-3.5" /> Panggil
+              </Button>
+            </div>
+
+            {/* Waiting list */}
+            {waiting.length > 0 && (
+              <div className="space-y-1 max-h-36 overflow-y-auto">
+                <p className="text-[10px] text-muted-foreground uppercase tracking-wider px-1">Antrian ({waiting.length})</p>
+                {waiting.map((q, i) => {
+                  const p = getParticipant(q.participant_id);
+                  return (
+                    <div key={q.id} className={`flex items-center gap-2 px-2 py-1 rounded text-xs ${i === 0 ? "bg-primary/5 border border-primary/20" : "bg-muted/40"}`}>
+                      <span className="font-mono font-bold w-12 flex-shrink-0">{q.queue_number}</span>
+                      <span className="text-muted-foreground truncate flex-1">{p?.full_name || "—"}</span>
+                      <span className={`text-[10px] font-bold flex-shrink-0 ${q.payment_display_status === "FREE" ? "text-green-600" : "text-orange-600"}`}>
+                        {q.payment_display_status === "FREE" ? "GRS" : "BYR"}
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+
+            {/* Skipped */}
+            {skipped.length > 0 && (
+              <div className="space-y-1">
+                <p className="text-[10px] text-muted-foreground uppercase tracking-wider px-1">Dilewati ({skipped.length})</p>
+                {skipped.map(q => {
+                  const p = getParticipant(q.participant_id);
+                  return (
+                    <div key={q.id} className="flex items-center gap-2 px-2 py-1 rounded bg-orange-50 text-xs">
+                      <span className="font-mono font-bold text-orange-700 w-12 flex-shrink-0">{q.queue_number}</span>
+                      <span className="text-muted-foreground truncate flex-1">{p?.full_name || "—"}</span>
+                      <Button size="sm" variant="ghost" className="h-5 px-1.5 text-[10px] text-orange-600 flex-shrink-0"
+                        disabled={!!called || !!qrVerified || !!serving || updateQueue.isPending}
+                        onClick={() => handleAction(q, "CALLED", "RECALLED")}>
+                        <RotateCcw className="w-2.5 h-2.5 mr-0.5" /> Panggil
+                      </Button>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+
+            {/* Done */}
+            {done.length > 0 && (
+              <div className="space-y-1">
+                <p className="text-[10px] text-muted-foreground uppercase tracking-wider px-1">Selesai ({done.length})</p>
+                <div className="max-h-24 overflow-y-auto space-y-1">
+                  {done.slice(-6).reverse().map(q => (
+                    <div key={q.id} className="flex items-center justify-between px-2 py-1 rounded bg-green-50 text-xs">
+                      <span className="font-mono font-bold text-green-700">{q.queue_number}</span>
+                      <span className={`text-[10px] font-bold ${q.payment_display_status === "FREE" ? "text-green-600" : "text-orange-600"}`}>
+                        {q.payment_display_status === "FREE" ? "Gratis" : "Berbayar"}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        <QrScannerModal open={scannerOpen} onClose={() => setScannerOpen(false)} onScan={handleQrScan} />
+      </>
+    );
+  }
+
+  // ── Full layout (standalone single-service view) ────────────────────────────
+  return (
+    <>
+      {/* Service Info Bar */}
+      <div className="flex flex-wrap items-center gap-3 p-4 rounded-xl bg-primary text-primary-foreground">
+        {isMedical ? <Stethoscope className="w-5 h-5 flex-shrink-0" /> : <Eye className="w-5 h-5 flex-shrink-0" />}
+        <div className="flex-1 min-w-0">
+          <p className="font-bold text-lg leading-tight">{service.service_name}</p>
+          <p className="text-primary-foreground/70 text-sm">Booth {service.booth_number} · Kode: {service.service_code}</p>
+        </div>
+        <div className="flex gap-6 text-sm text-center">
+          <div><p className="font-bold text-2xl">{waiting.length}</p><p className="text-primary-foreground/70 text-xs">Menunggu</p></div>
+          <div><p className="font-bold text-2xl text-green-300">{done.length}</p><p className="text-primary-foreground/70 text-xs">Selesai</p></div>
+          <div><p className="font-bold text-2xl text-orange-300">{skipped.length}</p><p className="text-primary-foreground/70 text-xs">Dilewati</p></div>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Left: Now Serving */}
+        <div className="lg:col-span-2 space-y-4">
+          <Card className={`border-2 transition-all ${flashActive ? "border-primary shadow-lg shadow-primary/20" : "border-primary/20"}`}>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-sm text-muted-foreground uppercase tracking-wider flex items-center justify-between">
+                Now Serving
+                {activeQueue && qrBadgeCfg && (
+                  <Badge className={`text-xs px-2 py-0.5 border gap-1 ${qrBadgeCfg.color}`}>
+                    <qrBadgeCfg.icon className="w-3 h-3" />
+                    {qrBadgeCfg.label}
+                  </Badge>
+                )}
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {activeQueue ? (
+                <div className="space-y-4">
+                  <div className="flex items-start justify-between gap-4">
+                    <div>
+                      <p className={`text-7xl font-black tracking-widest leading-none transition-all text-primary ${flashActive ? "scale-105" : ""}`}>
+                        {activeQueue.queue_number}
+                      </p>
+                      {(() => {
+                        const p = getParticipant(activeQueue.participant_id);
+                        return p ? (
+                          <div className="mt-2 flex items-center gap-2 text-sm">
+                            <User className="w-4 h-4 text-muted-foreground" />
+                            <span className="font-semibold">{p.full_name}</span>
+                            <span className="text-muted-foreground">— {p.unit_division}</span>
+                          </div>
+                        ) : null;
+                      })()}
+                      <p className="text-sm text-muted-foreground mt-1">
+                        Status: <span className={`font-semibold ${activeQueue.payment_display_status === "FREE" ? "text-green-600" : "text-orange-600"}`}>
+                          {activeQueue.payment_display_status === "FREE" ? "GRATIS" : "BERBAYAR"}
+                        </span>
+                      </p>
+                    </div>
+                    <Badge className={`text-sm px-4 py-2 border ${QUEUE_STATUS_CONFIG[activeQueue.status]?.color}`}>
+                      {QUEUE_STATUS_CONFIG[activeQueue.status]?.label}
+                    </Badge>
+                  </div>
+
+                  {verificationResult && <QrVerificationCard result={verificationResult} />}
+
+                  <div className="space-y-2 pt-2 border-t border-border">
+                    <Button
+                      variant="outline"
+                      className={`w-full gap-2 ${activeQueue.payment_display_status === "FREE" ? "text-orange-600 border-orange-300 hover:bg-orange-50" : "text-green-600 border-green-300 hover:bg-green-50"}`}
+                      onClick={async () => {
+                        const newPayment = activeQueue.payment_display_status === "FREE" ? "PAID" : "FREE";
+                        await base44.entities.Queue.update(activeQueue.id, { payment_display_status: newPayment });
+                        queryClient.invalidateQueries({ queryKey: ["booth-queues", service.id] });
+                      }}
+                      disabled={updateQueue.isPending}
+                    >
+                      {activeQueue.payment_display_status === "FREE"
+                        ? <><CreditCard className="w-4 h-4" /> Ubah ke Berbayar</>
+                        : <><Gift className="w-4 h-4" /> Ubah ke Gratis</>}
+                    </Button>
+
+                    <Button className="w-full gap-2 bg-blue-600 hover:bg-blue-700" onClick={() => setScannerOpen(true)} disabled={updateQueue.isPending}>
+                      <Barcode className="w-4 h-4" /> Scan Barcode Verifikasi
+                    </Button>
+
+                    <div className="grid grid-cols-2 gap-2">
+                      {(activeQueue.status === "CALLED" || activeQueue.status === "QR_VERIFIED") && (
+                        <Button className="gap-1.5 bg-green-600 hover:bg-green-700" onClick={() => handleAction(activeQueue, "SERVING", "SERVICE_STARTED")} disabled={updateQueue.isPending}>
+                          <PlayCircle className="w-4 h-4" /> Mulai Layanan
+                        </Button>
+                      )}
+                      {activeQueue.status === "SERVING" && (
+                        <Button className="gap-1.5 col-span-2 bg-green-600 hover:bg-green-700"
+                          onClick={() => {
+                            handleAction(activeQueue, "DONE", "SERVICE_DONE");
+                            setTimeout(() => {
+                              if (nextWaiting && !called && !qrVerified && !serving)
+                                handleAction(nextWaiting, "CALLED", "CALLED");
+                            }, 800);
+                          }}
+                          disabled={updateQueue.isPending}>
+                          <CheckCircle2 className="w-4 h-4" /> Selesai & Lanjut
+                        </Button>
+                      )}
+                      {(activeQueue.status === "CALLED" || activeQueue.status === "QR_VERIFIED" || activeQueue.status === "SERVING") && (
+                        <Button variant="outline" className="gap-1.5 text-orange-600 border-orange-300 hover:bg-orange-50"
+                          onClick={() => handleAction(activeQueue, "SKIPPED", "SKIPPED")} disabled={updateQueue.isPending}>
+                          <SkipForward className="w-4 h-4" /> Lewati
+                        </Button>
+                      )}
+                      <Button variant="outline" className="gap-1.5 text-red-600 border-red-300 hover:bg-red-50"
+                        onClick={() => handleAction(activeQueue, "CANCELLED", "CANCELLED")} disabled={updateQueue.isPending}>
+                        <XCircle className="w-4 h-4" /> Batalkan
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div className="text-center py-8">
+                  <p className="text-5xl font-black text-muted-foreground/20">—</p>
+                  <p className="text-sm text-muted-foreground mt-3">Belum ada antrian aktif</p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Next Queue */}
+          <Card>
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between gap-4">
+                <div>
+                  <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">Berikutnya</p>
+                  <p className="text-3xl font-black text-foreground/60">{nextWaiting ? nextWaiting.queue_number : "—"}</p>
+                  {nextWaiting && (() => {
+                    const p = getParticipant(nextWaiting.participant_id);
+                    return p ? <p className="text-xs text-muted-foreground mt-1 flex items-center gap-1"><User className="w-3 h-3" /> {p.full_name}</p> : null;
+                  })()}
+                  {nextWaiting && (
+                    <p className="text-xs text-muted-foreground mt-0.5">{nextWaiting.payment_display_status === "FREE" ? "Gratis" : "Berbayar"}</p>
+                  )}
+                </div>
+                <div className="flex flex-col gap-2">
+                  <Button size="lg" disabled={!nextWaiting || !!called || !!qrVerified || !!serving || updateQueue.isPending}
+                    onClick={() => nextWaiting && handleAction(nextWaiting, "CALLED", "CALLED")} className="gap-2">
+                    <PhoneCall className="w-5 h-5" /> Panggil Berikutnya
+                  </Button>
+                  {skipped.length > 0 && (
+                    <Button variant="outline" size="sm" className="gap-2 text-orange-600 border-orange-300"
+                      disabled={!!called || !!qrVerified || !!serving || updateQueue.isPending}
+                      onClick={() => handleAction(skipped[0], "CALLED", "RECALLED")}>
+                      <RotateCcw className="w-4 h-4" /> Panggil Ulang Dilewati ({skipped.length})
+                    </Button>
+                  )}
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Right: Queue Lists */}
+        <div className="space-y-4">
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm flex items-center gap-2">
+                <Clock className="w-4 h-4 text-blue-500" />Menunggu
+                <Badge variant="secondary" className="ml-auto">{waiting.length}</Badge>
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="p-3 pt-0 max-h-52 overflow-y-auto space-y-1">
+              {waiting.length === 0
+                ? <p className="text-xs text-muted-foreground text-center py-4">Kosong</p>
+                : waiting.map((q, i) => {
+                    const p = getParticipant(q.participant_id);
+                    return (
+                      <div key={q.id} className={`flex items-center gap-2 px-2 py-1.5 rounded-md text-sm ${i === 0 ? "bg-primary/5 border border-primary/20" : "bg-muted/40"}`}>
+                        <span className="font-mono font-bold w-14 flex-shrink-0">{q.queue_number}</span>
+                        <span className="text-xs text-muted-foreground truncate flex-1">{p?.full_name || "—"}</span>
+                        <span className={`text-[10px] font-bold flex-shrink-0 ${q.payment_display_status === "FREE" ? "text-green-600" : "text-orange-600"}`}>
+                          {q.payment_display_status === "FREE" ? "GRS" : "BYR"}
+                        </span>
+                      </div>
+                    );
+                  })
+              }
+            </CardContent>
+          </Card>
+
+          {skipped.length > 0 && (
+            <Card className="border-orange-200">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm flex items-center gap-2">
+                  <SkipForward className="w-4 h-4 text-orange-500" />Dilewati
+                  <Badge variant="secondary" className="ml-auto bg-orange-100 text-orange-700">{skipped.length}</Badge>
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="p-3 pt-0 max-h-36 overflow-y-auto space-y-1">
+                {skipped.map(q => {
+                  const p = getParticipant(q.participant_id);
+                  return (
+                    <div key={q.id} className="flex items-center justify-between px-2 py-1.5 rounded-md bg-orange-50 text-sm gap-2">
+                      <span className="font-mono font-bold text-orange-700 w-14 flex-shrink-0">{q.queue_number}</span>
+                      <span className="text-xs text-muted-foreground truncate flex-1">{p?.full_name || "—"}</span>
+                      <Button size="sm" variant="ghost" className="h-6 px-2 text-xs text-orange-600 flex-shrink-0"
+                        disabled={!!called || !!qrVerified || !!serving || updateQueue.isPending}
+                        onClick={() => handleAction(q, "CALLED", "RECALLED")}>
+                        <RotateCcw className="w-3 h-3 mr-1" /> Panggil
+                      </Button>
+                    </div>
+                  );
+                })}
+              </CardContent>
+            </Card>
+          )}
+
+          <Card className="border-green-200">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm flex items-center gap-2">
+                <CheckCircle2 className="w-4 h-4 text-green-500" />Selesai
+                <Badge variant="secondary" className="ml-auto bg-green-100 text-green-700">{done.length}</Badge>
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="p-3 pt-0 max-h-48 overflow-y-auto space-y-1">
+              {done.length === 0
+                ? <p className="text-xs text-muted-foreground text-center py-4">Belum ada</p>
+                : done.slice(-10).reverse().map(q => (
+                    <div key={q.id} className="flex items-center justify-between px-2 py-1.5 rounded-md bg-green-50 text-sm">
+                      <span className="font-mono font-bold text-green-700">{q.queue_number}</span>
+                      <div className="flex items-center gap-1.5">
+                        {q.qr_verification_status === "VERIFIED" && <ShieldCheck className="w-3 h-3 text-green-500" />}
+                        <span className={`text-[10px] font-bold ${q.payment_display_status === "FREE" ? "text-green-600" : "text-orange-600"}`}>
+                          {q.payment_display_status === "FREE" ? "Gratis" : "Berbayar"}
+                        </span>
+                      </div>
+                    </div>
+                  ))
+              }
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+
+      <QrScannerModal open={scannerOpen} onClose={() => setScannerOpen(false)} onScan={handleQrScan} />
+    </>
+  );
+}
+
+// ── Main Page ─────────────────────────────────────────────────────────────────
+
+export default function NakesBooth() {
+  const { toast } = useToast();
+  const [selectedServiceId, setSelectedServiceId] = useState("");
+  const [currentUser, setCurrentUser] = useState(null);
+
   useEffect(() => {
     const getUser = async () => {
-      // Check for mock user first
       const mockUserStr = sessionStorage.getItem("mockUser");
       if (mockUserStr) {
-        try {
-          setCurrentUser(JSON.parse(mockUserStr));
-          return;
-        } catch (e) {
-          console.error("Failed to parse mock user:", e);
-        }
+        try { setCurrentUser(JSON.parse(mockUserStr)); return; } catch {}
       }
-      // Fall back to real auth
-      try {
-        const u = await base44.auth.me();
-        setCurrentUser(u);
-      } catch (e) {
-        console.error("Auth error:", e);
-      }
+      try { setCurrentUser(await base44.auth.me()); } catch {}
     };
     getUser();
   }, []);
@@ -83,6 +685,7 @@ export default function NakesBooth() {
   const { data: participants = [] } = useQuery({
     queryKey: ["participants"],
     queryFn: () => base44.entities.Participant.list(),
+    refetchInterval: 10000,
   });
 
   const isMergedMedical = selectedServiceId === "merged-medical";
@@ -91,291 +694,16 @@ export default function NakesBooth() {
 
   const selectedService = isMerged ? null : services.find(s => s.id === selectedServiceId);
 
-  const effectiveServiceIds = useMemo(() => {
-    if (isMergedMedical) return services.filter(s => s.service_group === "MEDICAL" && s.is_active).map(s => s.id);
-    if (isMergedEye)     return services.filter(s => s.service_group === "EYE_CHECK" && s.is_active).map(s => s.id);
-    return selectedServiceId ? [selectedServiceId] : [];
-  }, [isMergedMedical, isMergedEye, selectedServiceId, services]);
+  const mergedServices = useMemo(() => {
+    if (isMergedMedical) return services.filter(s => s.service_group === "MEDICAL" && s.is_active);
+    if (isMergedEye)     return services.filter(s => s.service_group === "EYE_CHECK" && s.is_active);
+    return [];
+  }, [isMergedMedical, isMergedEye, services]);
 
-  const { data: queues = [], isLoading } = useQuery({
-    queryKey: ["booth-queues", selectedServiceId],
-    queryFn: async () => {
-      if (!effectiveServiceIds.length) return [];
-      const results = await Promise.all(effectiveServiceIds.map(id => base44.entities.Queue.filter({ service_id: id })));
-      return results.flat();
-    },
-    enabled: effectiveServiceIds.length > 0,
-    refetchInterval: 5000,
-  });
-
-  // Real-time subscription
-  useEffect(() => {
-    if (!selectedServiceId) return;
-    const unsub = base44.entities.Queue.subscribe(() => {
-      queryClient.invalidateQueries({ queryKey: ["booth-queues", selectedServiceId] });
-    });
-    return unsub;
-  }, [selectedServiceId, queryClient]);
-
-  const sorted = [...queues].sort((a, b) => (a.queue_sequence || 0) - (b.queue_sequence || 0));
-  const waiting     = sorted.filter(q => q.status === "WAITING");
-  const called      = sorted.find(q => q.status === "CALLED");
-  const qrVerified  = sorted.find(q => q.status === "QR_VERIFIED");
-  const serving     = sorted.find(q => q.status === "SERVING");
-  const skipped     = sorted.filter(q => q.status === "SKIPPED");
-  const done        = sorted.filter(q => q.status === "DONE");
-  const nextWaiting = waiting[0];
-  // Active queue priority: serving > qrVerified > called
-  const activeQueue = serving || qrVerified || called;
-
-  // Flash animation on active queue change
-  useEffect(() => {
-    const current = activeQueue?.queue_number;
-    if (current && current !== prevActiveRef.current) {
-      prevActiveRef.current = current;
-      setFlashActive(true);
-      setTimeout(() => setFlashActive(false), 800);
-    }
-  }, [activeQueue?.queue_number]);
-
-  // Clear verification result when active queue changes
-  useEffect(() => {
-    setVerificationResult(null);
-  }, [activeQueue?.id]);
-
-  const getParticipant = (participantId) =>
-    participants.find(p => p.id === participantId);
-
-  const updateQueue = useMutation({
-    mutationFn: async ({ queue, newStatus, eventType, notes, extraFields }) => {
-      const now = new Date().toISOString();
-      const timeField = {
-        CALLED: "called_at", QR_VERIFIED: null, SERVING: "serving_at",
-        DONE: "done_at", SKIPPED: "skipped_at", CANCELLED: "cancelled_at"
-      }[newStatus];
-      const update = { status: newStatus, ...extraFields };
-      if (timeField) update[timeField] = now;
-
-      try {
-        await base44.entities.Queue.update(queue.id, update);
-      } catch (e) {
-        console.warn("Queue update failed, continuing with logging:", e);
-      }
-
-      try {
-        await logQueueEvent({
-          queue_id: queue.id,
-          event_type: eventType,
-          previous_status: queue.status,
-          new_status: newStatus,
-          performed_by: currentUser?.email || "mock-user",
-          notes,
-        });
-      } catch (e) {
-        console.warn("Event logging failed:", e);
-      }
-
-      if (newStatus === "DONE") {
-        try {
-          // Deduct quota from service when examination is complete
-          const svc = services.find(s => s.id === queue.service_id);
-          if (svc) {
-            await base44.entities.Service.update(svc.id, {
-              used_free_quota: (svc.used_free_quota || 0) + 1,
-            });
-          }
-        } catch (e) {
-          console.warn("Quota deduction failed:", e);
-        }
-        try {
-          await base44.entities.Participant.update(queue.participant_id, { participant_status: "COMPLETED" });
-        } catch (e) {
-          console.warn("Participant status update failed:", e);
-        }
-      }
-    },
-    onSuccess: (_, vars) => {
-      queryClient.invalidateQueries({ queryKey: ["booth-queues", selectedServiceId] });
-      queryClient.invalidateQueries({ queryKey: ["queues"] });
-      queryClient.invalidateQueries({ queryKey: ["participants"] });
-      if (vars.newStatus === "DONE") {
-        setVerificationResult(null);
-      }
-      toast({ title: "Berhasil", description: "Status antrian diperbarui" });
-    },
-  });
-
-  const handleAction = (queue, newStatus, eventType, notes, extraFields) => {
-    if (!queue) return;
-    updateQueue.mutate({ queue, newStatus, eventType, notes, extraFields });
-  };
-
-  // QR Scan verification logic
-  const handleQrScan = useCallback(async (token) => {
-    setScannerOpen(false);
-    if (!selectedServiceId || !selectedService) return;
-
-    // Search all queues for this token (not just current service)
-    let allQueues = [];
-    try {
-      allQueues = await base44.entities.Queue.list();
-    } catch {
-      allQueues = [];
-    }
-
-    const matchedQueue = allQueues.find(q => q.qr_token === token);
-
-    if (!matchedQueue) {
-      const result = {
-        status: "INVALID",
-        message: "QR code tidak valid. Token tidak ditemukan dalam sistem.",
-      };
-      setVerificationResult(result);
-      await logQueueEvent({
-        queue_id: "unknown",
-        event_type: "QR_INVALID",
-        previous_status: "-",
-        new_status: "-",
-        performed_by: currentUser?.email,
-        notes: `Token: ${token}`,
-      });
-      toast({ title: "QR Tidak Valid", description: "Token tidak ditemukan.", variant: "destructive" });
-      return;
-    }
-
-    const participant = participants.find(p => p.id === matchedQueue.participant_id);
-    const queueService = services.find(s => s.id === matchedQueue.service_id);
-
-    // Wrong service check
-    if (matchedQueue.service_id !== selectedServiceId) {
-      const result = {
-        status: "WRONG_SERVICE",
-        message: `QR valid, tetapi peserta ini terdaftar di booth lain (${queueService?.service_name || "layanan lain"} — Booth ${queueService?.booth_number || "?"}).`,
-        queue: matchedQueue,
-        participant,
-        service: queueService,
-      };
-      setVerificationResult(result);
-      await logQueueEvent({
-        queue_id: matchedQueue.id,
-        event_type: "WRONG_SERVICE_QR",
-        previous_status: matchedQueue.status,
-        new_status: matchedQueue.status,
-        performed_by: currentUser?.email,
-        notes: `Scanned at service ${selectedServiceId}, belongs to ${matchedQueue.service_id}`,
-      });
-      toast({ title: "Booth Salah", description: "Peserta ini bukan untuk booth ini.", variant: "destructive" });
-      return;
-    }
-
-    // Already completed
-    if (matchedQueue.status === "DONE") {
-      const result = {
-        status: "ALREADY_COMPLETED",
-        message: "Antrian ini sudah selesai dilayani.",
-        queue: matchedQueue,
-        participant,
-        service: queueService,
-      };
-      setVerificationResult(result);
-      toast({ title: "Sudah Selesai", description: "Antrian ini sudah selesai dilayani.", variant: "destructive" });
-      return;
-    }
-
-    // Cancelled
-    if (matchedQueue.status === "CANCELLED") {
-      const result = {
-        status: "CANCELLED",
-        message: "Antrian ini sudah dibatalkan.",
-        queue: matchedQueue,
-        participant,
-        service: queueService,
-      };
-      setVerificationResult(result);
-      toast({ title: "Dibatalkan", description: "Antrian ini sudah dibatalkan.", variant: "destructive" });
-      return;
-    }
-
-    // Not called yet
-    if (matchedQueue.status === "WAITING") {
-      const result = {
-        status: "INVALID",
-        message: `Antrian ${matchedQueue.queue_number} belum dipanggil. Silakan tunggu giliran Anda.`,
-        queue: matchedQueue,
-        participant,
-        service: queueService,
-      };
-      setVerificationResult(result);
-      toast({ title: "Belum Dipanggil", description: `Nomor ${matchedQueue.queue_number} masih dalam antrian.`, variant: "destructive" });
-      return;
-    }
-
-    // Already verified or serving
-    if (matchedQueue.status === "QR_VERIFIED" || matchedQueue.status === "SERVING") {
-      const result = {
-        status: "VERIFIED",
-        message: "Peserta sudah terverifikasi. Layanan dapat dilanjutkan.",
-        queue: matchedQueue,
-        participant,
-        service: queueService,
-      };
-      setVerificationResult(result);
-      toast({ title: "Sudah Terverifikasi", description: "Peserta ini sudah terverifikasi sebelumnya." });
-      return;
-    }
-
-    // Valid — status is CALLED
-    const now = new Date().toISOString();
-    try {
-      await base44.entities.Queue.update(matchedQueue.id, {
-        status: "QR_VERIFIED",
-        qr_verification_status: "VERIFIED",
-        qr_verified_at: now,
-        qr_verified_by: currentUser?.email || "mock-user",
-      });
-    } catch (e) {
-      console.warn("QR update failed, continuing:", e);
-    }
-    
-    try {
-      await logQueueEvent({
-        queue_id: matchedQueue.id,
-        event_type: "QR_VERIFIED",
-        previous_status: matchedQueue.status,
-        new_status: "QR_VERIFIED",
-        performed_by: currentUser?.email || "mock-user",
-        notes: "QR code verified successfully",
-      });
-    } catch (e) {
-      console.warn("Event logging failed:", e);
-    }
-
-    const verifiedQueue = { ...matchedQueue, status: "QR_VERIFIED", qr_verification_status: "VERIFIED" };
-    const result = {
-      status: "VERIFIED",
-      message: "QR terverifikasi. Identitas peserta valid. Layanan dapat dimulai.",
-      queue: verifiedQueue,
-      participant,
-      service: queueService,
-    };
-    setVerificationResult(result);
-    queryClient.invalidateQueries({ queryKey: ["booth-queues", selectedServiceId] });
-    toast({ title: "✓ QR Terverifikasi", description: "Peserta dapat dilayani." });
-  }, [selectedServiceId, selectedService, participants, services, currentUser, queryClient, toast]);
-
-  const qrBadgeCfg = (queue) => {
-    if (!queue) return null;
-    return QR_BADGE_CONFIG[queue.qr_verification_status || "NOT_SCANNED"];
-  };
-
-  const isQrVerified = (queue) =>
-    queue?.qr_verification_status === "VERIFIED" ||
-    queue?.status === "QR_VERIFIED" ||
-    queue?.status === "SERVING" ||
-    queue?.status === "DONE";
+  const sharedProps = { participants, services, currentUser };
 
   return (
-    <div className="space-y-6 max-w-5xl mx-auto">
+    <div className="space-y-6 max-w-7xl mx-auto">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center gap-4">
         <div className="flex items-center gap-3">
@@ -387,13 +715,12 @@ export default function NakesBooth() {
             <p className="text-sm text-muted-foreground">Operasional layanan kesehatan</p>
           </div>
         </div>
-        <div className="sm:ml-auto w-full sm:w-72">
-          <Select value={selectedServiceId} onValueChange={(v) => { setSelectedServiceId(v); setVerificationResult(null); }}>
+        <div className="sm:ml-auto w-full sm:w-80">
+          <Select value={selectedServiceId} onValueChange={setSelectedServiceId}>
             <SelectTrigger>
               <SelectValue placeholder="Pilih booth layanan..." />
             </SelectTrigger>
             <SelectContent>
-              {/* Merged options */}
               <SelectItem value="merged-medical">
                 <div className="flex items-center gap-2 font-semibold">
                   <Stethoscope className="w-3.5 h-3.5 text-primary" />
@@ -406,13 +733,10 @@ export default function NakesBooth() {
                   Optik Melawai — Semua Mata (D+E)
                 </div>
               </SelectItem>
-              {/* Individual services */}
               {services.filter(s => s.is_active).map(s => (
                 <SelectItem key={s.id} value={s.id}>
                   <div className="flex items-center gap-2 text-muted-foreground">
-                    {s.service_group === "MEDICAL"
-                      ? <Stethoscope className="w-3.5 h-3.5" />
-                      : <Eye className="w-3.5 h-3.5" />}
+                    {s.service_group === "MEDICAL" ? <Stethoscope className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
                     [{s.service_code}] {s.service_name} — Booth {s.booth_number}
                   </div>
                 </SelectItem>
@@ -430,335 +754,17 @@ export default function NakesBooth() {
             <p className="text-sm text-muted-foreground/70 mt-1">Pilih booth yang ditugaskan untuk memulai operasi antrian.</p>
           </div>
         </Card>
-      ) : (
-        <>
-          {/* Service Info Bar */}
-          <div className="flex flex-wrap items-center gap-3 p-4 rounded-xl bg-primary text-primary-foreground">
-            {(isMergedEye || selectedService?.service_group === "EYE_CHECK")
-              ? <Eye className="w-5 h-5 flex-shrink-0" />
-              : <Stethoscope className="w-5 h-5 flex-shrink-0" />}
-            <div className="flex-1 min-w-0">
-              <p className="font-bold text-lg leading-tight">
-                {isMergedMedical ? "Primaya Hospital — Gabungan Medis (A+B+C)"
-                  : isMergedEye ? "Optik Melawai — Gabungan Mata (D+E)"
-                  : selectedService?.service_name}
-              </p>
-              <p className="text-primary-foreground/70 text-sm">
-                {isMerged
-                  ? `${effectiveServiceIds.length} layanan aktif`
-                  : `Booth ${selectedService?.booth_number} · Kode: ${selectedService?.service_code}`}
-              </p>
-            </div>
-            <div className="flex gap-6 text-sm text-center">
-              <div>
-                <p className="font-bold text-2xl">{waiting.length}</p>
-                <p className="text-primary-foreground/70 text-xs">Menunggu</p>
-              </div>
-              <div>
-                <p className="font-bold text-2xl text-green-300">{done.length}</p>
-                <p className="text-primary-foreground/70 text-xs">Selesai</p>
-              </div>
-              <div>
-                <p className="font-bold text-2xl text-orange-300">{skipped.length}</p>
-                <p className="text-primary-foreground/70 text-xs">Dilewati</p>
-              </div>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            {/* Left: Now Serving */}
-            <div className="lg:col-span-2 space-y-4">
-              <Card className={`border-2 transition-all ${flashActive ? "border-primary shadow-lg shadow-primary/20" : "border-primary/20"}`}>
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-sm text-muted-foreground uppercase tracking-wider flex items-center justify-between">
-                    Now Serving
-                    {activeQueue && (() => {
-                      const cfg = qrBadgeCfg(activeQueue);
-                      if (!cfg) return null;
-                      const Icon = cfg.icon;
-                      return (
-                        <Badge className={`text-xs px-2 py-0.5 border gap-1 ${cfg.color}`}>
-                          <Icon className="w-3 h-3" />
-                          {cfg.label}
-                        </Badge>
-                      );
-                    })()}
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  {activeQueue ? (
-                    <div className="space-y-4">
-                      <div className="flex items-start justify-between gap-4">
-                        <div>
-                          <p className={`text-7xl font-black tracking-widest leading-none transition-all ${
-                            flashActive ? "text-primary scale-105" : "text-primary"
-                          }`}>
-                            {activeQueue.queue_number}
-                          </p>
-                          {(() => {
-                            const p = getParticipant(activeQueue.participant_id);
-                            return p ? (
-                              <div className="mt-2 flex items-center gap-2 text-sm">
-                                <User className="w-4 h-4 text-muted-foreground" />
-                                <span className="font-semibold">{p.full_name}</span>
-                                <span className="text-muted-foreground">— {p.unit_division}</span>
-                              </div>
-                            ) : null;
-                          })()}
-                          <p className="text-sm text-muted-foreground mt-1">
-                            Status: <span className={`font-semibold ${activeQueue.payment_display_status === "FREE" ? "text-green-600" : "text-orange-600"}`}>
-                              {activeQueue.payment_display_status === "FREE" ? "GRATIS" : "BERBAYAR"}
-                            </span>
-                          </p>
-                        </div>
-                        <Badge className={`text-sm px-4 py-2 border ${QUEUE_STATUS_CONFIG[activeQueue.status]?.color}`}>
-                          {QUEUE_STATUS_CONFIG[activeQueue.status]?.label}
-                        </Badge>
-                      </div>
-
-                      {/* QR Verification Result */}
-                      {verificationResult && (
-                        <QrVerificationCard result={verificationResult} />
-                      )}
-
-                      {/* Action Buttons - Simplified Flow */}
-                                      <div className="space-y-2 pt-2 border-t border-border">
-                                        {/* Payment Toggle by Nakes */}
-                                        <Button
-                                          variant="outline"
-                                          className={`w-full gap-2 ${activeQueue.payment_display_status === "FREE" ? "text-orange-600 border-orange-300 hover:bg-orange-50" : "text-green-600 border-green-300 hover:bg-green-50"}`}
-                                          onClick={async () => {
-                                            const newPayment = activeQueue.payment_display_status === "FREE" ? "PAID" : "FREE";
-                                            await base44.entities.Queue.update(activeQueue.id, { payment_display_status: newPayment });
-                                            queryClient.invalidateQueries({ queryKey: ["booth-queues", selectedServiceId] });
-                                          }}
-                                          disabled={updateQueue.isPending}
-                                        >
-                                          {activeQueue.payment_display_status === "FREE"
-                                            ? <><CreditCard className="w-4 h-4" /> Ubah ke Berbayar</>
-                                            : <><Gift className="w-4 h-4" /> Ubah ke Gratis</>}
-                                        </Button>
-
-                                        {/* Scan Barcode Button */}
-                                        <Button
-                                          className="w-full gap-2 bg-blue-600 hover:bg-blue-700"
-                                          onClick={() => setScannerOpen(true)}
-                                          disabled={updateQueue.isPending}
-                                        >
-                                          <Barcode className="w-4 h-4" />
-                                          Scan Barcode Verifikasi
-                                        </Button>
-
-                                        <div className="grid grid-cols-2 gap-2">
-                                          {/* Primary: Next Action */}
-                                          {(activeQueue.status === "CALLED" || activeQueue.status === "QR_VERIFIED") && (
-                                            <Button
-                                              className="gap-1.5 bg-green-600 hover:bg-green-700"
-                                              onClick={() => handleAction(activeQueue, "SERVING", "SERVICE_STARTED")}
-                                              disabled={updateQueue.isPending}
-                                            >
-                                              <PlayCircle className="w-4 h-4" />
-                                              Mulai Layanan
-                                            </Button>
-                                          )}
-
-                           {activeQueue.status === "SERVING" && (
-                             <Button
-                               className="gap-1.5 col-span-2 bg-green-600 hover:bg-green-700"
-                               onClick={() => {
-                                 handleAction(activeQueue, "DONE", "SERVICE_DONE");
-                                 // Auto-call next queue after 800ms
-                                 setTimeout(() => {
-                                   if (nextWaiting && !called && !qrVerified && !serving) {
-                                     handleAction(nextWaiting, "CALLED", "CALLED");
-                                   }
-                                 }, 800);
-                               }}
-                               disabled={updateQueue.isPending}
-                             >
-                               <CheckCircle2 className="w-4 h-4" /> Selesai & Lanjut
-                             </Button>
-                           )}
-
-                           {/* Secondary: Skip/Cancel */}
-                           {(activeQueue.status === "CALLED" || activeQueue.status === "QR_VERIFIED" || activeQueue.status === "SERVING") && (
-                             <Button 
-                               variant="outline" 
-                               className="gap-1.5 text-orange-600 border-orange-300 hover:bg-orange-50"
-                               onClick={() => handleAction(activeQueue, "SKIPPED", "SKIPPED")}
-                               disabled={updateQueue.isPending}>
-                               <SkipForward className="w-4 h-4" /> Lewati
-                             </Button>
-                           )}
-
-                           <Button 
-                             variant="outline" 
-                             className="gap-1.5 text-red-600 border-red-300 hover:bg-red-50"
-                             onClick={() => handleAction(activeQueue, "CANCELLED", "CANCELLED")}
-                             disabled={updateQueue.isPending}>
-                             <XCircle className="w-4 h-4" /> Batalkan
-                           </Button>
-                        </div>
-                      </div>
-
-
-                    </div>
-                  ) : (
-                    <div className="text-center py-8">
-                      <p className="text-5xl font-black text-muted-foreground/20">—</p>
-                      <p className="text-sm text-muted-foreground mt-3">Belum ada antrian aktif</p>
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-
-              {/* Next Queue + Call */}
-              <Card>
-                <CardContent className="p-4">
-                  <div className="flex items-center justify-between gap-4">
-                    <div>
-                      <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">Berikutnya</p>
-                      <p className="text-3xl font-black text-foreground/60">
-                        {nextWaiting ? nextWaiting.queue_number : "—"}
-                      </p>
-                      {nextWaiting && (() => {
-                        const p = getParticipant(nextWaiting.participant_id);
-                        return p ? (
-                          <p className="text-xs text-muted-foreground mt-1 flex items-center gap-1">
-                            <User className="w-3 h-3" /> {p.full_name}
-                          </p>
-                        ) : null;
-                      })()}
-                      {nextWaiting && (
-                        <p className="text-xs text-muted-foreground mt-0.5">
-                          {nextWaiting.payment_display_status === "FREE" ? "Gratis" : "Berbayar"}
-                        </p>
-                      )}
-                    </div>
-                    <div className="flex flex-col gap-2">
-                      <Button
-                        size="lg"
-                        disabled={!nextWaiting || !!called || !!qrVerified || !!serving || updateQueue.isPending}
-                        onClick={() => {
-                          if (nextWaiting) {
-                            handleAction(nextWaiting, "CALLED", "CALLED", "");
-                          }
-                        }}
-                        className="gap-2"
-                      >
-                        <PhoneCall className="w-5 h-5" /> Panggil Berikutnya
-                      </Button>
-                      {skipped.length > 0 && (
-                        <Button variant="outline" size="sm" className="gap-2 text-orange-600 border-orange-300"
-                          disabled={!!called || !!qrVerified || !!serving || updateQueue.isPending}
-                          onClick={() => handleAction(skipped[0], "CALLED", "RECALLED")}>
-                          <RotateCcw className="w-4 h-4" /> Panggil Ulang Dilewati ({skipped.length})
-                        </Button>
-                      )}
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
-
-            {/* Right: Queue Lists */}
-            <div className="space-y-4">
-              {/* Waiting */}
-              <Card>
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-sm flex items-center gap-2">
-                    <Clock className="w-4 h-4 text-blue-500" />
-                    Menunggu
-                    <Badge variant="secondary" className="ml-auto">{waiting.length}</Badge>
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="p-3 pt-0 max-h-52 overflow-y-auto space-y-1">
-                  {waiting.length === 0
-                    ? <p className="text-xs text-muted-foreground text-center py-4">Kosong</p>
-                    : waiting.map((q, i) => {
-                        const p = getParticipant(q.participant_id);
-                        return (
-                          <div key={q.id} className={`flex items-center gap-2 px-2 py-1.5 rounded-md text-sm ${i === 0 ? "bg-primary/5 border border-primary/20" : "bg-muted/40"}`}>
-                            <span className="font-mono font-bold w-14 flex-shrink-0">{q.queue_number}</span>
-                            <span className="text-xs text-muted-foreground truncate flex-1">{p?.full_name || "—"}</span>
-                            <span className={`text-[10px] font-bold flex-shrink-0 ${q.payment_display_status === "FREE" ? "text-green-600" : "text-orange-600"}`}>
-                              {q.payment_display_status === "FREE" ? "GRS" : "BYR"}
-                            </span>
-                          </div>
-                        );
-                      })
-                  }
-                </CardContent>
-              </Card>
-
-              {/* Skipped */}
-              {skipped.length > 0 && (
-                <Card className="border-orange-200">
-                  <CardHeader className="pb-2">
-                    <CardTitle className="text-sm flex items-center gap-2">
-                      <SkipForward className="w-4 h-4 text-orange-500" />
-                      Dilewati
-                      <Badge variant="secondary" className="ml-auto bg-orange-100 text-orange-700">{skipped.length}</Badge>
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="p-3 pt-0 max-h-36 overflow-y-auto space-y-1">
-                    {skipped.map(q => {
-                      const p = getParticipant(q.participant_id);
-                      return (
-                        <div key={q.id} className="flex items-center justify-between px-2 py-1.5 rounded-md bg-orange-50 text-sm gap-2">
-                          <span className="font-mono font-bold text-orange-700 w-14 flex-shrink-0">{q.queue_number}</span>
-                          <span className="text-xs text-muted-foreground truncate flex-1">{p?.full_name || "—"}</span>
-                          <Button size="sm" variant="ghost" className="h-6 px-2 text-xs text-orange-600 flex-shrink-0"
-                            disabled={!!called || !!qrVerified || !!serving || updateQueue.isPending}
-                            onClick={() => handleAction(q, "CALLED", "RECALLED")}>
-                            <RotateCcw className="w-3 h-3 mr-1" /> Panggil
-                          </Button>
-                        </div>
-                      );
-                    })}
-                  </CardContent>
-                </Card>
-              )}
-
-              {/* Done */}
-              <Card className="border-green-200">
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-sm flex items-center gap-2">
-                    <CheckCircle2 className="w-4 h-4 text-green-500" />
-                    Selesai
-                    <Badge variant="secondary" className="ml-auto bg-green-100 text-green-700">{done.length}</Badge>
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="p-3 pt-0 max-h-48 overflow-y-auto space-y-1">
-                  {done.length === 0
-                    ? <p className="text-xs text-muted-foreground text-center py-4">Belum ada</p>
-                    : done.slice(-10).reverse().map(q => (
-                        <div key={q.id} className="flex items-center justify-between px-2 py-1.5 rounded-md bg-green-50 text-sm">
-                          <span className="font-mono font-bold text-green-700">{q.queue_number}</span>
-                          <div className="flex items-center gap-1.5">
-                            {q.qr_verification_status === "VERIFIED" && (
-                              <ShieldCheck className="w-3 h-3 text-green-500" title="QR Verified" />
-                            )}
-                            <span className={`text-[10px] font-bold ${q.quota_category === "FULL_FREE" ? "text-green-600" : q.quota_category === "CC_RP_1" ? "text-blue-600" : "text-orange-600"}`}>
-                               {q.payment_display_status === "FREE" ? "Gratis" : "Berbayar"}
-                             </span>
-                          </div>
-                        </div>
-                      ))
-                  }
-                </CardContent>
-              </Card>
-            </div>
-          </div>
-        </>
-      )}
-
-      {/* QR Scanner Modal */}
-      <QrScannerModal
-        open={scannerOpen}
-        onClose={() => setScannerOpen(false)}
-        onScan={handleQrScan}
-      />
+      ) : isMerged ? (
+        /* Merged view: grid of individual booth panels */
+        <div className={`grid gap-4 items-start ${isMergedMedical ? "grid-cols-1 md:grid-cols-3" : "grid-cols-1 md:grid-cols-2"}`}>
+          {mergedServices.map(service => (
+            <BoothPanel key={service.id} service={service} compact {...sharedProps} />
+          ))}
+        </div>
+      ) : selectedService ? (
+        /* Single service view: full layout */
+        <BoothPanel service={selectedService} {...sharedProps} />
+      ) : null}
     </div>
   );
 }
