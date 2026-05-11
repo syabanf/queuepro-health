@@ -14,7 +14,7 @@ export const AuthProvider = ({ children }) => {
 
   useEffect(() => {
     // Skip auth check on public pages
-    const publicPages = ['/demo', '/mobile-monitor', '/led-monitor'];
+    const publicPages = ['/demo', '/mobile-monitor', '/led-monitor', '/register'];
     if (publicPages.includes(window.location.pathname)) {
       setIsLoadingAuth(false);
       setIsLoadingPublicSettings(false);

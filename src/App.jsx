@@ -19,6 +19,7 @@ import SettingsPage from "@/pages/SettingsPage";
 import LEDMonitor from "@/pages/LEDMonitor";
 import MobileMonitor from "@/pages/MobileMonitor";
 import DemoLauncher from "@/pages/DemoLauncher";
+import PublicRegistration from "@/pages/PublicRegistration";
 
 
 const AuthenticatedApp = () => {
@@ -49,6 +50,7 @@ const AuthenticatedApp = () => {
       <Route path="/led-monitor" element={<LEDMonitor />} />
       <Route path="/mobile-monitor" element={<MobileMonitor />} />
       <Route path="/demo" element={<DemoLauncher />} />
+      <Route path="/register" element={<PublicRegistration />} />
 
       <Route element={<AppLayout user={user} />}>
         {/* Admin Routes */}
