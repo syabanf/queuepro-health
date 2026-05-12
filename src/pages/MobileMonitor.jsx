@@ -143,10 +143,10 @@ export default function MobileMonitor() {
 
           {/* Event info */}
           <div className="flex-1 min-w-0 px-1">
-            <p className="text-cyan-300 text-[9px] font-bold uppercase tracking-widest leading-tight truncate">
+            <p className="font-inter text-cyan-300 text-[9px] font-bold uppercase tracking-widest leading-tight truncate">
               {eventTagline.replace(/"/g, '')}
             </p>
-            <p className="text-white font-black text-xs leading-tight truncate">{eventName}</p>
+            <p className="font-inter text-white font-black text-xs leading-tight truncate">{eventName}</p>
           </div>
 
           {/* Refresh */}

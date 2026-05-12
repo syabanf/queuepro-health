@@ -201,8 +201,8 @@ export default function LEDMonitor() {
 
             {/* Event name */}
             <div>
-              <p className="text-cyan-300 text-xs font-bold uppercase tracking-[0.25em]">{eventTagline}</p>
-              <h1 className="text-white font-black text-xl leading-tight">{eventName}</h1>
+              <p className="font-inter text-cyan-300 text-xs font-bold uppercase tracking-[0.25em]">{eventTagline}</p>
+              <h1 className="font-inter text-white font-black text-xl leading-tight">{eventName}</h1>
             </div>
           </div>
 
