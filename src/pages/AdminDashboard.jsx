@@ -7,14 +7,12 @@ import { Button } from "@/components/ui/button";
 import {
   Users, Activity, Monitor, CheckCircle2, Clock,
   Stethoscope, Eye, AlertCircle, TrendingUp, SkipForward,
-  XCircle, CreditCard, Gift, Tag, ChevronRight, TestTube, CheckCircle, LogOut
+  XCircle, CreditCard, Gift, Tag, ChevronRight, LogOut
 } from "lucide-react";
 import PageHeader from "@/components/layout/PageHeader";
 import { format } from "date-fns";
 import { PARTICIPANT_STATUS_LABELS, PARTICIPANT_STATUS_COLORS } from "@/lib/registrationUtils";
 import { Link } from "react-router-dom";
-import TestFlowWizard from "@/components/TestFlowWizard";
-import DataConsistencyChecker from "@/components/DataConsistencyChecker";
 import { useAuth } from "@/lib/AuthContext";
 
 const QUOTA_TYPES = [
@@ -155,9 +153,7 @@ function ServiceQueueRow({ service, queues }) {
 }
 
 export default function AdminDashboard() {
-  const [showTestWizard, setShowTestWizard] = useState(false);
-  const [showDataChecker, setShowDataChecker] = useState(false);
-  const { user } = useAuth();
+const { user } = useAuth();
   const queryClient = useQueryClient();
   const [switching, setSwitching] = useState(false);
 
@@ -259,12 +255,6 @@ export default function AdminDashboard() {
         icon={Activity}
         action={
           <div className="flex flex-wrap gap-2">
-            <Button variant="outline" size="sm" onClick={() => setShowDataChecker(true)} className="gap-2">
-              <CheckCircle className="w-4 h-4" /> Data Check
-            </Button>
-            <Button variant="outline" size="sm" onClick={() => setShowTestWizard(true)} className="gap-2">
-              <TestTube className="w-4 h-4" /> Test Flow
-            </Button>
             <Button variant="outline" size="sm" onClick={switchRole} disabled={switching} className="gap-2">
               <LogOut className="w-4 h-4" />
               {switching ? 'Mengganti...' : `Ganti ke ${user?.role === 'admin' ? 'Nakes' : 'Admin'}`}
@@ -272,9 +262,6 @@ export default function AdminDashboard() {
           </div>
         }
       />
-
-      <TestFlowWizard isOpen={showTestWizard} onClose={() => setShowTestWizard(false)} />
-      <DataConsistencyChecker isOpen={showDataChecker} onClose={() => setShowDataChecker(false)} />
 
       {/* Quota Info — grouped by provider */}
       <div className="space-y-3">
