@@ -230,7 +230,7 @@ function BoothPanel({ service, participants, services, currentUser, compact = fa
           </div>
 
           <CardContent className="p-3 space-y-3 flex-1">
-            {/* Now Serving */}
+            {/* Nomor Antrian */}
             <div className={`p-3 rounded-lg border-2 transition-all ${flashActive ? "border-primary bg-primary/5" : "border-border"}`}>
               <div className="flex items-start justify-between gap-2 mb-2">
                 <span className="px-2.5 py-0.5 rounded-full bg-primary text-white text-[10px] font-black uppercase tracking-widest">
@@ -451,7 +451,7 @@ function BoothPanel({ service, participants, services, currentUser, compact = fa
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Left: Now Serving */}
+        {/* Left: Nomor Antrian */}
         <div className="lg:col-span-2 space-y-4">
           <Card className={`border-2 transition-all ${flashActive ? "border-primary shadow-lg shadow-primary/20" : "border-primary/20"}`}>
             <CardHeader className="pb-3">
