@@ -40,7 +40,7 @@ export default function PrintCoupon({ result }) {
         <body>
           <div class="coupon">
             <div class="header">
-              <h1>Brilian Talks Health Care</h1>
+              <h1>Queue System</h1>
               <p>BRI Pusat Cabang Benhil</p>
             </div>
             <div class="participant">

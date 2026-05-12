@@ -194,7 +194,7 @@ export default function RegistrationForm({ services, participants = [], eventSet
             <img src="/logo-optik-melawai.png" alt="Optik Melawai" className="h-5 object-contain" onError={e => e.target.style.display='none'} />
             <span className="text-[11px] font-bold text-red-700">OPTIK MELAWAI</span>
           </div>
-          <p className="text-xs text-muted-foreground ml-auto hidden sm:block">Brilian Talks Health Care 2025</p>
+          <p className="text-xs text-muted-foreground ml-auto hidden sm:block">Queue System</p>
         </div>
         <CardTitle className="text-base flex items-center gap-2">
           <UserPlus className="w-5 h-5 text-primary" />

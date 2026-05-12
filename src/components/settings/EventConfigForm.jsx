@@ -151,7 +151,7 @@ export default function EventConfigForm({ form, onChange, errors, totalParticipa
             <Label className="text-xs font-medium">Nama Event <span className="text-destructive">*</span></Label>
             <Input
               className={`mt-1 ${errors?.event_name ? "border-destructive" : ""}`}
-              placeholder="Brilian Talks Health Care"
+              placeholder="Queue System"
               value={form.event_name || ""}
               onChange={e => set("event_name", e.target.value)}
             />

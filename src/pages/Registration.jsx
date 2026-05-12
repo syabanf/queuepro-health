@@ -86,7 +86,7 @@ export default function Registration() {
     <div className="space-y-6">
       <PageHeader
         title="Registrasi Peserta"
-        subtitle="Pendaftaran peserta Brilian Talks Health Care"
+        subtitle="Pendaftaran peserta Queue System"
         icon={UserPlus}
       />
 
