@@ -47,6 +47,27 @@ function SlotBadge({ type }) {
   );
 }
 
+const QUEUE_STATUS_STYLE = {
+  WAITING:     { label: "Menunggu",    cls: "bg-slate-100 text-slate-600 border-slate-200" },
+  CALLED:      { label: "Dipanggil",  cls: "bg-amber-100 text-amber-700 border-amber-200" },
+  QR_VERIFIED: { label: "Terverifikasi", cls: "bg-blue-100 text-blue-700 border-blue-200" },
+  SERVING:     { label: "Dilayani",   cls: "bg-purple-100 text-purple-700 border-purple-200" },
+  DONE:        { label: "Selesai ✓",  cls: "bg-green-100 text-green-700 border-green-200" },
+  SKIPPED:     { label: "Dilewati",   cls: "bg-orange-100 text-orange-700 border-orange-200" },
+  CANCELLED:   { label: "Batal",      cls: "bg-red-100 text-red-700 border-red-200" },
+};
+
+function QueueStatusBadge({ queue }) {
+  if (!queue) return null;
+  const cfg = QUEUE_STATUS_STYLE[queue.status];
+  if (!cfg) return null;
+  return (
+    <Badge className={`text-[9px] px-1.5 py-0 border leading-tight mt-0.5 ${cfg.cls}`}>
+      {cfg.label}
+    </Badge>
+  );
+}
+
 function CategoryBadge({ category }) {
   const colors = {
     "FREE_CHECK": "bg-green-50 text-green-700 border-green-200",
@@ -374,7 +395,10 @@ export default function Participants() {
                       <td className="hidden md:table-cell py-2.5 px-2 sm:px-3 text-muted-foreground whitespace-nowrap">{p.phone_number}</td>
                       <td className="hidden lg:table-cell py-2.5 px-2 sm:px-3 text-muted-foreground whitespace-nowrap max-w-[120px] truncate">{p.unit_division}</td>
                       <td className="py-2.5 px-2 sm:px-3">
-                        <span className="font-mono font-bold text-primary text-xs sm:text-sm">{p.medQueue?.queue_number || "—"}</span>
+                        <div className="flex flex-col gap-0.5">
+                          <span className="font-mono font-bold text-primary text-xs sm:text-sm">{p.medQueue?.queue_number || "—"}</span>
+                          <QueueStatusBadge queue={p.medQueue} />
+                        </div>
                       </td>
                       <td className="hidden xl:table-cell py-2.5 px-2 sm:px-3 text-xs text-muted-foreground whitespace-nowrap">
                         {serviceMap[p.medical_service_id]?.service_name || "—"}
@@ -383,7 +407,10 @@ export default function Participants() {
                         {p.medical_slot_type && <SlotBadge type={p.medical_slot_type} />}
                       </td>
                       <td className="py-2.5 px-2 sm:px-3">
-                        <span className="font-mono font-bold text-accent text-xs sm:text-sm">{p.eyeQueue?.queue_number || "—"}</span>
+                        <div className="flex flex-col gap-0.5">
+                          <span className="font-mono font-bold text-accent text-xs sm:text-sm">{p.eyeQueue?.queue_number || "—"}</span>
+                          <QueueStatusBadge queue={p.eyeQueue} />
+                        </div>
                       </td>
                       <td className="hidden xl:table-cell py-2.5 px-2 sm:px-3 text-xs text-muted-foreground whitespace-nowrap">
                         {serviceMap[p.eye_service_id]?.service_name || "—"}
