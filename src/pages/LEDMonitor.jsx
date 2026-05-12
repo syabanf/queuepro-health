@@ -43,32 +43,17 @@ function ServiceCard({ service, queues }) {
       className={`flex flex-col rounded-2xl overflow-hidden transition-all duration-300 ${flash ? "scale-[1.02] shadow-2xl shadow-white/20" : ""}`}
       style={{ background: `linear-gradient(160deg, ${fromColor} 0%, ${toColor} 100%)` }}
     >
-      {/* Header: logos + service name */}
-      <div className="flex items-center justify-between px-5 pt-4 pb-2">
-        <div />
-        <div className="flex items-center gap-1.5">
-          {isMedical ? (
-            <>
-              <img src="/logo-primaya.png" alt="Primaya" className="h-6 object-contain brightness-0 invert" onError={e => e.target.style.display='none'} />
-              <span className="text-white/70 text-xs font-bold tracking-wider">PRIMAYA HOSPITAL</span>
-            </>
-          ) : (
-            <>
-              <img src="/logo-optik-melawai.png" alt="Optik Melawai" className="h-6 object-contain brightness-0 invert" onError={e => e.target.style.display='none'} />
-              <span className="text-white/70 text-xs font-bold tracking-wider">OPTIK MELAWAI</span>
-            </>
-          )}
-        </div>
-      </div>
-
       {/* Service name */}
-      <div className="text-center px-4 pb-1">
+      <div className="text-center px-4 pt-4 pb-1">
         <div className="flex items-center justify-center gap-2">
           <Icon className="w-5 h-5 text-white/50 flex-shrink-0" strokeWidth={1.5} />
           <h2 className="text-white font-black text-xl tracking-wide uppercase leading-tight">
             {service.service_name}
           </h2>
         </div>
+        <p className="text-white/50 text-xs font-medium mt-1">
+          by {isMedical ? "Primaya Hospital" : "Optik Melawai"}
+        </p>
       </div>
 
       {/* Queue number focal point */}
