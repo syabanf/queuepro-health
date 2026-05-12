@@ -154,8 +154,8 @@ export default function MobileMonitor() {
           </button>
         </div>
         {/* Event name */}
-        <p className="text-cyan-300 text-[10px] font-bold uppercase tracking-widest leading-tight">{eventName}</p>
-        <h1 className="text-white font-black text-xs leading-tight">Monitor Antrian</h1>
+        <p className="text-cyan-300 text-[10px] font-bold uppercase tracking-widest leading-tight">{eventTagline}</p>
+        <h1 className="text-white font-black text-xs leading-tight">{eventName}</h1>
       </div>
 
       {/* Service Cards */}
