@@ -9,13 +9,20 @@ function generateId() {
   return Math.random().toString(36).slice(2, 10) + Date.now().toString(36);
 }
 
+const DEFAULT_SORT = {
+  Service: 'booth_number',
+  Queue: 'queue_sequence',
+  Participant: '-created_date',
+};
+
 function createEntity(tableName) {
   return {
     list: async (sort) => {
+      const effectiveSort = sort || DEFAULT_SORT[tableName];
       let query = supabase.from(tableName).select('*');
-      if (sort) {
-        const desc = sort.startsWith('-');
-        const field = desc ? sort.slice(1) : sort;
+      if (effectiveSort) {
+        const desc = effectiveSort.startsWith('-');
+        const field = desc ? effectiveSort.slice(1) : effectiveSort;
         query = query.order(field, { ascending: !desc });
       }
       const { data, error } = await query;
