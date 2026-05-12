@@ -233,39 +233,127 @@ function SummaryCard({ services }) {
   const allActive = services.filter(s => s.is_active);
 
   return (
-    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-      {/* Total limit */}
+    <div className="space-y-3">
+      {/* Aggregate totals */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        <Card>
+          <CardContent className="p-3 text-center">
+            <p className="text-2xl font-black text-foreground">
+              {allActive.some(s => svcIsUnlimited(s))
+                ? "∞"
+                : allActive.reduce((sum, s) => sum + getTotalLimit(s), 0)}
+            </p>
+            <p className="text-xs text-muted-foreground mt-0.5">Total Kuota</p>
+          </CardContent>
+        </Card>
+        {QUOTA_TYPES.map(qt => {
+          const QtIcon = qt.icon;
+          const hasUnlimited = allActive.some(s => isUnlimited(s[qt.limitField]));
+          const total = hasUnlimited ? UNLIMITED : allActive.reduce((sum, s) => sum + (s[qt.limitField] || 0), 0);
+          const used = allActive.reduce((sum, s) => sum + (s[qt.usedField] || 0), 0);
+          return (
+            <Card key={qt.key}>
+              <CardContent className="p-3">
+                <div className="flex items-center gap-1.5 mb-1">
+                  <QtIcon className={`w-3.5 h-3.5 ${qt.color}`} />
+                  <span className={`text-xs font-bold ${qt.color}`}>{qt.shortLabel}</span>
+                </div>
+                <p className="text-xl font-black text-foreground">
+                  {hasUnlimited ? "∞" : total - used}
+                  {" "}<span className="text-sm font-normal text-muted-foreground">/ {fmtQuota(total)}</span>
+                </p>
+                <QuotaBar used={used} total={total} barColor={qt.barColor} />
+              </CardContent>
+            </Card>
+          );
+        })}
+      </div>
+
+      {/* Per-service table */}
       <Card>
-        <CardContent className="p-3 text-center">
-          <p className="text-2xl font-black text-foreground">
-            {allActive.some(s => svcIsUnlimited(s))
-              ? "∞"
-              : allActive.reduce((sum, s) => sum + getTotalLimit(s), 0)}
-          </p>
-          <p className="text-xs text-muted-foreground mt-0.5">Total Kuota</p>
+        <CardContent className="p-0">
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-border/50 bg-muted/30">
+                  <th className="text-left text-xs font-semibold text-muted-foreground py-2.5 px-4 w-8">Kode</th>
+                  <th className="text-left text-xs font-semibold text-muted-foreground py-2.5 px-4">Layanan</th>
+                  {QUOTA_TYPES.map(qt => (
+                    <th key={qt.key} className="text-center text-xs font-semibold py-2.5 px-3">
+                      <span className={qt.color}>{qt.shortLabel}</span>
+                      <span className="text-muted-foreground font-normal block text-[9px]">sisa / limit</span>
+                    </th>
+                  ))}
+                  <th className="text-center text-xs font-semibold text-muted-foreground py-2.5 px-3">
+                    Total
+                    <span className="text-muted-foreground font-normal block text-[9px]">sisa / limit</span>
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {allActive.map(s => {
+                  const isEye = s.service_group === "EYE_CHECK";
+                  const totalLimit = getTotalLimit(s);
+                  const totalUsed = getTotalUsed(s);
+                  const totalRem = getTotalRemaining(s);
+                  const fillPct = isUnlimited(totalLimit) ? 0 : totalLimit > 0 ? Math.min(100, Math.round((totalUsed / totalLimit) * 100)) : 0;
+
+                  return (
+                    <tr key={s.id} className="border-b border-border/30 last:border-0 hover:bg-muted/20 transition-colors">
+                      <td className="py-2.5 px-4">
+                        <div className={`w-7 h-7 rounded-md flex items-center justify-center text-[11px] font-black
+                          ${isEye ? "bg-accent/10 text-accent" : "bg-primary/10 text-primary"}`}>
+                          {s.service_code}
+                        </div>
+                      </td>
+                      <td className="py-2.5 px-4">
+                        <p className="font-medium text-sm text-foreground leading-tight">{s.service_name}</p>
+                        <div className="flex items-center gap-1.5 mt-0.5">
+                          <div className="w-20 h-1 bg-muted rounded-full overflow-hidden">
+                            <div className={`h-full rounded-full ${fillPct >= 100 ? "bg-destructive" : fillPct >= 80 ? "bg-amber-400" : isEye ? "bg-accent" : "bg-primary"}`}
+                              style={{ width: isUnlimited(totalLimit) ? "0%" : `${fillPct}%` }} />
+                          </div>
+                          <span className="text-[10px] text-muted-foreground">{fillPct}%</span>
+                        </div>
+                      </td>
+                      {QUOTA_TYPES.map(qt => {
+                        const limit = s[qt.limitField] || 0;
+                        const used = s[qt.usedField] || 0;
+                        const rem = getRemaining(s, qt);
+                        const hasLimit = limit > 0;
+                        return (
+                          <td key={qt.key} className="py-2.5 px-3 text-center">
+                            {hasLimit ? (
+                              <div>
+                                <span className={`font-mono font-bold text-sm ${isUnlimited(rem) ? "text-cyan-600" : rem <= 0 ? "text-destructive" : rem <= 10 ? "text-amber-600" : qt.color}`}>
+                                  {fmtQuota(rem)}
+                                </span>
+                                <span className="text-muted-foreground text-xs"> / {fmtQuota(limit)}</span>
+                                <div className="mt-0.5 mx-auto w-12 h-1 bg-muted rounded-full overflow-hidden">
+                                  <div className={`h-full rounded-full ${qt.barColor}`}
+                                    style={{ width: isUnlimited(limit) ? "0%" : `${Math.min(100, Math.round((used / limit) * 100))}%` }} />
+                                </div>
+                              </div>
+                            ) : (
+                              <span className="text-muted-foreground/30 text-xs">—</span>
+                            )}
+                          </td>
+                        );
+                      })}
+                      <td className="py-2.5 px-3 text-center">
+                        <span className={`font-mono font-bold text-sm ${isUnlimited(totalLimit) ? "text-cyan-600" : totalRem <= 0 && totalLimit > 0 ? "text-destructive" : "text-foreground"}`}>
+                          {fmtQuota(totalRem)}
+                        </span>
+                        <span className="text-muted-foreground text-xs"> / {fmtQuota(totalLimit)}</span>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
         </CardContent>
       </Card>
-      {QUOTA_TYPES.map(qt => {
-        const QtIcon = qt.icon;
-        const hasUnlimited = allActive.some(s => isUnlimited(s[qt.limitField]));
-        const total = hasUnlimited ? UNLIMITED : allActive.reduce((sum, s) => sum + (s[qt.limitField] || 0), 0);
-        const used = allActive.reduce((sum, s) => sum + (s[qt.usedField] || 0), 0);
-        return (
-          <Card key={qt.key}>
-            <CardContent className="p-3">
-              <div className="flex items-center gap-1.5 mb-1">
-                <QtIcon className={`w-3.5 h-3.5 ${qt.color}`} />
-                <span className={`text-xs font-bold ${qt.color}`}>{qt.shortLabel}</span>
-              </div>
-              <p className="text-xl font-black text-foreground">
-                {hasUnlimited ? "∞" : total - used}
-                {" "}<span className="text-sm font-normal text-muted-foreground">/ {fmtQuota(total)}</span>
-              </p>
-              <QuotaBar used={used} total={total} barColor={qt.barColor} />
-            </CardContent>
-          </Card>
-        );
-      })}
     </div>
   );
 }
