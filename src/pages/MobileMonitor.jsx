@@ -40,7 +40,7 @@ function MobileServiceCard({ service, queues, participants }) {
         </div>
         <div className="flex-1 min-w-0">
           <p className="text-white font-bold text-xs leading-tight truncate">{service.service_name}</p>
-          <p className="text-white/50 text-[10px]">Booth {service.booth_number} &bull; Kode {service.service_code}</p>
+          <p className="text-white/50 text-[10px]">by {isMedical ? "Primaya Hospital" : "Optik Melawai"}</p>
         </div>
         <div className="flex gap-2.5 flex-shrink-0 text-right">
           <div>
@@ -57,7 +57,9 @@ function MobileServiceCard({ service, queues, participants }) {
       {/* Queue Info */}
       <div className="grid grid-cols-2 divide-x divide-white/10">
         <div className={`flex flex-col items-center justify-center py-2 px-2 transition-all duration-300 ${flash ? "bg-white/10" : ""}`}>
-          <p className="text-white/40 text-[9px] uppercase tracking-wider mb-0.5">Now Serving</p>
+          <span className="mb-1 px-2 py-px rounded-full bg-white text-[#003D79] text-[8px] font-black uppercase tracking-widest">
+            NOMOR ANTRIAN
+          </span>
           <p className={`font-black tracking-widest leading-none transition-all duration-300 ${serving ? "text-3xl text-white" : "text-2xl text-white/15"} ${flash ? "scale-110" : ""}`}>
             {serving ? serving.queue_number : "—"}
           </p>
@@ -65,7 +67,7 @@ function MobileServiceCard({ service, queues, participants }) {
             <span className={`mt-1 px-2 py-px rounded-full text-[9px] font-bold ${
               serving.status === "SERVING" ? "bg-green-400/20 text-green-300" : "bg-amber-400/20 text-amber-300"
             }`}>
-              {serving.status === "SERVING" ? "Dilayani" : "Dipanggil"}
+              {serving.status === "SERVING" ? "● Dilayani" : "● Dipanggil"}
             </span>
           )}
           {!serving && <p className="text-white/25 text-[9px] mt-0.5">Belum ada</p>}
