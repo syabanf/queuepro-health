@@ -175,11 +175,11 @@ export default function LEDMonitor() {
         <div className="flex items-center justify-between flex-shrink-0">
           {/* Logos + Event Name */}
           <div className="flex items-center gap-4">
-            {/* BRI Logo */}
+            {/* Danantara Logo */}
             <div className="bg-white rounded-xl px-3 py-1.5 flex items-center justify-center flex-shrink-0">
               <img
-                src="/logo-bri-full.svg"
-                alt="BRI"
+                src="/logo-danantara.png"
+                alt="Danantara Indonesia"
                 className="h-8 object-contain"
                 onError={e => e.target.style.display='none'}
               />
@@ -187,11 +187,11 @@ export default function LEDMonitor() {
 
             <div className="w-px h-8 bg-white/20 flex-shrink-0" />
 
-            {/* Danantara Logo */}
+            {/* BRI Logo */}
             <div className="bg-white rounded-xl px-3 py-1.5 flex items-center justify-center flex-shrink-0">
               <img
-                src="/logo-danantara.png"
-                alt="Danantara Indonesia"
+                src="/logo-bri-full.svg"
+                alt="BRI"
                 className="h-8 object-contain"
                 onError={e => e.target.style.display='none'}
               />
