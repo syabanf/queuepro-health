@@ -315,21 +315,20 @@ export default function PublicRegistration() {
     <div className="min-h-screen bg-muted/30">
       <div className="px-4 py-3" style={{ background: '#003D79' }}>
         <div className="max-w-lg mx-auto flex items-center justify-between gap-3">
-          <div className="bg-white rounded-lg px-2.5 py-1.5 flex items-center justify-center flex-shrink-0">
-            <img src="/logo-danantara.png" alt="Danantara Indonesia" className="h-6 object-contain"
+          <div className="bg-white rounded-xl px-2.5 py-1.5 flex items-center justify-center flex-shrink-0 flex-1">
+            <img src="/logo-danantara.png" alt="Danantara Indonesia" className="h-8 object-contain"
               onError={e => e.target.style.display='none'} />
           </div>
-          <div className="text-center min-w-0 flex-1">
-            <p className="text-white font-black text-sm leading-tight truncate">
-              {event?.event_name || "Brilian Talks Health Care"}
-            </p>
-            <p className="text-white/50 text-[10px]">Registrasi Peserta Online</p>
+          <div className="bg-white rounded-xl px-2.5 py-1.5 flex items-center justify-center flex-shrink-0 flex-1">
+            <img src="/logo-brilian-talks.png" alt="BRILian Talks" className="h-8 object-contain"
+              onError={e => e.target.style.display='none'} />
           </div>
-          <div className="bg-white rounded-lg px-2.5 py-1.5 flex items-center justify-center flex-shrink-0">
-            <img src="/logo-bri-full.svg" alt="BRI" className="h-6 object-contain"
+          <div className="bg-white rounded-xl px-2.5 py-1.5 flex items-center justify-center flex-shrink-0 flex-1">
+            <img src="/logo-bri-full.svg" alt="BRI" className="h-8 object-contain"
               onError={e => e.target.style.display='none'} />
           </div>
         </div>
+        <p className="text-center text-white/50 text-[10px] mt-2">Registrasi Peserta Online</p>
       </div>
 
       <div className="max-w-lg mx-auto p-4 space-y-4">
