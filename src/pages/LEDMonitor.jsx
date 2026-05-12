@@ -45,10 +45,7 @@ function ServiceCard({ service, queues }) {
     >
       {/* Header: logos + service name */}
       <div className="flex items-center justify-between px-5 pt-4 pb-2">
-        <div className="flex items-center gap-2">
-          <img src="/logo-bri.png" alt="BRI" className="h-6 object-contain brightness-0 invert" onError={e => e.target.style.display='none'} />
-          <span className="text-white font-black text-sm tracking-widest">BRI</span>
-        </div>
+        <div />
         <div className="flex items-center gap-1.5">
           {isMedical ? (
             <>
