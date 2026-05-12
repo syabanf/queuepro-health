@@ -240,7 +240,7 @@ export default function AdminDashboard() {
     const specialUsed = specialParticipants;
     const remaining = totalQuota - participants.length;
     return { completed, partial, waiting, serving, skipped, cancelled, freeUsed, rp1Used, specialUsed, remaining };
-  }, [participants, queues, totalQuota, freeCheckParticipants, paymentParticipants]);
+  }, [participants, queues, totalQuota, freeCheckParticipants, rp1Participants, specialParticipants]);
 
   const fillPct = Math.min(100, Math.round((participants.length / totalQuota) * 100));
   const medicalServices = services.filter(s => s.service_group === "MEDICAL");
