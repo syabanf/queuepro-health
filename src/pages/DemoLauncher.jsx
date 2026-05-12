@@ -72,26 +72,25 @@ export default function DemoLauncher() {
         <div className="absolute -bottom-32 -right-32 w-96 h-96 rounded-full bg-cyan-400/10 blur-3xl" />
       </div>
 
-      {/* Corner logos */}
-      <div className="fixed top-4 left-4 z-10">
-        <div className="bg-white rounded-xl px-3 py-1.5 flex items-center justify-center shadow-lg">
-          <img src="/logo-danantara.png" alt="Danantara Indonesia" className="h-7 object-contain"
-            onError={e => e.target.style.display='none'} />
-        </div>
-      </div>
-      <div className="fixed top-4 right-4 z-10">
-        <div className="bg-white rounded-xl px-3 py-1.5 flex items-center justify-center shadow-lg">
-          <img src="/logo-bri-full.svg" alt="BRI" className="h-7 object-contain"
-            onError={e => e.target.style.display='none'} />
-        </div>
-      </div>
-
       <div className="relative w-full max-w-md">
-        {/* App Header */}
-        <div className="text-center mb-8">
-          <div className="w-16 h-16 rounded-2xl bg-white/15 backdrop-blur-sm border border-white/20 flex items-center justify-center mx-auto mb-4">
-            <Activity className="w-8 h-8 text-white" />
+        {/* 3-logo header */}
+        <div className="flex items-center justify-between gap-3 mb-6">
+          <div className="bg-white rounded-2xl px-3 py-2 flex items-center justify-center shadow-lg flex-1">
+            <img src="/logo-danantara.png" alt="Danantara Indonesia" className="h-10 object-contain"
+              onError={e => e.target.style.display='none'} />
           </div>
+          <div className="bg-white rounded-2xl px-3 py-2 flex items-center justify-center shadow-lg flex-1">
+            <img src="/logo-brilian-talks.png" alt="BRILian Talks" className="h-10 object-contain"
+              onError={e => e.target.style.display='none'} />
+          </div>
+          <div className="bg-white rounded-2xl px-3 py-2 flex items-center justify-center shadow-lg flex-1">
+            <img src="/logo-bri-full.svg" alt="BRI" className="h-10 object-contain"
+              onError={e => e.target.style.display='none'} />
+          </div>
+        </div>
+
+        {/* App Header */}
+        <div className="text-center mb-6">
           <h1 className="text-2xl font-black text-white">Queue System</h1>
           <p className="text-cyan-200/80 text-sm mt-1">Sistem Manajemen Antrian Layanan Kesehatan</p>
         </div>
