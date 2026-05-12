@@ -1,4 +1,4 @@
-import { entities, auth, functions, users } from '@/api/localDb';
+import { entities, auth, functions, users } from '@/api/supabaseDb';
 
 export const base44 = {
   entities,
