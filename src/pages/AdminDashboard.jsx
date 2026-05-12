@@ -183,35 +183,39 @@ export default function AdminDashboard() {
   const { data: services = [] } = useQuery({
     queryKey: ["services"],
     queryFn: () => base44.entities.Service.list(),
-    refetchInterval: 8000,
+    refetchInterval: 5000,
   });
 
   const { data: eventSettings = [] } = useQuery({
     queryKey: ["eventSettings"],
     queryFn: () => base44.entities.EventSetting.list(),
+    refetchInterval: 10000,
   });
 
   const { data: participants = [] } = useQuery({
     queryKey: ["participants"],
     queryFn: () => base44.entities.Participant.list("-created_date"),
-    refetchInterval: 8000,
+    refetchInterval: 5000,
   });
 
   const { data: queues = [] } = useQuery({
     queryKey: ["queues"],
     queryFn: () => base44.entities.Queue.list(),
-    refetchInterval: 8000,
+    refetchInterval: 5000,
   });
 
   // Real-time subscriptions
   useEffect(() => {
+    const unsubS = base44.entities.Service.subscribe(() => {
+      queryClient.invalidateQueries({ queryKey: ["services"] });
+    });
     const unsubP = base44.entities.Participant.subscribe(() => {
       queryClient.invalidateQueries({ queryKey: ["participants"] });
     });
     const unsubQ = base44.entities.Queue.subscribe(() => {
       queryClient.invalidateQueries({ queryKey: ["queues"] });
     });
-    return () => { unsubP(); unsubQ(); };
+    return () => { unsubS(); unsubP(); unsubQ(); };
   }, [queryClient]);
 
   const event = eventSettings[0];

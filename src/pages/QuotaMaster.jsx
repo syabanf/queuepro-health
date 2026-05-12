@@ -366,7 +366,7 @@ export default function QuotaMaster() {
   const { data: services = [], isLoading } = useQuery({
     queryKey: ["services"],
     queryFn: () => base44.entities.Service.list(),
-    refetchInterval: 15000,
+    refetchInterval: 5000,
   });
 
   const [servicesForm, setServicesForm] = useState([]);

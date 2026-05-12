@@ -78,13 +78,13 @@ export default function Participants() {
   const { data: participants = [], isLoading } = useQuery({
     queryKey: ["participants"],
     queryFn: () => base44.entities.Participant.list("-created_date"),
-    refetchInterval: 30000,
+    refetchInterval: 5000,
   });
 
   const { data: queues = [] } = useQuery({
     queryKey: ["queues"],
     queryFn: () => base44.entities.Queue.list(),
-    refetchInterval: 30000,
+    refetchInterval: 5000,
   });
 
   const { data: services = [] } = useQuery({
@@ -105,7 +105,10 @@ export default function Participants() {
     const unsubQ = base44.entities.Queue.subscribe(() => {
       queryClient.invalidateQueries({ queryKey: ["queues"] });
     });
-    return () => { unsubP(); unsubQ(); };
+    const unsubS = base44.entities.Service.subscribe(() => {
+      queryClient.invalidateQueries({ queryKey: ["services"] });
+    });
+    return () => { unsubP(); unsubQ(); unsubS(); };
   }, [queryClient]);
 
   const serviceMap = useMemo(() => Object.fromEntries(services.map(s => [s.id, s])), [services]);

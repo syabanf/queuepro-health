@@ -688,7 +688,7 @@ export default function NakesBooth() {
   const { data: participants = [] } = useQuery({
     queryKey: ["participants"],
     queryFn: () => base44.entities.Participant.list(),
-    refetchInterval: 10000,
+    refetchInterval: 5000,
   });
 
   const isMergedMedical = selectedServiceId === "merged-medical";
