@@ -71,8 +71,11 @@ function ServiceCard({ service, queues }) {
         </div>
       </div>
 
-      {/* DIPANGGIL — dominant focal point */}
+      {/* Queue number focal point */}
       <div className={`flex-1 flex flex-col items-center justify-center py-6 px-4 transition-all duration-300 ${flash ? "bg-white/10" : ""}`}>
+        <div className="px-5 py-1.5 mb-4 rounded-full bg-white text-[#003D79] text-sm font-black uppercase tracking-widest border border-white/80">
+          NOMOR ANTRIAN
+        </div>
         <p
           className={`font-black tracking-widest leading-none transition-all duration-500
             ${serving ? "text-white" : "text-white/15"}
@@ -92,7 +95,7 @@ function ServiceCard({ service, queues }) {
           }`}>
             {serving.status === "SERVING" ? "● SEDANG DILAYANI"
               : serving.status === "QR_VERIFIED" ? "● TERVERIFIKASI"
-              : "● NOMOR ANTRIAN"}
+              : "● DIPANGGIL"}
           </div>
         )}
         {!serving && (
