@@ -9,7 +9,7 @@ import { useToast } from "@/components/ui/use-toast";
 import {
   Monitor, PhoneCall, PlayCircle, CheckCircle2,
   SkipForward, XCircle, RotateCcw, Clock, Stethoscope, Eye, User, Barcode,
-  ShieldCheck, ShieldX, Shield
+  ShieldCheck, ShieldX, Shield, MessageCircle
 } from "lucide-react";
 import QrScannerModal from "@/components/booth/QrScannerModal";
 import QrVerificationCard from "@/components/booth/QrVerificationCard";
@@ -222,6 +222,22 @@ function BoothPanel({ service, participants, services, currentUser, compact = fa
   }, [service.id, participants, services, currentUser, queryClient, toast]);
 
   const getParticipant = (id) => participants.find(p => p.id === id);
+
+  const sendWhatsApp = (queue) => {
+    const p = getParticipant(queue.participant_id);
+    if (!p?.phone_number) return;
+    const raw = p.phone_number.replace(/\D/g, "");
+    const phone = raw.startsWith("0") ? "62" + raw.slice(1) : raw.startsWith("62") ? raw : "62" + raw;
+    const message =
+      `Halo *${p.full_name}*,\n\n` +
+      `📢 Nomor antrian Anda *${queue.queue_number}* sedang *DIPANGGIL*!\n\n` +
+      `Silakan segera menuju:\n` +
+      `🏥 *${service.service_name}*\n` +
+      `📍 Booth ${service.booth_number}\n\n` +
+      `Pantau antrian real-time:\nhttps://queuepro-health.vercel.app/mobile-monitor`;
+    window.open(`https://wa.me/${phone}?text=${encodeURIComponent(message)}`, "_blank");
+  };
+
   const isMedical = service.service_group === "MEDICAL";
   const Icon = isMedical ? Stethoscope : Eye;
   const qrBadgeCfg = activeQueue ? QR_BADGE_CONFIG[activeQueue.qr_verification_status || "NOT_SCANNED"] : null;
@@ -336,6 +352,17 @@ function BoothPanel({ service, participants, services, currentUser, compact = fa
                     >
                       <Barcode className="w-3.5 h-3.5" /> Scan Barcode
                     </Button>
+
+                    {/* WhatsApp notify — shown when CALLED */}
+                    {activeQueue.status === "CALLED" && getParticipant(activeQueue.participant_id)?.phone_number && (
+                      <Button
+                        size="sm"
+                        className="w-full gap-1.5 text-xs h-7 bg-green-600 hover:bg-green-700"
+                        onClick={() => sendWhatsApp(activeQueue)}
+                      >
+                        <MessageCircle className="w-3.5 h-3.5" /> Kirim WhatsApp
+                      </Button>
+                    )}
 
                     {(activeQueue.status === "CALLED" || activeQueue.status === "QR_VERIFIED") && (
                       <Button
@@ -578,6 +605,13 @@ function BoothPanel({ service, participants, services, currentUser, compact = fa
                     <Button className="w-full gap-2 bg-blue-600 hover:bg-blue-700" onClick={() => setScannerOpen(true)} disabled={updateQueue.isPending}>
                       <Barcode className="w-4 h-4" /> Scan Barcode Verifikasi
                     </Button>
+
+                    {/* WhatsApp notify — shown when CALLED */}
+                    {activeQueue.status === "CALLED" && getParticipant(activeQueue.participant_id)?.phone_number && (
+                      <Button className="w-full gap-2 bg-green-600 hover:bg-green-700" onClick={() => sendWhatsApp(activeQueue)}>
+                        <MessageCircle className="w-4 h-4" /> Kirim Notifikasi WhatsApp
+                      </Button>
+                    )}
 
                     <div className="grid grid-cols-2 gap-2">
                       {(activeQueue.status === "CALLED" || activeQueue.status === "QR_VERIFIED") && (
