@@ -9,7 +9,7 @@ import { Badge } from "@/components/ui/badge";
 // Note: RadioGroup removed — using custom radio indicator to avoid Radix double-fire bug
 import {
   UserPlus, Loader2, AlertCircle, Stethoscope, Eye, Activity, Syringe,
-  CheckCircle2, ArrowLeft, Users,
+  CheckCircle2, ArrowLeft, Users, MessageCircle,
 } from "lucide-react";
 import { formatQueueNumber, getNextQueueSequence, generateRegistrationNumber } from "@/lib/registrationUtils";
 import { generateQrToken, buildQrCodeUrl } from "@/lib/qrUtils";
@@ -278,6 +278,28 @@ export default function PublicRegistration() {
           </Card>
 
           <QueueTicket queue={queue} service={service} idx={0} />
+
+          {/* WhatsApp button */}
+          {participant.phone_number && (() => {
+            const raw = participant.phone_number.replace(/\D/g, "");
+            const phone = raw.startsWith("0") ? "62" + raw.slice(1) : raw.startsWith("62") ? raw : "62" + raw;
+            const message =
+              `Halo *${participant.full_name}*,\n\n` +
+              `Pendaftaran Anda berhasil! 🎉\n\n` +
+              `📋 No. Registrasi: *${participant.registration_number}*\n` +
+              `🎟️ Nomor Antrian: *${queue.queue_number}*\n` +
+              `🏥 Layanan: *${service?.service_name}* (Booth ${service?.booth_number})\n\n` +
+              `Pantau status antrian real-time di:\n` +
+              `https://queuepro-health.vercel.app/mobile-monitor`;
+            return (
+              <Button
+                className="w-full gap-2 bg-green-600 hover:bg-green-700 text-white"
+                onClick={() => window.open(`https://wa.me/${phone}?text=${encodeURIComponent(message)}`, "_blank")}
+              >
+                <MessageCircle className="w-4 h-4" /> Kirim via WhatsApp
+              </Button>
+            );
+          })()}
 
           <Button className="w-full" variant="outline" onClick={handleRegisterAnother}>
             <ArrowLeft className="w-4 h-4 mr-2" /> Daftarkan Peserta Lain
