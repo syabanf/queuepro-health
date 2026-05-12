@@ -23,6 +23,7 @@ const QUOTA_TYPES = [
     key: 'free',
     limitField: 'free_quota',
     usedField: 'used_free_quota',
+    priceField: 'free_price',
     label: 'Free Tanpa Syarat',
     shortLabel: 'Free',
     icon: Gift,
@@ -37,6 +38,7 @@ const QUOTA_TYPES = [
     key: 'rp1',
     limitField: 'rp1_quota',
     usedField: 'used_rp1_quota',
+    priceField: 'rp1_price',
     label: 'Rp 1 BRI',
     shortLabel: 'Rp 1 BRI',
     icon: CreditCard,
@@ -51,6 +53,7 @@ const QUOTA_TYPES = [
     key: 'special',
     limitField: 'special_quota',
     usedField: 'used_special_quota',
+    priceField: 'special_price',
     label: 'Special Price',
     shortLabel: 'Special',
     icon: Tag,
@@ -62,6 +65,11 @@ const QUOTA_TYPES = [
     badgeCls: 'bg-purple-100 text-purple-700 border-purple-200',
   },
 ];
+
+const fmtRupiah = (val) => {
+  if (!val || val === 0) return "Gratis";
+  return "Rp " + Number(val).toLocaleString("id-ID");
+};
 
 function getRemaining(svc, qt) {
   const limit = svc[qt.limitField] || 0;
@@ -162,13 +170,19 @@ function ServiceQuotaCard({ service, onChange }) {
           const QtIcon = qt.icon;
           const limit = service[qt.limitField] || 0;
           const used = service[qt.usedField] || 0;
-          const rem = Math.max(0, limit - used);
+          const price = service[qt.priceField] ?? 0;
+          const rem = getRemaining(service, qt);
 
           return (
             <div key={qt.key} className={`rounded-lg border p-3 ${qt.bg} ${qt.border}`}>
-              <div className="flex items-center gap-1.5 mb-2">
-                <QtIcon className={`w-3.5 h-3.5 ${qt.color}`} />
-                <span className={`text-xs font-bold ${qt.color}`}>{qt.shortLabel}</span>
+              <div className="flex items-center justify-between gap-1.5 mb-2">
+                <div className="flex items-center gap-1.5">
+                  <QtIcon className={`w-3.5 h-3.5 ${qt.color}`} />
+                  <span className={`text-xs font-bold ${qt.color}`}>{qt.shortLabel}</span>
+                </div>
+                <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${qt.bg} ${qt.color} border ${qt.border}`}>
+                  {fmtRupiah(price)}
+                </span>
               </div>
 
               <div className="mb-2">
@@ -179,6 +193,17 @@ function ServiceQuotaCard({ service, onChange }) {
                   className="h-7 mt-0.5 text-sm font-mono bg-white"
                   value={limit}
                   onChange={e => set(qt.limitField, parseInt(e.target.value) || 0)}
+                />
+              </div>
+
+              <div className="mb-2">
+                <label className="text-[10px] text-muted-foreground uppercase tracking-wide">Harga (Rp)</label>
+                <Input
+                  type="number"
+                  min={0}
+                  className="h-7 mt-0.5 text-sm font-mono bg-white"
+                  value={price}
+                  onChange={e => set(qt.priceField, parseInt(e.target.value) || 0)}
                 />
               </div>
 
