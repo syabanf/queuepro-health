@@ -243,39 +243,6 @@ export default function RegistrationForm({ services, participants = [], eventSet
                   {errors.unit_division && <p className="text-xs text-destructive mt-1">{errors.unit_division}</p>}
                 </div>
 
-                {/* Status Kuota */}
-                <div>
-                  <Label className="text-xs font-medium">Status Kuota <span className="text-destructive">*</span></Label>
-                  <Select value={form.quota_status} onValueChange={v => setForm(p => ({ ...p, quota_status: v }))}>
-                    <SelectTrigger className="mt-1">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {QUOTA_STATUS_OPTIONS.map(opt => {
-                        const Icon = opt.icon;
-                        return (
-                          <SelectItem key={opt.value} value={opt.value}>
-                            <div className="flex items-center gap-2">
-                              <Icon className={`w-3.5 h-3.5 ${opt.color}`} />
-                              <span>{opt.label}</span>
-                            </div>
-                          </SelectItem>
-                        );
-                      })}
-                    </SelectContent>
-                  </Select>
-                  {/* Badge preview */}
-                  {(() => {
-                    const opt = QUOTA_STATUS_OPTIONS.find(o => o.value === form.quota_status);
-                    if (!opt) return null;
-                    const Icon = opt.icon;
-                    return (
-                      <div className={`inline-flex items-center gap-1.5 mt-1.5 px-2 py-1 rounded-md border text-xs font-medium ${opt.bg} ${opt.border} ${opt.color}`}>
-                        <Icon className="w-3 h-3" /> {opt.label}
-                      </div>
-                    );
-                  })()}
-                </div>
               </div>
             </div>
 
