@@ -61,11 +61,6 @@ function ServiceOption({ service, selected, onSelect, getRemainingSlots, isServi
         </p>
       </div>
 
-      <div className="flex-shrink-0 text-right">
-        <p className={`text-xs font-bold ${remaining <= 10 ? "text-amber-600" : "text-green-600"}`}>
-          Sisa: {remaining}
-        </p>
-      </div>
     </div>
   );
 }

@@ -160,11 +160,6 @@ export default function RegistrationForm({ services, participants = [], eventSet
             Booth {service.booth_number} &bull; Kode {service.service_code}
           </p>
         </div>
-        <div className="flex-shrink-0 text-right">
-          <p className={`text-xs font-bold ${remaining <= 10 ? "text-amber-600" : "text-green-600"}`}>
-            Sisa: {remaining}
-          </p>
-        </div>
       </div>
     );
   };
