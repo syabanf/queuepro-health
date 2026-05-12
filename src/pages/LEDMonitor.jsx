@@ -73,9 +73,6 @@ function ServiceCard({ service, queues }) {
 
       {/* DIPANGGIL — dominant focal point */}
       <div className={`flex-1 flex flex-col items-center justify-center py-6 px-4 transition-all duration-300 ${flash ? "bg-white/10" : ""}`}>
-        <p className="text-white/50 text-xs font-bold uppercase tracking-[0.3em] mb-3">
-          DIPANGGIL
-        </p>
         <p
           className={`font-black tracking-widest leading-none transition-all duration-500
             ${serving ? "text-white" : "text-white/15"}
