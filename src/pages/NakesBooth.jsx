@@ -467,6 +467,12 @@ function BoothPanel({ service, participants, services, currentUser, compact = fa
                     <div key={q.id} className="flex items-center gap-2 px-2 py-1 rounded bg-orange-50 text-xs">
                       <span className="font-mono font-bold text-orange-700 w-12 flex-shrink-0">{q.queue_number}</span>
                       <span className="text-muted-foreground truncate flex-1">{p?.full_name || "—"}</span>
+                      {p?.phone_number && (
+                        <Button size="sm" variant="ghost" className="h-5 px-1.5 text-[10px] text-green-600 flex-shrink-0"
+                          onClick={() => sendWhatsApp(q)}>
+                          <MessageCircle className="w-2.5 h-2.5" />
+                        </Button>
+                      )}
                       <Button size="sm" variant="ghost" className="h-5 px-1.5 text-[10px] text-orange-600 flex-shrink-0"
                         disabled={!!called || !!qrVerified || !!serving || updateQueue.isPending}
                         onClick={() => handleAction(q, "CALLED", "RECALLED")}>
@@ -724,11 +730,20 @@ function BoothPanel({ service, participants, services, currentUser, compact = fa
                     <div key={q.id} className="flex items-center justify-between px-2 py-1.5 rounded-md bg-orange-50 text-sm gap-2">
                       <span className="font-mono font-bold text-orange-700 w-14 flex-shrink-0">{q.queue_number}</span>
                       <span className="text-xs text-muted-foreground truncate flex-1">{p?.full_name || "—"}</span>
-                      <Button size="sm" variant="ghost" className="h-6 px-2 text-xs text-orange-600 flex-shrink-0"
-                        disabled={!!called || !!qrVerified || !!serving || updateQueue.isPending}
-                        onClick={() => handleAction(q, "CALLED", "RECALLED")}>
-                        <RotateCcw className="w-3 h-3 mr-1" /> Panggil
-                      </Button>
+                      <div className="flex items-center gap-1 flex-shrink-0">
+                        {p?.phone_number && (
+                          <Button size="sm" variant="ghost" className="h-6 px-2 text-xs text-green-600 flex-shrink-0"
+                            title="Kirim WhatsApp"
+                            onClick={() => sendWhatsApp(q)}>
+                            <MessageCircle className="w-3 h-3" />
+                          </Button>
+                        )}
+                        <Button size="sm" variant="ghost" className="h-6 px-2 text-xs text-orange-600 flex-shrink-0"
+                          disabled={!!called || !!qrVerified || !!serving || updateQueue.isPending}
+                          onClick={() => handleAction(q, "CALLED", "RECALLED")}>
+                          <RotateCcw className="w-3 h-3 mr-1" /> Panggil
+                        </Button>
+                      </div>
                     </div>
                   );
                 })}
