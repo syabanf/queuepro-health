@@ -92,7 +92,7 @@ function ServiceCard({ service, queues }) {
           }`}>
             {serving.status === "SERVING" ? "● SEDANG DILAYANI"
               : serving.status === "QR_VERIFIED" ? "● TERVERIFIKASI"
-              : "● DIPANGGIL"}
+              : "● NOMOR ANTRIAN"}
           </div>
         )}
         {!serving && (
