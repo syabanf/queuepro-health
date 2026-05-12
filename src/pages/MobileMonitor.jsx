@@ -129,33 +129,32 @@ export default function MobileMonitor() {
     }}>
       {/* Header */}
       <div className="px-3 pt-2 pb-2 backdrop-blur-md bg-black/20 border-b border-white/10 flex-shrink-0">
-        {/* Logos row */}
-        <div className="flex items-center gap-2 mb-1.5">
-          <div className="bg-white rounded-lg px-2 py-1 flex items-center justify-center">
-            <img
-              src="/logo-danantara.png"
-              alt="Danantara Indonesia"
-              className="h-5 object-contain"
-              onError={e => e.target.style.display='none'}
-            />
+        <div className="flex items-center gap-2">
+          {/* Logos */}
+          <div className="bg-white rounded-lg px-2 py-1 flex items-center justify-center flex-shrink-0">
+            <img src="/logo-danantara.png" alt="Danantara Indonesia" className="h-5 object-contain"
+              onError={e => e.target.style.display='none'} />
           </div>
           <div className="w-px h-5 bg-white/25 flex-shrink-0" />
-          <div className="bg-white rounded-lg px-2 py-1 flex items-center justify-center">
-            <img
-              src="/logo-bri-full.svg"
-              alt="BRI"
-              className="h-5 object-contain"
-              onError={e => e.target.style.display='none'}
-            />
+          <div className="bg-white rounded-lg px-2 py-1 flex items-center justify-center flex-shrink-0">
+            <img src="/logo-bri-full.svg" alt="BRI" className="h-5 object-contain"
+              onError={e => e.target.style.display='none'} />
           </div>
-          <button onClick={fetchData} className="flex items-center gap-1 text-white/50 text-[10px] active:scale-95 ml-auto">
+
+          {/* Event info */}
+          <div className="flex-1 min-w-0 px-1">
+            <p className="text-cyan-300 text-[9px] font-bold uppercase tracking-widest leading-tight truncate">
+              {eventTagline.replace(/"/g, '')}
+            </p>
+            <p className="text-white font-black text-xs leading-tight truncate">{eventName}</p>
+          </div>
+
+          {/* Refresh */}
+          <button onClick={fetchData} className="flex items-center gap-1 text-white/50 text-[10px] active:scale-95 flex-shrink-0">
             <RefreshCw className={`w-3 h-3 ${isRefreshing ? "animate-spin" : ""}`} />
             {lastUpdated.toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit", second: "2-digit" })}
           </button>
         </div>
-        {/* Event name */}
-        <p className="text-cyan-300 text-[10px] font-bold uppercase tracking-widest leading-tight">{eventTagline}</p>
-        <h1 className="text-white font-black text-xs leading-tight">{eventName}</h1>
       </div>
 
       {/* Service Cards */}
