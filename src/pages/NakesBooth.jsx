@@ -9,7 +9,7 @@ import { useToast } from "@/components/ui/use-toast";
 import {
   Monitor, PhoneCall, PlayCircle, CheckCircle2,
   SkipForward, XCircle, RotateCcw, Clock, Stethoscope, Eye, User, Barcode,
-  ShieldCheck, ShieldX, Shield, CreditCard, Gift
+  ShieldCheck, ShieldX, Shield
 } from "lucide-react";
 import QrScannerModal from "@/components/booth/QrScannerModal";
 import QrVerificationCard from "@/components/booth/QrVerificationCard";
@@ -32,6 +32,33 @@ const QR_BADGE_CONFIG = {
   ALREADY_COMPLETED:  { label: "Sudah Selesai",     color: "bg-purple-100 text-purple-700 border-purple-200",icon: ShieldX },
   CANCELLED:          { label: "Dibatalkan",         color: "bg-red-100 text-red-700 border-red-200",         icon: ShieldX },
 };
+
+const QUOTA_OPTIONS = [
+  { value: "FREE",          label: "Free / Gratis",  color: "text-green-700",  limitField: "free_quota",    usedField: "used_free_quota"    },
+  { value: "RP1_BRI",      label: "Rp 1 BRI",       color: "text-blue-700",   limitField: "rp1_quota",     usedField: "used_rp1_quota"     },
+  { value: "SPECIAL_PRICE",label: "Special Price",   color: "text-purple-700", limitField: "special_quota", usedField: "used_special_quota" },
+];
+
+function quotaLabel(val) {
+  return QUOTA_OPTIONS.find(o => o.value === val)?.label || val;
+}
+function quotaColor(val) {
+  return QUOTA_OPTIONS.find(o => o.value === val)?.color || "text-muted-foreground";
+}
+function isQuotaFull(svc, val) {
+  const opt = QUOTA_OPTIONS.find(o => o.value === val);
+  if (!opt) return false;
+  const limit = svc[opt.limitField] || 0;
+  if (limit === 0) return false; // unlimited / not configured
+  return (svc[opt.usedField] || 0) >= limit;
+}
+function quotaRemaining(svc, val) {
+  const opt = QUOTA_OPTIONS.find(o => o.value === val);
+  if (!opt) return null;
+  const limit = svc[opt.limitField] || 0;
+  if (limit === 0) return null;
+  return Math.max(0, limit - (svc[opt.usedField] || 0));
+}
 
 async function logQueueEvent({ queue_id, event_type, previous_status, new_status, performed_by, notes }) {
   await base44.entities.QueueEvent.create({
@@ -261,8 +288,8 @@ function BoothPanel({ service, participants, services, currentUser, compact = fa
                     <Badge className={`text-[10px] border ${QUEUE_STATUS_CONFIG[activeQueue.status]?.color}`}>
                       {QUEUE_STATUS_CONFIG[activeQueue.status]?.label}
                     </Badge>
-                    <span className={`text-[10px] font-semibold ${activeQueue.payment_display_status === "FREE" ? "text-green-600" : "text-orange-600"}`}>
-                      {activeQueue.payment_display_status === "FREE" ? "Gratis" : "Berbayar"}
+                    <span className={`text-[10px] font-semibold ${quotaColor(activeQueue.quota_status)}`}>
+                      {quotaLabel(activeQueue.quota_status)}
                     </span>
                   </div>
 
@@ -270,21 +297,36 @@ function BoothPanel({ service, participants, services, currentUser, compact = fa
 
                   {/* Actions */}
                   <div className="mt-2.5 space-y-1.5 pt-2.5 border-t border-border">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className={`w-full gap-1.5 text-xs h-7 ${activeQueue.payment_display_status === "FREE" ? "text-orange-600 border-orange-300 hover:bg-orange-50" : "text-green-600 border-green-300 hover:bg-green-50"}`}
-                      onClick={async () => {
-                        const newPayment = activeQueue.payment_display_status === "FREE" ? "PAID" : "FREE";
-                        await base44.entities.Queue.update(activeQueue.id, { payment_display_status: newPayment });
+                    {/* Quota category dropdown */}
+                    <Select
+                      value={activeQueue.quota_status || "FREE"}
+                      onValueChange={async (val) => {
+                        const paymentDisplay = val === "FREE" ? "FREE" : val === "RP1_BRI" ? "RP1 BRI" : "SPECIAL PRICE";
+                        await base44.entities.Queue.update(activeQueue.id, {
+                          quota_status: val,
+                          payment_display_status: paymentDisplay,
+                          quota_category: val === "FREE" ? "FULL_FREE" : "PAID",
+                        });
                         queryClient.invalidateQueries({ queryKey: ["booth-queues", service.id] });
                       }}
                       disabled={updateQueue.isPending}
                     >
-                      {activeQueue.payment_display_status === "FREE"
-                        ? <><CreditCard className="w-3 h-3" /> Ubah ke Berbayar</>
-                        : <><Gift className="w-3 h-3" /> Ubah ke Gratis</>}
-                    </Button>
+                      <SelectTrigger className="h-7 text-xs w-full">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {QUOTA_OPTIONS.map(opt => {
+                          const full = isQuotaFull(service, opt.value);
+                          const rem = quotaRemaining(service, opt.value);
+                          return (
+                            <SelectItem key={opt.value} value={opt.value} disabled={full && activeQueue.quota_status !== opt.value}>
+                              <span className={opt.color}>{opt.label}</span>
+                              {rem !== null && <span className="text-muted-foreground ml-1 text-[10px]">({full ? "Penuh" : `${rem} sisa`})</span>}
+                            </SelectItem>
+                          );
+                        })}
+                      </SelectContent>
+                    </Select>
 
                     <Button
                       size="sm"
@@ -486,8 +528,8 @@ function BoothPanel({ service, participants, services, currentUser, compact = fa
                         ) : null;
                       })()}
                       <p className="text-sm text-muted-foreground mt-1">
-                        Status: <span className={`font-semibold ${activeQueue.payment_display_status === "FREE" ? "text-green-600" : "text-orange-600"}`}>
-                          {activeQueue.payment_display_status === "FREE" ? "GRATIS" : "BERBAYAR"}
+                        Kuota: <span className={`font-semibold ${quotaColor(activeQueue.quota_status)}`}>
+                          {quotaLabel(activeQueue.quota_status)}
                         </span>
                       </p>
                     </div>
@@ -499,20 +541,39 @@ function BoothPanel({ service, participants, services, currentUser, compact = fa
                   {verificationResult && <QrVerificationCard result={verificationResult} />}
 
                   <div className="space-y-2 pt-2 border-t border-border">
-                    <Button
-                      variant="outline"
-                      className={`w-full gap-2 ${activeQueue.payment_display_status === "FREE" ? "text-orange-600 border-orange-300 hover:bg-orange-50" : "text-green-600 border-green-300 hover:bg-green-50"}`}
-                      onClick={async () => {
-                        const newPayment = activeQueue.payment_display_status === "FREE" ? "PAID" : "FREE";
-                        await base44.entities.Queue.update(activeQueue.id, { payment_display_status: newPayment });
-                        queryClient.invalidateQueries({ queryKey: ["booth-queues", service.id] });
-                      }}
-                      disabled={updateQueue.isPending}
-                    >
-                      {activeQueue.payment_display_status === "FREE"
-                        ? <><CreditCard className="w-4 h-4" /> Ubah ke Berbayar</>
-                        : <><Gift className="w-4 h-4" /> Ubah ke Gratis</>}
-                    </Button>
+                    {/* Quota category dropdown (full layout) */}
+                    <div>
+                      <p className="text-xs text-muted-foreground mb-1">Kategori Kuota</p>
+                      <Select
+                        value={activeQueue.quota_status || "FREE"}
+                        onValueChange={async (val) => {
+                          const paymentDisplay = val === "FREE" ? "FREE" : val === "RP1_BRI" ? "RP1 BRI" : "SPECIAL PRICE";
+                          await base44.entities.Queue.update(activeQueue.id, {
+                            quota_status: val,
+                            payment_display_status: paymentDisplay,
+                            quota_category: val === "FREE" ? "FULL_FREE" : "PAID",
+                          });
+                          queryClient.invalidateQueries({ queryKey: ["booth-queues", service.id] });
+                        }}
+                        disabled={updateQueue.isPending}
+                      >
+                        <SelectTrigger className="w-full">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {QUOTA_OPTIONS.map(opt => {
+                            const full = isQuotaFull(service, opt.value);
+                            const rem = quotaRemaining(service, opt.value);
+                            return (
+                              <SelectItem key={opt.value} value={opt.value} disabled={full && activeQueue.quota_status !== opt.value}>
+                                <span className={opt.color}>{opt.label}</span>
+                                {rem !== null && <span className="text-muted-foreground ml-1 text-xs">({full ? "Penuh" : `${rem} sisa`})</span>}
+                              </SelectItem>
+                            );
+                          })}
+                        </SelectContent>
+                      </Select>
+                    </div>
 
                     <Button className="w-full gap-2 bg-blue-600 hover:bg-blue-700" onClick={() => setScannerOpen(true)} disabled={updateQueue.isPending}>
                       <Barcode className="w-4 h-4" /> Scan Barcode Verifikasi
