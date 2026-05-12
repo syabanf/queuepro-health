@@ -313,14 +313,22 @@ export default function PublicRegistration() {
   // ---- Registration form ----
   return (
     <div className="min-h-screen bg-muted/30">
-      <div className="px-4 py-4" style={{ background: '#003D79' }}>
-        <div className="max-w-lg mx-auto">
-          <div className="flex items-center gap-2 mb-0.5">
-            <span className="text-white font-black text-lg tracking-wider">BRI</span>
-            <span className="text-white/40 mx-1">×</span>
-            <span className="text-white/80 text-sm font-semibold">Brilian Talks Health Care 2025</span>
+      <div className="px-4 py-3" style={{ background: '#003D79' }}>
+        <div className="max-w-lg mx-auto flex items-center justify-between gap-3">
+          <div className="bg-white rounded-lg px-2.5 py-1.5 flex items-center justify-center flex-shrink-0">
+            <img src="/logo-danantara.png" alt="Danantara Indonesia" className="h-6 object-contain"
+              onError={e => e.target.style.display='none'} />
           </div>
-          <p className="text-white/50 text-xs">Registrasi Peserta Online</p>
+          <div className="text-center min-w-0 flex-1">
+            <p className="text-white font-black text-sm leading-tight truncate">
+              {event?.event_name || "Brilian Talks Health Care"}
+            </p>
+            <p className="text-white/50 text-[10px]">Registrasi Peserta Online</p>
+          </div>
+          <div className="bg-white rounded-lg px-2.5 py-1.5 flex items-center justify-center flex-shrink-0">
+            <img src="/logo-bri-full.svg" alt="BRI" className="h-6 object-contain"
+              onError={e => e.target.style.display='none'} />
+          </div>
         </div>
       </div>
 

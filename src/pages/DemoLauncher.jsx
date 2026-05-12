@@ -72,6 +72,20 @@ export default function DemoLauncher() {
         <div className="absolute -bottom-32 -right-32 w-96 h-96 rounded-full bg-cyan-400/10 blur-3xl" />
       </div>
 
+      {/* Corner logos */}
+      <div className="fixed top-4 left-4 z-10">
+        <div className="bg-white rounded-xl px-3 py-1.5 flex items-center justify-center shadow-lg">
+          <img src="/logo-danantara.png" alt="Danantara Indonesia" className="h-7 object-contain"
+            onError={e => e.target.style.display='none'} />
+        </div>
+      </div>
+      <div className="fixed top-4 right-4 z-10">
+        <div className="bg-white rounded-xl px-3 py-1.5 flex items-center justify-center shadow-lg">
+          <img src="/logo-bri-full.svg" alt="BRI" className="h-7 object-contain"
+            onError={e => e.target.style.display='none'} />
+        </div>
+      </div>
+
       <div className="relative w-full max-w-md">
         {/* App Header */}
         <div className="text-center mb-8">
