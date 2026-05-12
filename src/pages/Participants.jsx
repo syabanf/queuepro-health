@@ -14,7 +14,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import {
   Users, Search, Printer, Eye, Download,
-  ChevronLeft, ChevronRight, RefreshCw, Filter, Trash2
+  ChevronLeft, ChevronRight, RefreshCw, Filter, Trash2, MessageCircle
 } from "lucide-react";
 import { format } from "date-fns";
 import PageHeader from "@/components/layout/PageHeader";
@@ -180,6 +180,17 @@ export default function Participants() {
       setDeleteTarget(null);
     },
   });
+
+  const handleWhatsApp = (p) => {
+    const raw = (p.phone_number || "").replace(/\D/g, "");
+    const phone = raw.startsWith("0") ? "62" + raw.slice(1) : raw.startsWith("62") ? raw : "62" + raw;
+    const queueInfo = [
+      p.medQueue?.queue_number && `• Antrian Medis: *${p.medQueue.queue_number}*`,
+      p.eyeQueue?.queue_number && `• Antrian Mata: *${p.eyeQueue.queue_number}*`,
+    ].filter(Boolean).join("\n");
+    const message = `Halo *${p.full_name}*,\n\nBerikut nomor antrian Anda:\n${queueInfo || "• Belum ada antrian"}\n\nPantau status antrian real-time di:\nhttps://queuepro-health.vercel.app/mobile-monitor`;
+    window.open(`https://wa.me/${phone}?text=${encodeURIComponent(message)}`, "_blank");
+  };
 
   const handleReprint = (p) => {
     const pQueues = queues.filter(q => q.participant_id === p.id);
@@ -412,6 +423,16 @@ export default function Participants() {
                             onClick={() => handleReprint(p)}
                           >
                             <Printer className="w-4 h-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-6 w-6 sm:h-7 sm:w-7 text-muted-foreground hover:text-green-600"
+                            title="Kirim WhatsApp"
+                            onClick={() => handleWhatsApp(p)}
+                            disabled={!p.phone_number}
+                          >
+                            <MessageCircle className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                           </Button>
                           <Button
                             variant="ghost"
