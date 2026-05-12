@@ -133,8 +133,8 @@ export default function MobileMonitor() {
         <div className="flex items-center gap-2 mb-1.5">
           <div className="bg-white rounded-lg px-2 py-1 flex items-center justify-center">
             <img
-              src="/logo-bri-full.svg"
-              alt="BRI"
+              src="/logo-danantara.png"
+              alt="Danantara Indonesia"
               className="h-5 object-contain"
               onError={e => e.target.style.display='none'}
             />
@@ -142,8 +142,8 @@ export default function MobileMonitor() {
           <div className="w-px h-5 bg-white/25 flex-shrink-0" />
           <div className="bg-white rounded-lg px-2 py-1 flex items-center justify-center">
             <img
-              src="/logo-danantara.png"
-              alt="Danantara Indonesia"
+              src="/logo-bri-full.svg"
+              alt="BRI"
               className="h-5 object-contain"
               onError={e => e.target.style.display='none'}
             />
