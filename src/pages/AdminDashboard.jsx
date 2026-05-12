@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import {
   Users, Activity, Monitor, CheckCircle2, Clock,
   Stethoscope, Eye, AlertCircle, TrendingUp, SkipForward,
-  XCircle, CreditCard, Gift, ChevronRight, TestTube, CheckCircle, LogOut
+  XCircle, CreditCard, Gift, Tag, ChevronRight, TestTube, CheckCircle, LogOut
 } from "lucide-react";
 import PageHeader from "@/components/layout/PageHeader";
 import { format } from "date-fns";
@@ -16,6 +16,87 @@ import { Link } from "react-router-dom";
 import TestFlowWizard from "@/components/TestFlowWizard";
 import DataConsistencyChecker from "@/components/DataConsistencyChecker";
 import { useAuth } from "@/lib/AuthContext";
+
+const QUOTA_TYPES = [
+  { key: 'free',    limitField: 'free_quota',    usedField: 'used_free_quota',    label: 'Free',    color: 'text-green-700', bg: 'bg-green-500', trackBg: 'bg-green-100' },
+  { key: 'rp1',     limitField: 'rp1_quota',     usedField: 'used_rp1_quota',     label: 'Rp 1 BRI', color: 'text-blue-700',  bg: 'bg-blue-500',  trackBg: 'bg-blue-100'  },
+  { key: 'special', limitField: 'special_quota', usedField: 'used_special_quota', label: 'Special', color: 'text-purple-700',bg: 'bg-purple-500',trackBg: 'bg-purple-100'},
+];
+
+function svcTotalLimit(s) {
+  return QUOTA_TYPES.reduce((sum, qt) => sum + (s[qt.limitField] || 0), 0);
+}
+function svcTotalUsed(s) {
+  return QUOTA_TYPES.reduce((sum, qt) => sum + (s[qt.usedField] || 0), 0);
+}
+function svcTotalRemaining(s) {
+  return Math.max(0, svcTotalLimit(s) - svcTotalUsed(s));
+}
+
+function ServiceQuotaCard({ service }) {
+  const isEye = service.service_group === "EYE_CHECK";
+  const totalLimit = svcTotalLimit(service);
+  const totalUsed = svcTotalUsed(service);
+  const totalRem = svcTotalRemaining(service);
+  const fillPct = totalLimit > 0 ? Math.min(100, Math.round((totalUsed / totalLimit) * 100)) : 0;
+  const activeTypes = QUOTA_TYPES.filter(qt => (service[qt.limitField] || 0) > 0);
+
+  return (
+    <Card className={`border ${totalRem <= 0 && totalLimit > 0 ? "border-destructive/40" : totalRem <= 20 ? "border-amber-200" : isEye ? "border-accent/30" : "border-primary/20"}`}>
+      <CardContent className="p-3">
+        {/* Header */}
+        <div className="flex items-center justify-between mb-2">
+          <div className="flex items-center gap-2 min-w-0">
+            <div className={`w-6 h-6 rounded flex items-center justify-center text-[10px] font-black flex-shrink-0 ${isEye ? "bg-accent/10 text-accent" : "bg-primary/10 text-primary"}`}>
+              {service.service_code}
+            </div>
+            <span className="text-sm font-semibold truncate">{service.service_name}</span>
+          </div>
+          {totalRem <= 0 && totalLimit > 0 ? (
+            <Badge className="bg-red-100 text-red-700 border-red-200 text-[10px] flex-shrink-0">Penuh</Badge>
+          ) : (
+            <Badge className={`text-[10px] flex-shrink-0 ${totalRem <= 20 ? "bg-amber-100 text-amber-700 border-amber-200" : "bg-green-100 text-green-700 border-green-200"}`}>
+              Sisa: {totalRem}
+            </Badge>
+          )}
+        </div>
+
+        {/* Overall bar */}
+        <div className="flex items-center gap-2 mb-2.5">
+          <div className="flex-1 h-1.5 bg-muted rounded-full overflow-hidden">
+            <div className={`h-full rounded-full transition-all duration-700 ${fillPct >= 100 ? "bg-destructive" : fillPct >= 80 ? "bg-amber-400" : isEye ? "bg-accent" : "bg-primary"}`}
+              style={{ width: `${fillPct}%` }} />
+          </div>
+          <span className="text-xs text-muted-foreground flex-shrink-0 font-mono">{totalUsed}/{totalLimit}</span>
+        </div>
+
+        {/* Per-quota rows */}
+        {activeTypes.length > 0 && (
+          <div className="grid gap-1.5" style={{ gridTemplateColumns: `repeat(${activeTypes.length}, 1fr)` }}>
+            {activeTypes.map(qt => {
+              const limit = service[qt.limitField] || 0;
+              const used = service[qt.usedField] || 0;
+              const rem = Math.max(0, limit - used);
+              const pct = limit > 0 ? Math.min(100, Math.round((used / limit) * 100)) : 0;
+              return (
+                <div key={qt.key} className={`rounded px-2 py-1.5 ${qt.trackBg}`}>
+                  <div className="flex items-center justify-between mb-1">
+                    <span className={`text-[9px] font-bold uppercase tracking-wide ${qt.color}`}>{qt.label}</span>
+                    <span className={`text-[9px] font-mono font-bold ${qt.color}`}>{rem}</span>
+                  </div>
+                  <div className="h-1 bg-white/60 rounded-full overflow-hidden">
+                    <div className={`h-full rounded-full ${qt.bg}`} style={{ width: `${100 - pct}%` }} />
+                  </div>
+                  <p className="text-[8px] text-right text-muted-foreground mt-0.5 font-mono">{used}/{limit}</p>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
 
 function StatCard({ title, value, icon: Icon, bgClass, textClass, subtitle }) {
   return (
@@ -136,14 +217,16 @@ export default function AdminDashboard() {
   const event = eventSettings[0];
   const eventMaxParticipants = event?.max_participants || 200;
 
-  // Calculate quota from service definitions
+  // Calculate quota from service definitions (all 3 types summed per service)
   const totalFreeQuota = services.reduce((sum, s) => sum + (s.free_quota || 0), 0);
-  const totalPaidQuota = services.reduce((sum, s) => sum + (s.paid_quota || 0), 0);
-  const totalQuota = totalFreeQuota + totalPaidQuota || eventMaxParticipants;
+  const totalRp1Quota  = services.reduce((sum, s) => sum + (s.rp1_quota  || 0), 0);
+  const totalSpecialQuota = services.reduce((sum, s) => sum + (s.special_quota || 0), 0);
+  const totalQuota = totalFreeQuota + totalRp1Quota + totalSpecialQuota || eventMaxParticipants;
 
-  // Count actual by category
-  const freeCheckParticipants = participants.filter(p => p.participant_category === "FREE_CHECK").length;
-  const paymentParticipants = participants.filter(p => p.participant_category === "PAYMENT").length;
+  // Count actual by quota status
+  const freeCheckParticipants   = participants.filter(p => p.quota_status === "FREE").length;
+  const rp1Participants         = participants.filter(p => p.quota_status === "RP1_BRI").length;
+  const specialParticipants     = participants.filter(p => p.quota_status === "SPECIAL_PRICE").length;
 
   const stats = useMemo(() => {
     const completed = participants.filter(p => p.participant_status === "COMPLETED").length;
@@ -152,10 +235,11 @@ export default function AdminDashboard() {
     const serving = queues.filter(q => q.status === "SERVING" || q.status === "CALLED").length;
     const skipped = queues.filter(q => q.status === "SKIPPED").length;
     const cancelled = queues.filter(q => q.status === "CANCELLED").length;
-    const freeUsed = freeCheckParticipants;
-    const paidUsed = paymentParticipants;
+    const freeUsed    = freeCheckParticipants;
+    const rp1Used     = rp1Participants;
+    const specialUsed = specialParticipants;
     const remaining = totalQuota - participants.length;
-    return { completed, partial, waiting, serving, skipped, cancelled, freeUsed, paidUsed, remaining };
+    return { completed, partial, waiting, serving, skipped, cancelled, freeUsed, rp1Used, specialUsed, remaining };
   }, [participants, queues, totalQuota, freeCheckParticipants, paymentParticipants]);
 
   const fillPct = Math.min(100, Math.round((participants.length / totalQuota) * 100));
@@ -188,7 +272,7 @@ export default function AdminDashboard() {
       <TestFlowWizard isOpen={showTestWizard} onClose={() => setShowTestWizard(false)} />
       <DataConsistencyChecker isOpen={showDataChecker} onClose={() => setShowDataChecker(false)} />
 
-      {/* Free Slot Info — grouped by provider */}
+      {/* Quota Info — grouped by provider */}
       <div className="space-y-3">
         {medicalServices.length > 0 && (
           <div>
@@ -197,32 +281,9 @@ export default function AdminDashboard() {
               <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Primaya Hospital</span>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-              {medicalServices.filter(s => s.is_active).map(s => {
-                const remaining = Math.max(0, (s.free_quota || 0) - (s.used_free_quota || 0));
-                const usedPct = Math.min(100, Math.round(((s.used_free_quota || 0) / (s.free_quota || 1)) * 100));
-                return (
-                  <Card key={s.id} className={`border ${remaining <= 0 ? "border-destructive/40" : remaining <= 20 ? "border-amber-200" : "border-green-200"}`}>
-                    <CardContent className="p-3">
-                      <div className="flex items-center justify-between mb-2">
-                        <span className="text-sm font-semibold truncate">{s.service_name}</span>
-                        {remaining <= 0 ? (
-                          <Badge className="bg-red-100 text-red-700 border-red-200 text-[10px] flex-shrink-0">Penuh</Badge>
-                        ) : (
-                          <Badge className={`text-[10px] flex-shrink-0 ${remaining <= 20 ? "bg-amber-100 text-amber-700 border-amber-200" : "bg-green-100 text-green-700 border-green-200"}`}>
-                            Sisa: {remaining}
-                          </Badge>
-                        )}
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <div className="flex-1 h-1.5 bg-muted rounded-full overflow-hidden">
-                          <div className={`h-full rounded-full transition-all duration-700 ${usedPct >= 100 ? "bg-destructive" : usedPct >= 80 ? "bg-amber-400" : "bg-green-500"}`} style={{ width: `${usedPct}%` }} />
-                        </div>
-                        <span className="text-xs text-muted-foreground flex-shrink-0">{s.used_free_quota || 0}/{s.free_quota || 0}</span>
-                      </div>
-                    </CardContent>
-                  </Card>
-                );
-              })}
+              {medicalServices.filter(s => s.is_active).map(s => (
+                <ServiceQuotaCard key={s.id} service={s} />
+              ))}
             </div>
           </div>
         )}
@@ -233,32 +294,9 @@ export default function AdminDashboard() {
               <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Optik Melawai</span>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              {eyeServices.filter(s => s.is_active).map(s => {
-                const remaining = Math.max(0, (s.free_quota || 0) - (s.used_free_quota || 0));
-                const usedPct = Math.min(100, Math.round(((s.used_free_quota || 0) / (s.free_quota || 1)) * 100));
-                return (
-                  <Card key={s.id} className={`border ${remaining <= 0 ? "border-destructive/40" : remaining <= 20 ? "border-amber-200" : "border-green-200"}`}>
-                    <CardContent className="p-3">
-                      <div className="flex items-center justify-between mb-2">
-                        <span className="text-sm font-semibold truncate">{s.service_name}</span>
-                        {remaining <= 0 ? (
-                          <Badge className="bg-red-100 text-red-700 border-red-200 text-[10px] flex-shrink-0">Penuh</Badge>
-                        ) : (
-                          <Badge className={`text-[10px] flex-shrink-0 ${remaining <= 20 ? "bg-amber-100 text-amber-700 border-amber-200" : "bg-green-100 text-green-700 border-green-200"}`}>
-                            Sisa: {remaining}
-                          </Badge>
-                        )}
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <div className="flex-1 h-1.5 bg-muted rounded-full overflow-hidden">
-                          <div className={`h-full rounded-full transition-all duration-700 ${usedPct >= 100 ? "bg-destructive" : usedPct >= 80 ? "bg-amber-400" : "bg-green-500"}`} style={{ width: `${usedPct}%` }} />
-                        </div>
-                        <span className="text-xs text-muted-foreground flex-shrink-0">{s.used_free_quota || 0}/{s.free_quota || 0}</span>
-                      </div>
-                    </CardContent>
-                  </Card>
-                );
-              })}
+              {eyeServices.filter(s => s.is_active).map(s => (
+                <ServiceQuotaCard key={s.id} service={s} />
+              ))}
             </div>
           </div>
         )}
@@ -347,9 +385,32 @@ export default function AdminDashboard() {
         </Card>
         <Card>
           <CardContent className="p-4">
-            <p className="text-xs text-muted-foreground font-medium">Gratis Terpakai</p>
-            <p className="text-3xl font-black text-green-600 mt-1 leading-none">{stats.freeUsed}</p>
+            <div className="flex items-center gap-1.5 mb-1">
+              <Gift className="w-3.5 h-3.5 text-green-600" />
+              <p className="text-xs text-muted-foreground font-medium">Free Terpakai</p>
+            </div>
+            <p className="text-3xl font-black text-green-600 leading-none">{stats.freeUsed}</p>
             <p className="text-xs text-muted-foreground mt-1">dari {totalFreeQuota}</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center gap-1.5 mb-1">
+              <CreditCard className="w-3.5 h-3.5 text-blue-600" />
+              <p className="text-xs text-muted-foreground font-medium">Rp 1 BRI Terpakai</p>
+            </div>
+            <p className="text-3xl font-black text-blue-600 leading-none">{stats.rp1Used}</p>
+            <p className="text-xs text-muted-foreground mt-1">dari {totalRp1Quota}</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center gap-1.5 mb-1">
+              <Tag className="w-3.5 h-3.5 text-purple-600" />
+              <p className="text-xs text-muted-foreground font-medium">Special Terpakai</p>
+            </div>
+            <p className="text-3xl font-black text-purple-600 leading-none">{stats.specialUsed}</p>
+            <p className="text-xs text-muted-foreground mt-1">dari {totalSpecialQuota}</p>
           </CardContent>
         </Card>
       </div>
