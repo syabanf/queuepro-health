@@ -242,12 +242,6 @@ export default function PublicRegistration() {
         qr_verification_status: "NOT_SCANNED",
       });
 
-      // Public registration always uses Free Tanpa Syarat
-      await base44.entities.Service.update(form.service_id, {
-        used_free_quota: (selectedService.used_free_quota || 0) + 1,
-      });
-
-
       setResult({ participant, queue, service: selectedService });
       queryClient.invalidateQueries({ queryKey: ["pub-services"] });
       queryClient.invalidateQueries({ queryKey: ["pub-participants"] });

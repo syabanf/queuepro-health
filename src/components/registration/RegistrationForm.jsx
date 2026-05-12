@@ -112,13 +112,6 @@ export default function RegistrationForm({ services, participants = [], eventSet
         qr_verification_status: "NOT_SCANNED",
       });
 
-      // Increment the correct used counter based on quota_status
-      const quotaIncrement =
-        form.quota_status === "RP1_BRI"       ? { used_rp1_quota:     (selectedService.used_rp1_quota     || 0) + 1 }
-        : form.quota_status === "SPECIAL_PRICE" ? { used_special_quota: (selectedService.used_special_quota || 0) + 1 }
-        :                                         { used_free_quota:    (selectedService.used_free_quota    || 0) + 1 };
-      await base44.entities.Service.update(form.service_id, quotaIncrement);
-
       onSuccess({ participant, queue, service: selectedService });
       setForm({ full_name: "", phone_number: "", unit_division: "", service_id: "", quota_status: "FREE" });
     } catch (err) {
