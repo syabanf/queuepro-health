@@ -232,8 +232,10 @@ function BoothPanel({ service, participants, services, currentUser, compact = fa
           <CardContent className="p-3 space-y-3 flex-1">
             {/* Now Serving */}
             <div className={`p-3 rounded-lg border-2 transition-all ${flashActive ? "border-primary bg-primary/5" : "border-border"}`}>
-              <div className="flex items-start justify-between gap-2 mb-1">
-                <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Now Serving</p>
+              <div className="flex items-start justify-between gap-2 mb-2">
+                <span className="px-2.5 py-0.5 rounded-full bg-primary text-white text-[10px] font-black uppercase tracking-widest">
+                  NOMOR ANTRIAN
+                </span>
                 {qrBadgeCfg && activeQueue && (
                   <Badge className={`text-[10px] px-1.5 py-0.5 border gap-1 ${qrBadgeCfg.color}`}>
                     <qrBadgeCfg.icon className="w-2.5 h-2.5" />
@@ -453,8 +455,10 @@ function BoothPanel({ service, participants, services, currentUser, compact = fa
         <div className="lg:col-span-2 space-y-4">
           <Card className={`border-2 transition-all ${flashActive ? "border-primary shadow-lg shadow-primary/20" : "border-primary/20"}`}>
             <CardHeader className="pb-3">
-              <CardTitle className="text-sm text-muted-foreground uppercase tracking-wider flex items-center justify-between">
-                Now Serving
+              <CardTitle className="flex items-center justify-between">
+                <span className="px-3 py-1 rounded-full bg-primary text-white text-xs font-black uppercase tracking-widest">
+                  NOMOR ANTRIAN
+                </span>
                 {activeQueue && qrBadgeCfg && (
                   <Badge className={`text-xs px-2 py-0.5 border gap-1 ${qrBadgeCfg.color}`}>
                     <qrBadgeCfg.icon className="w-3 h-3" />
