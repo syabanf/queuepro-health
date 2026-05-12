@@ -140,14 +140,13 @@ export default function MobileMonitor() {
             <img src="/logo-bri-full.svg" alt="BRI" className="h-5 object-contain"
               onError={e => e.target.style.display='none'} />
           </div>
-
-          {/* Event info */}
-          <div className="flex-1 min-w-0 px-1">
-            <p className="font-inter text-cyan-300 text-[9px] font-bold uppercase tracking-widest leading-tight truncate">
-              {eventTagline.replace(/"/g, '')}
-            </p>
-            <p className="font-inter text-white font-black text-xs leading-tight truncate">{eventName}</p>
+          <div className="w-px h-5 bg-white/25 flex-shrink-0" />
+          <div className="bg-white rounded-lg px-2 py-1 flex items-center justify-center flex-shrink-0">
+            <img src="/logo-brilian-talks.png" alt="BRILian Talks" className="h-5 object-contain"
+              onError={e => e.target.style.display='none'} />
           </div>
+
+          <div className="flex-1" />
 
           {/* Refresh */}
           <button onClick={fetchData} className="flex items-center gap-1 text-white/50 text-[10px] active:scale-95 flex-shrink-0">

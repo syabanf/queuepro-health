@@ -319,12 +319,12 @@ export default function PublicRegistration() {
             <img src="/logo-danantara.png" alt="Danantara Indonesia" className="h-8 object-contain"
               onError={e => e.target.style.display='none'} />
           </div>
-          <div className="bg-white rounded-xl px-2.5 py-2 flex items-center justify-center flex-shrink-0 flex-1">
-            <img src="/logo-brilian-talks.png" alt="BRILian Talks" className="h-11 object-contain"
+          <div className="bg-white rounded-xl px-2.5 py-1.5 flex items-center justify-center flex-shrink-0 flex-1">
+            <img src="/logo-bri-full.svg" alt="BRI" className="h-8 object-contain"
               onError={e => e.target.style.display='none'} />
           </div>
           <div className="bg-white rounded-xl px-2.5 py-1.5 flex items-center justify-center flex-shrink-0 flex-1">
-            <img src="/logo-bri-full.svg" alt="BRI" className="h-8 object-contain"
+            <img src="/logo-brilian-talks.png" alt="BRILian Talks" className="h-8 object-contain"
               onError={e => e.target.style.display='none'} />
           </div>
         </div>

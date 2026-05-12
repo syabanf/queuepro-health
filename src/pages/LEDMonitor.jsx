@@ -199,10 +199,14 @@ export default function LEDMonitor() {
 
             <div className="w-px h-8 bg-white/20 flex-shrink-0" />
 
-            {/* Event name */}
-            <div>
-              <p className="font-inter text-cyan-300 text-xs font-bold uppercase tracking-[0.25em]">{eventTagline}</p>
-              <h1 className="font-inter text-white font-black text-xl leading-tight">{eventName}</h1>
+            {/* BRILian Talks Logo */}
+            <div className="bg-white rounded-xl px-3 py-1.5 flex items-center justify-center flex-shrink-0">
+              <img
+                src="/logo-brilian-talks.png"
+                alt="BRILian Talks"
+                className="h-8 object-contain"
+                onError={e => e.target.style.display='none'}
+              />
             </div>
           </div>
 
