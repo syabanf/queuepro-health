@@ -1,9 +1,9 @@
 import { createClient } from '@supabase/supabase-js';
 
 const SUPABASE_URL = 'https://juihnxnmwcgbflgjsuqa.supabase.co';
-const SUPABASE_ANON_KEY = 'sb_publishable_a5NliuJ4q9sNAV5-dJFPzQ_1rSZAGAa';
+const SUPABASE_KEY = 'sb_publishable_a5NliuJ4q9sNAV5-dJFPzQ_1rSZAGAa';
 
-export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+export const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
 
 function generateId() {
   return Math.random().toString(36).slice(2, 10) + Date.now().toString(36);
