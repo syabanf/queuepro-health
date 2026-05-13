@@ -180,9 +180,11 @@ export default function Participants() {
 
       const matchMedical = filterMedical === "all" || p.medQueue?.service_id === filterMedical;
       const matchEye = filterEye === "all" || p.eyeQueue?.service_id === filterEye;
+      const medQS = p.medQueue ? (p.medQueue.quota_status || "FREE") : null;
+      const eyeQS = p.eyeQueue ? (p.eyeQueue.quota_status || "FREE") : null;
       const matchSlot = filterSlot === "all" ||
-        p.medQueue?.quota_status === filterSlot ||
-        p.eyeQueue?.quota_status === filterSlot;
+        medQS === filterSlot ||
+        eyeQS === filterSlot;
       const matchStatus = filterStatus === "all" || p.computedStatus === filterStatus;
 
       return matchSearch && matchMedical && matchEye && matchSlot && matchStatus;
