@@ -62,14 +62,17 @@ function ServiceQuotaCard({ service, queues }) {
           <span className="text-xs text-muted-foreground flex-shrink-0 font-mono">{totalUsed}/{totalLimit}</span>
         </div>
 
-        {/* Per-quota rows — read used_*_quota from DB (updated by booth on DONE, realtime via Service subscription) */}
+        {/* Per-quota rows — count from queue records (same source as overall bar).
+            quota_status=null/undefined treated as FREE (registration default). */}
         {activeTypes.length > 0 && (
           <div className="grid gap-1.5" style={{ gridTemplateColumns: `repeat(${activeTypes.length}, 1fr)` }}>
             {activeTypes.map(qt => {
               const limit = service[qt.limitField] || 0;
-              const used  = service[qt.usedField]  || 0;
-              const rem   = Math.max(0, limit - used);
-              const pct   = limit > 0 ? Math.min(100, Math.round((used / limit) * 100)) : 0;
+              const used = qt.key === 'free'
+                ? svcQueues.filter(q => !q.quota_status || q.quota_status === qt.statusValue).length
+                : svcQueues.filter(q => q.quota_status === qt.statusValue).length;
+              const rem = Math.max(0, limit - used);
+              const pct = limit > 0 ? Math.min(100, Math.round((used / limit) * 100)) : 0;
               return (
                 <div key={qt.key} className={`rounded px-2 py-1.5 ${qt.trackBg}`}>
                   <div className="flex items-center justify-between mb-1">
