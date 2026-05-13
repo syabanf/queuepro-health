@@ -50,20 +50,26 @@ function quotaColor(val) {
 // Only SERVING and DONE count as a consumed quota slot
 const OCCUPYING_STATUSES = new Set(["SERVING", "DONE"]);
 
-// Read used_*_quota directly from DB service record (always fresh, no queue-counting issues)
-function isQuotaFull(svc, val) {
+// Count used slots from queue records (same logic as AdminDashboard ServiceQuotaCard)
+// null quota_status treated as FREE (registration default)
+function usedByType(queues, val) {
+  return val === "FREE"
+    ? queues.filter(q => OCCUPYING_STATUSES.has(q.status) && (!q.quota_status || q.quota_status === "FREE")).length
+    : queues.filter(q => OCCUPYING_STATUSES.has(q.status) && q.quota_status === val).length;
+}
+function isQuotaFull(svc, val, queues) {
   const opt = QUOTA_OPTIONS.find(o => o.value === val);
   if (!opt) return false;
   const limit = svc[opt.limitField] || 0;
   if (limit === 0) return false;
-  return (svc[opt.usedField] || 0) >= limit;
+  return usedByType(queues, val) >= limit;
 }
-function quotaRemaining(svc, val) {
+function quotaRemaining(svc, val, queues) {
   const opt = QUOTA_OPTIONS.find(o => o.value === val);
   if (!opt) return null;
   const limit = svc[opt.limitField] || 0;
   if (limit === 0) return null;
-  return Math.max(0, limit - (svc[opt.usedField] || 0));
+  return Math.max(0, limit - usedByType(queues, val));
 }
 
 async function logQueueEvent({ queue_id, event_type, previous_status, new_status, performed_by, notes }) {
@@ -338,8 +344,8 @@ function BoothPanel({ service, participants, services, currentUser, compact = fa
                       </SelectTrigger>
                       <SelectContent>
                         {QUOTA_OPTIONS.filter(opt => (service[opt.limitField] || 0) > 0).map(opt => {
-                          const full = isQuotaFull(service, opt.value);
-                          const rem = quotaRemaining(service, opt.value);
+                          const full = isQuotaFull(service, opt.value, queues);
+                          const rem = quotaRemaining(service, opt.value, queues);
                           return (
                             <SelectItem key={opt.value} value={opt.value} disabled={full && activeQueue.quota_status !== opt.value}>
                               <span className={opt.color}>{opt.label}</span>
@@ -601,8 +607,8 @@ function BoothPanel({ service, participants, services, currentUser, compact = fa
                         </SelectTrigger>
                         <SelectContent>
                           {QUOTA_OPTIONS.filter(opt => (service[opt.limitField] || 0) > 0).map(opt => {
-                            const full = isQuotaFull(service, opt.value);
-                            const rem = quotaRemaining(service, opt.value);
+                            const full = isQuotaFull(service, opt.value, queues);
+                            const rem = quotaRemaining(service, opt.value, queues);
                             return (
                               <SelectItem key={opt.value} value={opt.value} disabled={full && activeQueue.quota_status !== opt.value}>
                                 <span className={opt.color}>{opt.label}</span>
