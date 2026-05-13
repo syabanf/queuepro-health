@@ -147,11 +147,19 @@ export default function Participants() {
       // Auto-compute status
       let computedStatus = p.participant_status;
       if (computedStatus !== "CANCELLED") {
-        const medDone = medQueue?.status === "DONE";
-        const eyeDone = eyeQueue?.status === "DONE";
-        if (medDone && eyeDone) computedStatus = "COMPLETED";
-        else if (medDone || eyeDone) computedStatus = "PARTIALLY_COMPLETED";
-        else computedStatus = "REGISTERED";
+        const hasMed = !!medQueue;
+        const hasEye = !!eyeQueue;
+        const medDone = hasMed && medQueue.status === "DONE";
+        const eyeDone = hasEye && eyeQueue.status === "DONE";
+        if (hasMed && hasEye) {
+          // peserta daftar dua layanan
+          if (medDone && eyeDone) computedStatus = "COMPLETED";
+          else if (medDone || eyeDone) computedStatus = "PARTIALLY_COMPLETED";
+          else computedStatus = "REGISTERED";
+        } else {
+          // peserta daftar satu layanan — done = completed
+          computedStatus = (medDone || eyeDone) ? "COMPLETED" : "REGISTERED";
+        }
       }
 
       return { ...p, medQueue, eyeQueue, computedStatus };
@@ -170,11 +178,11 @@ export default function Participants() {
         p.medQueue?.queue_number?.toLowerCase().includes(q) ||
         p.eyeQueue?.queue_number?.toLowerCase().includes(q);
 
-      const matchMedical = filterMedical === "all" || p.medical_service_id === filterMedical;
-      const matchEye = filterEye === "all" || p.eye_service_id === filterEye;
+      const matchMedical = filterMedical === "all" || p.medQueue?.service_id === filterMedical;
+      const matchEye = filterEye === "all" || p.eyeQueue?.service_id === filterEye;
       const matchSlot = filterSlot === "all" ||
-        p.medical_slot_type === filterSlot ||
-        p.eye_slot_type === filterSlot;
+        p.medQueue?.quota_status === filterSlot ||
+        p.eyeQueue?.quota_status === filterSlot;
       const matchStatus = filterStatus === "all" || p.computedStatus === filterStatus;
 
       return matchSearch && matchMedical && matchEye && matchSlot && matchStatus;
