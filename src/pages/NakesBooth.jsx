@@ -39,6 +39,8 @@ const QUOTA_OPTIONS = [
   { value: "SPECIAL_PRICE",label: "Special Price",   color: "text-purple-700", limitField: "special_quota", usedField: "used_special_quota" },
 ];
 
+
+
 function quotaLabel(val) {
   return QUOTA_OPTIONS.find(o => o.value === val)?.label || val;
 }
