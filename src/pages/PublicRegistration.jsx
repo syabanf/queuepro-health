@@ -127,6 +127,12 @@ export default function PublicRegistration() {
     refetchInterval: 60000,
   });
 
+  const { data: allQueues = [], isLoading: loadingQueues } = useQuery({
+    queryKey: ["pub-queues"],
+    queryFn: () => base44.entities.Queue.list(),
+    refetchInterval: 15000,
+  });
+
   useEffect(() => {
     const unsubServices = base44.entities.Service.subscribe(() => {
       queryClient.invalidateQueries({ queryKey: ["pub-services"] });
@@ -146,11 +152,17 @@ export default function PublicRegistration() {
   const eyeServices = activeServices.filter(s => s.service_group === "EYE_CHECK");
   const selectedService = services.find(s => s.id === form.service_id);
 
-  const getRemainingSlots = (s) =>
-    Math.max(0, (s.free_quota    || 0) - (s.used_free_quota    || 0)) +
-    Math.max(0, (s.rp1_quota     || 0) - (s.used_rp1_quota     || 0)) +
-    Math.max(0, (s.special_quota || 0) - (s.used_special_quota || 0));
-  const isServiceFull = (s) => getRemainingSlots(s) <= 0;
+  const OCCUPYING_STATUSES = new Set(["SERVING", "DONE"]);
+  const getRemainingSlots = (s) => {
+    const totalLimit = (s.free_quota || 0) + (s.rp1_quota || 0) + (s.special_quota || 0);
+    const used = allQueues.filter(q => q.service_id === s.id && OCCUPYING_STATUSES.has(q.status)).length;
+    return Math.max(0, totalLimit - used);
+  };
+  const isServiceFull = (s) => {
+    const totalLimit = (s.free_quota || 0) + (s.rp1_quota || 0) + (s.special_quota || 0);
+    if (totalLimit === 0) return false;
+    return getRemainingSlots(s) <= 0;
+  };
 
   const totalQuota = services.reduce((sum, s) => sum + (s.free_quota || 0) + (s.paid_quota || 0), 0)
     || event?.max_participants || 200;
@@ -453,15 +465,18 @@ export default function PublicRegistration() {
                           <span className="text-xs font-bold text-[#003D79] uppercase tracking-wide">Primaya Hospital</span>
                         </div>
                         <div className="space-y-1.5 pl-1">
-                          {medicalServices.map(s => (
-                            <ServiceOption
-                              key={s.id} service={s}
-                              selected={form.service_id === s.id}
-                              onSelect={val => setForm(p => ({ ...p, service_id: val }))}
-                              getRemainingSlots={getRemainingSlots}
-                              isServiceFull={isServiceFull}
-                            />
-                          ))}
+                          {loadingQueues
+                            ? <div className="animate-pulse h-10 rounded-lg bg-muted" />
+                            : medicalServices.map(s => (
+                                <ServiceOption
+                                  key={s.id} service={s}
+                                  selected={form.service_id === s.id}
+                                  onSelect={val => setForm(p => ({ ...p, service_id: val }))}
+                                  getRemainingSlots={getRemainingSlots}
+                                  isServiceFull={isServiceFull}
+                                />
+                              ))
+                          }
                         </div>
                       </div>
                     )}
@@ -475,15 +490,18 @@ export default function PublicRegistration() {
                           <span className="text-xs font-bold text-red-700 uppercase tracking-wide">Optik Melawai</span>
                         </div>
                         <div className="space-y-1.5 pl-1">
-                          {eyeServices.map(s => (
-                            <ServiceOption
-                              key={s.id} service={s}
-                              selected={form.service_id === s.id}
-                              onSelect={val => setForm(p => ({ ...p, service_id: val }))}
-                              getRemainingSlots={getRemainingSlots}
-                              isServiceFull={isServiceFull}
-                            />
-                          ))}
+                          {loadingQueues
+                            ? <div className="animate-pulse h-10 rounded-lg bg-muted" />
+                            : eyeServices.map(s => (
+                                <ServiceOption
+                                  key={s.id} service={s}
+                                  selected={form.service_id === s.id}
+                                  onSelect={val => setForm(p => ({ ...p, service_id: val }))}
+                                  getRemainingSlots={getRemainingSlots}
+                                  isServiceFull={isServiceFull}
+                                />
+                              ))
+                          }
                         </div>
                       </div>
                     )}

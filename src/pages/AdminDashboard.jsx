@@ -16,26 +16,20 @@ import { Link } from "react-router-dom";
 import { useAuth } from "@/lib/AuthContext";
 
 const QUOTA_TYPES = [
-  { key: 'free',    limitField: 'free_quota',    usedField: 'used_free_quota',    label: 'Free',    color: 'text-green-700', bg: 'bg-green-500', trackBg: 'bg-green-100' },
-  { key: 'rp1',     limitField: 'rp1_quota',     usedField: 'used_rp1_quota',     label: 'Rp 1 BRI', color: 'text-blue-700',  bg: 'bg-blue-500',  trackBg: 'bg-blue-100'  },
-  { key: 'special', limitField: 'special_quota', usedField: 'used_special_quota', label: 'Special', color: 'text-purple-700',bg: 'bg-purple-500',trackBg: 'bg-purple-100'},
+  { key: 'free',    limitField: 'free_quota',    statusValue: 'FREE',          label: 'Free',      color: 'text-green-700',  bg: 'bg-green-500',  trackBg: 'bg-green-100'  },
+  { key: 'rp1',     limitField: 'rp1_quota',     statusValue: 'RP1_BRI',       label: 'Rp 1 BRI',  color: 'text-blue-700',   bg: 'bg-blue-500',   trackBg: 'bg-blue-100'   },
+  { key: 'special', limitField: 'special_quota', statusValue: 'SPECIAL_PRICE', label: 'Special',   color: 'text-purple-700', bg: 'bg-purple-500', trackBg: 'bg-purple-100' },
 ];
 
-function svcTotalLimit(s) {
-  return QUOTA_TYPES.reduce((sum, qt) => sum + (s[qt.limitField] || 0), 0);
-}
-function svcTotalUsed(s) {
-  return QUOTA_TYPES.reduce((sum, qt) => sum + (s[qt.usedField] || 0), 0);
-}
-function svcTotalRemaining(s) {
-  return Math.max(0, svcTotalLimit(s) - svcTotalUsed(s));
-}
+// Only SERVING and DONE count as a consumed quota slot
+const OCCUPYING_STATUSES = new Set(["SERVING", "DONE"]);
 
-function ServiceQuotaCard({ service }) {
+function ServiceQuotaCard({ service, queues }) {
   const isEye = service.service_group === "EYE_CHECK";
-  const totalLimit = svcTotalLimit(service);
-  const totalUsed = svcTotalUsed(service);
-  const totalRem = svcTotalRemaining(service);
+  const svcQueues = queues.filter(q => q.service_id === service.id && OCCUPYING_STATUSES.has(q.status));
+  const totalLimit = QUOTA_TYPES.reduce((sum, qt) => sum + (service[qt.limitField] || 0), 0);
+  const totalUsed = svcQueues.length;
+  const totalRem = Math.max(0, totalLimit - totalUsed);
   const fillPct = totalLimit > 0 ? Math.min(100, Math.round((totalUsed / totalLimit) * 100)) : 0;
   const activeTypes = QUOTA_TYPES.filter(qt => (service[qt.limitField] || 0) > 0);
 
@@ -73,7 +67,7 @@ function ServiceQuotaCard({ service }) {
           <div className="grid gap-1.5" style={{ gridTemplateColumns: `repeat(${activeTypes.length}, 1fr)` }}>
             {activeTypes.map(qt => {
               const limit = service[qt.limitField] || 0;
-              const used = service[qt.usedField] || 0;
+              const used = svcQueues.filter(q => q.quota_status === qt.statusValue).length;
               const rem = Math.max(0, limit - used);
               const pct = limit > 0 ? Math.min(100, Math.round((used / limit) * 100)) : 0;
               return (
@@ -194,7 +188,7 @@ const { user } = useAuth();
     refetchInterval: 5000,
   });
 
-  const { data: queues = [] } = useQuery({
+  const { data: queues = [], isLoading: loadingQueues } = useQuery({
     queryKey: ["queues"],
     queryFn: () => base44.entities.Queue.list(),
     refetchInterval: 5000,
@@ -272,9 +266,12 @@ const { user } = useAuth();
               <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Primaya Hospital</span>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-              {medicalServices.filter(s => s.is_active).map(s => (
-                <ServiceQuotaCard key={s.id} service={s} />
-              ))}
+              {loadingQueues
+                ? [1,2,3].map(i => <Card key={i} className="border border-primary/20 animate-pulse"><CardContent className="p-3 h-24" /></Card>)
+                : medicalServices.filter(s => s.is_active).map(s => (
+                    <ServiceQuotaCard key={s.id} service={s} queues={queues} />
+                  ))
+              }
             </div>
           </div>
         )}
@@ -285,9 +282,12 @@ const { user } = useAuth();
               <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Optik Melawai</span>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              {eyeServices.filter(s => s.is_active).map(s => (
-                <ServiceQuotaCard key={s.id} service={s} />
-              ))}
+              {loadingQueues
+                ? [1,2].map(i => <Card key={i} className="border border-accent/30 animate-pulse"><CardContent className="p-3 h-24" /></Card>)
+                : eyeServices.filter(s => s.is_active).map(s => (
+                    <ServiceQuotaCard key={s.id} service={s} queues={queues} />
+                  ))
+              }
             </div>
           </div>
         )}
