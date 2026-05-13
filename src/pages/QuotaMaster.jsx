@@ -17,6 +17,17 @@ const UNLIMITED = 9999;
 const isUnlimited = (val) => (val || 0) >= UNLIMITED;
 const fmtQuota = (val) => isUnlimited(val) ? "∞" : String(val ?? 0);
 
+// ── Shared queue-based used computation ──────────────────────────────────────
+const OCCUPYING = new Set(["SERVING", "DONE"]);
+
+function usedFromQueues(allQueues, serviceId, quotaStatus) {
+  const svcQueues = allQueues.filter(q => q.service_id === serviceId && OCCUPYING.has(q.status));
+  if (quotaStatus === "FREE") {
+    return svcQueues.filter(q => !q.quota_status || q.quota_status === "FREE").length;
+  }
+  return svcQueues.filter(q => q.quota_status === quotaStatus).length;
+}
+
 // ── Quota type definitions ────────────────────────────────────────────────────
 const QUOTA_TYPES = [
   {
@@ -24,6 +35,7 @@ const QUOTA_TYPES = [
     limitField: 'free_quota',
     usedField: 'used_free_quota',
     priceField: 'free_price',
+    quotaStatus: 'FREE',
     label: 'Free Tanpa Syarat',
     shortLabel: 'Free',
     icon: Gift,
@@ -39,6 +51,7 @@ const QUOTA_TYPES = [
     limitField: 'rp1_quota',
     usedField: 'used_rp1_quota',
     priceField: 'rp1_price',
+    quotaStatus: 'RP1_BRI',
     label: 'Rp 1 BRI',
     shortLabel: 'Rp 1 BRI',
     icon: CreditCard,
@@ -54,6 +67,7 @@ const QUOTA_TYPES = [
     limitField: 'special_quota',
     usedField: 'used_special_quota',
     priceField: 'special_price',
+    quotaStatus: 'SPECIAL_PRICE',
     label: 'Special Price',
     shortLabel: 'Special',
     icon: Tag,
@@ -71,24 +85,12 @@ const fmtRupiah = (val) => {
   return "Rp " + Number(val).toLocaleString("id-ID");
 };
 
-function getRemaining(svc, qt) {
-  const limit = svc[qt.limitField] || 0;
-  if (isUnlimited(limit)) return UNLIMITED;
-  return Math.max(0, limit - (svc[qt.usedField] || 0));
-}
 function svcIsUnlimited(svc) {
   return QUOTA_TYPES.some(qt => isUnlimited(svc[qt.limitField]));
-}
-function getTotalRemaining(svc) {
-  if (svcIsUnlimited(svc)) return UNLIMITED;
-  return QUOTA_TYPES.reduce((sum, qt) => sum + getRemaining(svc, qt), 0);
 }
 function getTotalLimit(svc) {
   if (svcIsUnlimited(svc)) return UNLIMITED;
   return QUOTA_TYPES.reduce((sum, qt) => sum + (svc[qt.limitField] || 0), 0);
-}
-function getTotalUsed(svc) {
-  return QUOTA_TYPES.reduce((sum, qt) => sum + (svc[qt.usedField] || 0), 0);
 }
 
 // ── Progress bar ─────────────────────────────────────────────────────────────
@@ -106,12 +108,16 @@ function QuotaBar({ used, total, barColor }) {
 }
 
 // ── Single service quota card ─────────────────────────────────────────────────
-function ServiceQuotaCard({ service, onChange }) {
+function ServiceQuotaCard({ service, onChange, allQueues = [] }) {
   const isEye = service.service_group === "EYE_CHECK";
   const Icon = isEye ? Eye : Stethoscope;
   const totalLimit = getTotalLimit(service);
-  const totalUsed = getTotalUsed(service);
-  const totalRem = getTotalRemaining(service);
+  const totalUsed = ["FREE", "RP1_BRI", "SPECIAL_PRICE"].reduce(
+    (s, v) => s + usedFromQueues(allQueues, service.id, v), 0
+  );
+  const totalRem = svcIsUnlimited(service)
+    ? UNLIMITED
+    : Math.max(0, totalLimit - totalUsed);
   const fillPct = totalLimit > 0 ? Math.min(100, Math.round((totalUsed / totalLimit) * 100)) : 0;
 
   const set = (field, val) => onChange({ ...service, [field]: val });
@@ -169,9 +175,9 @@ function ServiceQuotaCard({ service, onChange }) {
         {QUOTA_TYPES.map(qt => {
           const QtIcon = qt.icon;
           const limit = service[qt.limitField] || 0;
-          const used = service[qt.usedField] || 0;
+          const used = usedFromQueues(allQueues, service.id, qt.quotaStatus);
           const price = service[qt.priceField] ?? 0;
-          const rem = getRemaining(service, qt);
+          const rem = isUnlimited(limit) ? UNLIMITED : Math.max(0, limit - used);
 
           return (
             <div key={qt.key} className={`rounded-lg border p-3 ${qt.bg} ${qt.border}`}>
@@ -229,7 +235,7 @@ function ServiceQuotaCard({ service, onChange }) {
 }
 
 // ── Summary row ───────────────────────────────────────────────────────────────
-function SummaryCard({ services }) {
+function SummaryCard({ services, allQueues }) {
   const allActive = services.filter(s => s.is_active);
 
   return (
@@ -250,7 +256,7 @@ function SummaryCard({ services }) {
           const QtIcon = qt.icon;
           const hasUnlimited = allActive.some(s => isUnlimited(s[qt.limitField]));
           const total = hasUnlimited ? UNLIMITED : allActive.reduce((sum, s) => sum + (s[qt.limitField] || 0), 0);
-          const used = allActive.reduce((sum, s) => sum + (s[qt.usedField] || 0), 0);
+          const used = allActive.reduce((sum, s) => sum + usedFromQueues(allQueues, s.id, qt.quotaStatus), 0);
           return (
             <Card key={qt.key}>
               <CardContent className="p-3">
@@ -294,8 +300,10 @@ function SummaryCard({ services }) {
                 {allActive.map(s => {
                   const isEye = s.service_group === "EYE_CHECK";
                   const totalLimit = getTotalLimit(s);
-                  const totalUsed = getTotalUsed(s);
-                  const totalRem = getTotalRemaining(s);
+                  const totalUsed = ["FREE", "RP1_BRI", "SPECIAL_PRICE"].reduce(
+                    (acc, v) => acc + usedFromQueues(allQueues, s.id, v), 0
+                  );
+                  const totalRem = svcIsUnlimited(s) ? UNLIMITED : Math.max(0, totalLimit - totalUsed);
                   const fillPct = isUnlimited(totalLimit) ? 0 : totalLimit > 0 ? Math.min(100, Math.round((totalUsed / totalLimit) * 100)) : 0;
 
                   return (
@@ -318,8 +326,8 @@ function SummaryCard({ services }) {
                       </td>
                       {QUOTA_TYPES.map(qt => {
                         const limit = s[qt.limitField] || 0;
-                        const used = s[qt.usedField] || 0;
-                        const rem = getRemaining(s, qt);
+                        const used = usedFromQueues(allQueues, s.id, qt.quotaStatus);
+                        const rem = isUnlimited(limit) ? UNLIMITED : Math.max(0, limit - used);
                         const hasLimit = limit > 0;
                         return (
                           <td key={qt.key} className="py-2.5 px-3 text-center">
@@ -369,6 +377,12 @@ export default function QuotaMaster() {
     refetchInterval: 5000,
   });
 
+  const { data: allQueues = [] } = useQuery({
+    queryKey: ["queues"],
+    queryFn: () => base44.entities.Queue.list(),
+    refetchInterval: 5000,
+  });
+
   const [servicesForm, setServicesForm] = useState([]);
   const [isDirty, setIsDirty] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -377,6 +391,12 @@ export default function QuotaMaster() {
   useEffect(() => {
     if (services.length > 0) setServicesForm(services);
   }, [services]);
+
+  useEffect(() => {
+    const unsubS = base44.entities.Service.subscribe(() => queryClient.invalidateQueries({ queryKey: ["services"] }));
+    const unsubQ = base44.entities.Queue.subscribe(() => queryClient.invalidateQueries({ queryKey: ["queues"] }));
+    return () => { unsubS(); unsubQ(); };
+  }, [queryClient]);
 
   const handleChange = (updated) => {
     setServicesForm(prev => prev.map(s => s.id === updated.id ? updated : s));
@@ -487,7 +507,7 @@ export default function QuotaMaster() {
       </div>
 
       {/* Summary */}
-      <SummaryCard services={servicesForm} />
+      <SummaryCard services={servicesForm} allQueues={allQueues} />
 
       {/* Layanan Medis */}
       {medicalServices.length > 0 && (
@@ -498,7 +518,7 @@ export default function QuotaMaster() {
           </div>
           <div className="space-y-3">
             {medicalServices.map(s => (
-              <ServiceQuotaCard key={s.id} service={s} onChange={handleChange} />
+              <ServiceQuotaCard key={s.id} service={s} onChange={handleChange} allQueues={allQueues} />
             ))}
           </div>
         </div>
@@ -513,7 +533,7 @@ export default function QuotaMaster() {
           </div>
           <div className="space-y-3">
             {eyeServices.map(s => (
-              <ServiceQuotaCard key={s.id} service={s} onChange={handleChange} />
+              <ServiceQuotaCard key={s.id} service={s} onChange={handleChange} allQueues={allQueues} />
             ))}
           </div>
         </div>

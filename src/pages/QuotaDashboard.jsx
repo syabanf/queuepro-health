@@ -6,27 +6,35 @@ import { Badge } from "@/components/ui/badge";
 import { Activity, Stethoscope, Eye, RefreshCw } from "lucide-react";
 import PageHeader from "@/components/layout/PageHeader";
 
-function QuotaTableRow({ service, isEye }) {
-  // Full Free tier
-  const freeTotal = service.free_quota || 0;
-  const freeUsed = service.used_free_quota || 0;
-  const freeRem = freeTotal - freeUsed;
-  const fullFreePct = freeTotal > 0 ? Math.min(100, (freeUsed / freeTotal) * 100) : 0;
+// ── Shared queue-based used computation ──────────────────────────────────────
+const OCCUPYING = new Set(["SERVING", "DONE"]);
 
-  // CC Rp 1 tier
-  const ccRp1Total = service.cc_rp1_quota || 0;
-  const ccRp1Used = service.used_free_quota || 0;
-  const ccRp1Rem = ccRp1Total - ccRp1Used;
-  const ccRp1Pct = ccRp1Total > 0 ? Math.min(100, (ccRp1Used / ccRp1Total) * 100) : 0;
+function usedFromQueues(allQueues, serviceId, quotaStatus) {
+  const svcQueues = allQueues.filter(q => q.service_id === serviceId && OCCUPYING.has(q.status));
+  if (quotaStatus === "FREE") {
+    return svcQueues.filter(q => !q.quota_status || q.quota_status === "FREE").length;
+  }
+  return svcQueues.filter(q => q.quota_status === quotaStatus).length;
+}
 
-  // Full Paid tier
-  const paidTotal = service.paid_quota || 0;
-  const paidUsed = service.used_paid_quota || 0;
-  const fullPaidRem = paidTotal - paidUsed;
-  const fullPaidPct = paidTotal > 0 ? Math.min(100, (paidUsed / paidTotal) * 100) : 0;
+function QuotaTableRow({ service, isEye, queues }) {
+  // Free tier
+  const freeUsed    = usedFromQueues(queues, service.id, "FREE");
+  const rp1Used     = usedFromQueues(queues, service.id, "RP1_BRI");
+  const specialUsed = usedFromQueues(queues, service.id, "SPECIAL_PRICE");
+  const freeTotal    = service.free_quota    || 0;
+  const rp1Total     = service.rp1_quota     || 0;
+  const specialTotal = service.special_quota || 0;
 
-  const totalSlot = service.total_slot || 0;
-  const totalUsed = freeUsed + ccRp1Used + paidUsed;
+  const freeRem    = freeTotal    - freeUsed;
+  const rp1Rem     = rp1Total     - rp1Used;
+  const specialRem = specialTotal - specialUsed;
+
+  const freePct    = freeTotal    > 0 ? Math.min(100, (freeUsed    / freeTotal)    * 100) : 0;
+  const rp1Pct     = rp1Total     > 0 ? Math.min(100, (rp1Used     / rp1Total)     * 100) : 0;
+  const specialPct = specialTotal > 0 ? Math.min(100, (specialUsed / specialTotal) * 100) : 0;
+
+  const totalUsed = freeUsed + rp1Used + specialUsed;
   const isUnlimited = service.is_unlimited;
 
   const renderQuota = (total, used, pct) => {
@@ -57,20 +65,22 @@ function QuotaTableRow({ service, isEye }) {
         <p className="text-sm font-medium">{service.service_name}</p>
         <p className="text-xs text-muted-foreground">Booth {service.booth_number}</p>
       </td>
-      {/* Tanpa Syarat (Full Free) */}
+      {/* Free */}
       <td className="py-3 px-4 text-center text-sm font-medium">{freeTotal}</td>
       <td className="py-3 px-4 text-center text-sm font-bold text-green-700">{freeUsed}</td>
-      <td className="py-3 px-4">{renderQuota(freeTotal, freeUsed, fullFreePct)}</td>
-      {/* Dengan CC Rp 1 */}
-      <td className="py-3 px-4 text-center text-sm font-medium">{ccRp1Total || "-"}</td>
-      <td className="py-3 px-4 text-center text-sm font-bold text-blue-700">{ccRp1Used}</td>
-      <td className="py-3 px-4">{ccRp1Total > 0 ? renderQuota(ccRp1Total, ccRp1Used, ccRp1Pct) : "-"}</td>
-      {/* Berbayar Penuh */}
-      <td className="py-3 px-4 text-center text-sm font-medium">{paidTotal || "-"}</td>
-      <td className="py-3 px-4 text-center text-sm font-bold text-orange-600">{paidUsed}</td>
-      <td className="py-3 px-4">{paidTotal > 0 ? renderQuota(paidTotal, paidUsed, fullPaidPct) : "-"}</td>
+      <td className="py-3 px-4">{renderQuota(freeTotal, freeUsed, freePct)}</td>
+      {/* Rp 1 BRI */}
+      <td className="py-3 px-4 text-center text-sm font-medium">{rp1Total || "-"}</td>
+      <td className="py-3 px-4 text-center text-sm font-bold text-blue-700">{rp1Used}</td>
+      <td className="py-3 px-4">{rp1Total > 0 ? renderQuota(rp1Total, rp1Used, rp1Pct) : "-"}</td>
+      {/* Special Price */}
+      <td className="py-3 px-4 text-center text-sm font-medium">{specialTotal || "-"}</td>
+      <td className="py-3 px-4 text-center text-sm font-bold text-orange-600">{specialUsed}</td>
+      <td className="py-3 px-4">{specialTotal > 0 ? renderQuota(specialTotal, specialUsed, specialPct) : "-"}</td>
       {/* Total Slot */}
-      <td className="py-3 px-4 text-center text-sm font-medium">{isUnlimited ? "Unlimited" : totalSlot}</td>
+      <td className="py-3 px-4 text-center text-sm font-medium">
+        {isUnlimited ? "Unlimited" : freeTotal + rp1Total + specialTotal}
+      </td>
     </tr>
   );
 }
@@ -113,12 +123,14 @@ export default function QuotaDashboard() {
 
   const medical = services.filter(s => s.service_group === "MEDICAL");
   const eye = services.filter(s => s.service_group === "EYE_CHECK");
-  const totalFullFreeUsed = services.reduce((a, s) => a + (s.used_free_quota || 0), 0);
-  const totalCcRp1Used = services.reduce((a, s) => a + (s.used_free_quota || 0), 0);
-  const totalFullPaidUsed = services.reduce((a, s) => a + (s.used_paid_quota || 0), 0);
-  const totalFreeQuota = services.reduce((a, s) => a + (s.free_quota || 0), 0);
-  const totalCcRp1Quota = services.reduce((a, s) => a + (s.cc_rp1_quota || 0), 0);
-  const totalPaidQuota = services.reduce((a, s) => a + (s.paid_quota || 0), 0);
+
+  const totalFreeUsed    = services.reduce((s, svc) => s + usedFromQueues(queues, svc.id, "FREE"), 0);
+  const totalRp1Used     = services.reduce((s, svc) => s + usedFromQueues(queues, svc.id, "RP1_BRI"), 0);
+  const totalSpecialUsed = services.reduce((s, svc) => s + usedFromQueues(queues, svc.id, "SPECIAL_PRICE"), 0);
+  const totalFreeQuota    = services.reduce((a, s) => a + (s.free_quota    || 0), 0);
+  const totalRp1Quota     = services.reduce((a, s) => a + (s.rp1_quota     || 0), 0);
+  const totalSpecialQuota = services.reduce((a, s) => a + (s.special_quota || 0), 0);
+
   const activeBooths = services.filter(s => s.is_active).length;
   const lastUpdatedStr = dataUpdatedAt ? new Date(dataUpdatedAt).toLocaleTimeString("id-ID") : "—";
 
@@ -127,9 +139,9 @@ export default function QuotaDashboard() {
       <tr className="bg-muted/60 border-b border-border">
         <th className="text-left text-xs font-semibold text-muted-foreground py-3 px-4 w-12">Kode</th>
         <th className="text-left text-xs font-semibold text-muted-foreground py-3 px-4">Layanan</th>
-        <th className="text-center text-xs font-semibold text-muted-foreground py-3 px-4" colSpan={3}>Tanpa Syarat</th>
-        <th className="text-center text-xs font-semibold text-muted-foreground py-3 px-4" colSpan={3}>Dengan CC Rp 1</th>
-        <th className="text-center text-xs font-semibold text-muted-foreground py-3 px-4" colSpan={3}>Berbayar Penuh</th>
+        <th className="text-center text-xs font-semibold text-muted-foreground py-3 px-4" colSpan={3}>Free</th>
+        <th className="text-center text-xs font-semibold text-muted-foreground py-3 px-4" colSpan={3}>Rp 1 BRI</th>
+        <th className="text-center text-xs font-semibold text-muted-foreground py-3 px-4" colSpan={3}>Special Price</th>
         <th className="text-center text-xs font-semibold text-muted-foreground py-3 px-4">Total Slot</th>
       </tr>
       <tr className="bg-muted/30 border-b border-border">
@@ -173,23 +185,23 @@ export default function QuotaDashboard() {
         </Card>
         <Card>
           <CardContent className="p-5">
-            <p className="text-xs text-muted-foreground font-medium">Tanpa Syarat</p>
-            <p className="text-3xl font-black text-green-600 mt-1">{totalFullFreeUsed}</p>
+            <p className="text-xs text-muted-foreground font-medium">Free</p>
+            <p className="text-3xl font-black text-green-600 mt-1">{totalFreeUsed}</p>
             <p className="text-xs text-muted-foreground mt-1">dari {totalFreeQuota} total</p>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="p-5">
-            <p className="text-xs text-muted-foreground font-medium">CC Rp 1</p>
-            <p className="text-3xl font-black text-blue-600 mt-1">{totalCcRp1Used}</p>
-            <p className="text-xs text-muted-foreground mt-1">dari {totalCcRp1Quota} total</p>
+            <p className="text-xs text-muted-foreground font-medium">Rp 1 BRI</p>
+            <p className="text-3xl font-black text-blue-600 mt-1">{totalRp1Used}</p>
+            <p className="text-xs text-muted-foreground mt-1">dari {totalRp1Quota} total</p>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="p-5">
-            <p className="text-xs text-muted-foreground font-medium">Berbayar Penuh</p>
-            <p className="text-3xl font-black text-orange-600 mt-1">{totalFullPaidUsed}</p>
-            <p className="text-xs text-muted-foreground mt-1">dari {totalPaidQuota} total</p>
+            <p className="text-xs text-muted-foreground font-medium">Special Price</p>
+            <p className="text-3xl font-black text-orange-600 mt-1">{totalSpecialUsed}</p>
+            <p className="text-xs text-muted-foreground mt-1">dari {totalSpecialQuota} total</p>
           </CardContent>
         </Card>
         <Card>
@@ -215,7 +227,7 @@ export default function QuotaDashboard() {
               <tbody>
                 {medical.length === 0
                   ? <tr><td colSpan={12} className="text-center py-8 text-sm text-muted-foreground">Tidak ada data</td></tr>
-                  : medical.map(s => <QuotaTableRow key={s.id} service={s} isEye={false} />)
+                  : medical.map(s => <QuotaTableRow key={s.id} service={s} isEye={false} queues={queues} />)
                 }
               </tbody>
             </table>
@@ -237,7 +249,7 @@ export default function QuotaDashboard() {
               <tbody>
                 {eye.length === 0
                   ? <tr><td colSpan={12} className="text-center py-8 text-sm text-muted-foreground">Tidak ada data</td></tr>
-                  : eye.map(s => <QuotaTableRow key={s.id} service={s} isEye={true} />)
+                  : eye.map(s => <QuotaTableRow key={s.id} service={s} isEye={true} queues={queues} />)
                 }
               </tbody>
             </table>
