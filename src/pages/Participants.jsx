@@ -19,7 +19,7 @@ import {
 import { format } from "date-fns";
 import PageHeader from "@/components/layout/PageHeader";
 import { printCoupon } from "@/lib/couponPrinter";
-import { PARTICIPANT_STATUS_LABELS, PARTICIPANT_STATUS_COLORS, SLOT_TYPE_COLORS } from "@/lib/registrationUtils";
+import { PARTICIPANT_STATUS_LABELS, PARTICIPANT_STATUS_COLORS } from "@/lib/registrationUtils";
 
 const PAGE_SIZE = 15;
 
@@ -39,11 +39,18 @@ function StatusBadge({ status }) {
   );
 }
 
-function SlotBadge({ type }) {
+const QUOTA_STATUS_CONFIG = {
+  FREE:          { label: "Free",          cls: "bg-green-50 text-green-700 border-green-200" },
+  RP1_BRI:       { label: "Rp 1 BRI",      cls: "bg-blue-50 text-blue-700 border-blue-200" },
+  SPECIAL_PRICE: { label: "Special Price", cls: "bg-purple-50 text-purple-700 border-purple-200" },
+};
+
+function QuotaBadge({ queue }) {
+  if (!queue) return <span className="text-muted-foreground text-xs">—</span>;
+  const status = queue.quota_status || "FREE";
+  const cfg = QUOTA_STATUS_CONFIG[status] || { label: status, cls: "bg-gray-100 text-gray-600 border-gray-200" };
   return (
-    <Badge className={`text-xs border ${SLOT_TYPE_COLORS[type] || ""}`}>
-      {type === "FREE" ? "Gratis" : type === "PAID" ? "Bayar" : "—"}
-    </Badge>
+    <Badge className={`text-xs border ${cfg.cls}`}>{cfg.label}</Badge>
   );
 }
 
@@ -68,21 +75,6 @@ function QueueStatusBadge({ queue }) {
   );
 }
 
-function CategoryBadge({ category }) {
-  const colors = {
-    "FREE_CHECK": "bg-green-50 text-green-700 border-green-200",
-    "PAYMENT": "bg-blue-50 text-blue-700 border-blue-200"
-  };
-  const labels = {
-    "FREE_CHECK": "FREE CHECK",
-    "PAYMENT": "PAYMENT"
-  };
-  return (
-    <Badge className={`text-xs border ${colors[category] || ""}`}>
-      {labels[category] || "—"}
-    </Badge>
-  );
-}
 
 export default function Participants() {
   const navigate = useNavigate();
@@ -415,7 +407,7 @@ export default function Participants() {
                         {serviceMap[p.medical_service_id]?.service_name || "—"}
                       </td>
                       <td className="hidden lg:table-cell py-2.5 px-2 sm:px-3">
-                        {p.medical_slot_type && <SlotBadge type={p.medical_slot_type} />}
+                        <QuotaBadge queue={p.medQueue} />
                       </td>
                       <td className="py-2.5 px-2 sm:px-3">
                         <div className="flex flex-col gap-0.5">
@@ -427,10 +419,10 @@ export default function Participants() {
                         {serviceMap[p.eye_service_id]?.service_name || "—"}
                       </td>
                       <td className="hidden lg:table-cell py-2.5 px-2 sm:px-3">
-                        {p.eye_slot_type && <SlotBadge type={p.eye_slot_type} />}
+                        <QuotaBadge queue={p.eyeQueue} />
                       </td>
                       <td className="hidden md:table-cell py-2.5 px-2 sm:px-3">
-                        <CategoryBadge category={p.participant_category} />
+                        <QuotaBadge queue={p.medQueue || p.eyeQueue} />
                       </td>
                       <td className="py-2.5 px-2 sm:px-3">
                         <StatusBadge status={p.computedStatus} />
