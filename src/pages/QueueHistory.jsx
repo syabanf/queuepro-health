@@ -81,7 +81,7 @@ export default function QueueHistory() {
         ev.participant?.registration_number?.toLowerCase().includes(q);
       const matchService = filterService === "all" || ev.service?.id === filterService;
       const matchStatus = filterStatus === "all" || ev.event_type === filterStatus;
-      const matchSlot = filterSlot === "all" || ev.queue?.slot_type === filterSlot;
+      const matchSlot = filterSlot === "all" || ev.queue?.quota_status === filterSlot || (!ev.queue?.quota_status && filterSlot === "FREE");
       return matchSearch && matchService && matchStatus && matchSlot;
     });
   }, [enriched, search, filterService, filterStatus, filterSlot]);
@@ -130,11 +130,12 @@ export default function QueueHistory() {
                 </SelectContent>
               </Select>
               <Select value={filterSlot} onValueChange={v => { setFilterSlot(v); setPage(1); }}>
-                <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="Tipe Slot" /></SelectTrigger>
+                <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="Tipe Quota" /></SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">Semua Tipe Slot</SelectItem>
-                  <SelectItem value="FREE">Gratis (FREE)</SelectItem>
-                  <SelectItem value="PAID">Berbayar (PAID)</SelectItem>
+                  <SelectItem value="all">Semua Tipe Quota</SelectItem>
+                  <SelectItem value="FREE">Free</SelectItem>
+                  <SelectItem value="RP1_BRI">Rp 1 BRI</SelectItem>
+                  <SelectItem value="SPECIAL_PRICE">Special Price</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -186,11 +187,16 @@ export default function QueueHistory() {
                           {ev.service ? `[${ev.service.service_code}] ${ev.service.service_name}` : "—"}
                         </td>
                         <td className="py-2.5 px-3">
-                          {ev.queue?.slot_type && (
-                            <Badge className={`text-xs border ${ev.queue.slot_type === "FREE" ? "bg-green-100 text-green-700 border-green-200" : "bg-orange-100 text-orange-700 border-orange-200"}`}>
-                              {ev.queue.slot_type === "FREE" ? "Gratis" : "Bayar"}
-                            </Badge>
-                          )}
+                          {(() => {
+                            const qs = ev.queue?.quota_status || (ev.queue ? "FREE" : null);
+                            if (!qs) return null;
+                            const cfg = {
+                              FREE: { cls: "bg-green-100 text-green-700 border-green-200", label: "Free" },
+                              RP1_BRI: { cls: "bg-blue-100 text-blue-700 border-blue-200", label: "Rp 1 BRI" },
+                              SPECIAL_PRICE: { cls: "bg-purple-100 text-purple-700 border-purple-200", label: "Special Price" },
+                            }[qs] || { cls: "bg-gray-100 text-gray-600 border-gray-200", label: qs };
+                            return <Badge className={`text-xs border ${cfg.cls}`}>{cfg.label}</Badge>;
+                          })()}
                         </td>
                         <td className="py-2.5 px-3">
                           {ev.previous_status && (

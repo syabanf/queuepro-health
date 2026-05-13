@@ -329,11 +329,12 @@ export default function Participants() {
                 </SelectContent>
               </Select>
               <Select value={filterSlot} onValueChange={v => { setFilterSlot(v); setPage(1); }}>
-                <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="Tipe Slot" /></SelectTrigger>
+                <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="Tipe Quota" /></SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">Semua Tipe Slot</SelectItem>
-                  <SelectItem value="FREE">Gratis (FREE)</SelectItem>
-                  <SelectItem value="PAID">Berbayar (PAID)</SelectItem>
+                  <SelectItem value="all">Semua Tipe Quota</SelectItem>
+                  <SelectItem value="FREE">Free</SelectItem>
+                  <SelectItem value="RP1_BRI">Rp 1 BRI</SelectItem>
+                  <SelectItem value="SPECIAL_PRICE">Special Price</SelectItem>
                 </SelectContent>
               </Select>
               <Select value={filterStatus} onValueChange={v => { setFilterStatus(v); setPage(1); }}>

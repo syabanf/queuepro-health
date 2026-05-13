@@ -48,13 +48,18 @@ export default function Reports() {
       const matchService = filterService === "all" ||
         p.medical_service_id === filterService ||
         p.eye_service_id === filterService;
-      const matchSlot = filterSlot === "all" ||
-        p.medical_slot_type === filterSlot ||
-        p.eye_slot_type === filterSlot;
+      const matchSlot = (() => {
+        if (filterSlot === "all") return true;
+        const pQueues = queues.filter(q => q.participant_id === p.id);
+        return pQueues.some(q => {
+          const qs = q.quota_status || "FREE";
+          return qs === filterSlot;
+        });
+      })();
       const matchStatus = filterStatus === "all" || p.participant_status === filterStatus;
       return matchService && matchSlot && matchStatus;
     });
-  }, [participants, filterService, filterSlot, filterStatus]);
+  }, [participants, queues, filterService, filterSlot, filterStatus]);
 
   const stats = useMemo(() => {
     const pIds = new Set(filteredParticipants.map(p => p.id));
@@ -70,8 +75,10 @@ export default function Reports() {
     const registered = filteredParticipants.filter(p => p.participant_status === "REGISTERED").length;
     const skipped = filteredQueues.filter(q => q.status === "SKIPPED").length;
     const cancelled = filteredQueues.filter(q => q.status === "CANCELLED").length;
-    const freeUsed = filteredQueues.filter(q => q.slot_type === "FREE" && q.status !== "CANCELLED").length;
-    const paidUsed = filteredQueues.filter(q => q.slot_type === "PAID" && q.status !== "CANCELLED").length;
+    const freeUsed    = filteredQueues.filter(q => (!q.quota_status || q.quota_status === "FREE") && q.status !== "CANCELLED").length;
+    const rp1Used     = filteredQueues.filter(q => q.quota_status === "RP1_BRI" && q.status !== "CANCELLED").length;
+    const specialUsed = filteredQueues.filter(q => q.quota_status === "SPECIAL_PRICE" && q.status !== "CANCELLED").length;
+    const paidUsed = rp1Used + specialUsed;
     const completionRate = filteredParticipants.length > 0
       ? Math.round((completed / filteredParticipants.length) * 100)
       : 0;
@@ -95,30 +102,37 @@ export default function Reports() {
       const svcQueues = filteredQueues.filter(q => q.service_id === svc.id);
       const done = svcQueues.filter(q => q.status === "DONE").length;
       const total = svcQueues.filter(q => q.status !== "CANCELLED").length;
-      const freeQ = svcQueues.filter(q => q.slot_type === "FREE" && q.status !== "CANCELLED").length;
-      const paidQ = svcQueues.filter(q => q.slot_type === "PAID" && q.status !== "CANCELLED").length;
-      return { svc, done, total, freeQ, paidQ };
+      const freeQ    = svcQueues.filter(q => (!q.quota_status || q.quota_status === "FREE") && q.status !== "CANCELLED").length;
+      const rp1Q     = svcQueues.filter(q => q.quota_status === "RP1_BRI" && q.status !== "CANCELLED").length;
+      const specialQ = svcQueues.filter(q => q.quota_status === "SPECIAL_PRICE" && q.status !== "CANCELLED").length;
+      const paidQ = rp1Q + specialQ;
+      return { svc, done, total, freeQ, paidQ, rp1Q, specialQ };
     }).filter(b => b.total > 0);
 
-    return { completed, partial, registered, skipped, cancelled, freeUsed, paidUsed, completionRate, avgServiceMin, avgWaitMin, serviceBreakdown, totalFiltered: filteredParticipants.length };
+    return { completed, partial, registered, skipped, cancelled, freeUsed, rp1Used, specialUsed, paidUsed, completionRate, avgServiceMin, avgWaitMin, serviceBreakdown, totalFiltered: filteredParticipants.length };
   }, [filteredParticipants, queues, services, filterService]);
 
   const handlePrint = () => window.print();
 
   const handleExportCSV = () => {
-    const headers = ["No. Reg", "Nama", "No. Telp", "Unit/Divisi", "Layanan Medis", "Slot Medis", "Layanan Mata", "Slot Mata", "Status", "Waktu Daftar"];
-    const rows = filteredParticipants.map(p => [
-      p.registration_number,
-      p.full_name,
-      p.phone_number,
-      p.unit_division,
-      serviceMap[p.medical_service_id]?.service_name || "",
-      p.medical_slot_type || "",
-      serviceMap[p.eye_service_id]?.service_name || "",
-      p.eye_slot_type || "",
-      p.participant_status,
-      p.registered_at ? format(new Date(p.registered_at), "dd/MM/yyyy HH:mm") : ""
-    ]);
+    const QUOTA_LABEL = { FREE: "Free", RP1_BRI: "Rp 1 BRI", SPECIAL_PRICE: "Special Price" };
+    const headers = ["No. Reg", "Nama", "No. Telp", "Unit/Divisi", "Layanan Medis", "Quota Medis", "Layanan Mata", "Quota Mata", "Status", "Waktu Daftar"];
+    const rows = filteredParticipants.map(p => {
+      const medQ = queues.find(q => q.participant_id === p.id && q.service_id === p.medical_service_id);
+      const eyeQ = queues.find(q => q.participant_id === p.id && q.service_id === p.eye_service_id);
+      return [
+        p.registration_number,
+        p.full_name,
+        p.phone_number,
+        p.unit_division,
+        serviceMap[p.medical_service_id]?.service_name || "",
+        QUOTA_LABEL[medQ?.quota_status] || (medQ ? "Free" : ""),
+        serviceMap[p.eye_service_id]?.service_name || "",
+        QUOTA_LABEL[eyeQ?.quota_status] || (eyeQ ? "Free" : ""),
+        p.participant_status,
+        p.registered_at ? format(new Date(p.registered_at), "dd/MM/yyyy HH:mm") : ""
+      ];
+    });
     const csv = [headers, ...rows].map(r => r.map(v => `"${String(v).replace(/"/g, '""')}"`).join(",")).join("\n");
     const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
     const a = document.createElement("a");
@@ -196,11 +210,12 @@ export default function Reports() {
               </SelectContent>
             </Select>
             <Select value={filterSlot} onValueChange={setFilterSlot}>
-              <SelectTrigger className="h-8 text-xs w-36"><SelectValue placeholder="Tipe Slot" /></SelectTrigger>
+              <SelectTrigger className="h-8 text-xs w-36"><SelectValue placeholder="Tipe Quota" /></SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">Semua Slot</SelectItem>
-                <SelectItem value="FREE">Gratis (FREE)</SelectItem>
-                <SelectItem value="PAID">Berbayar (PAID)</SelectItem>
+                <SelectItem value="all">Semua Quota</SelectItem>
+                <SelectItem value="FREE">Free</SelectItem>
+                <SelectItem value="RP1_BRI">Rp 1 BRI</SelectItem>
+                <SelectItem value="SPECIAL_PRICE">Special Price</SelectItem>
               </SelectContent>
             </Select>
             <Select value={filterStatus} onValueChange={setFilterStatus}>
@@ -232,8 +247,9 @@ export default function Reports() {
           <StatBox label="Masih Terdaftar" value={stats.registered} colorClass="bg-blue-100 text-blue-700"><Users className="w-5 h-5" /></StatBox>
           <StatBox label="Antrian Dilewati" value={stats.skipped} colorClass="bg-orange-100 text-orange-700"><SkipForward className="w-5 h-5" /></StatBox>
           <StatBox label="Antrian Dibatalkan" value={stats.cancelled} colorClass="bg-red-100 text-red-700"><XCircle className="w-5 h-5" /></StatBox>
-          <StatBox label="Slot Gratis Terpakai" value={stats.freeUsed} colorClass="bg-green-100 text-green-700"><FileText className="w-5 h-5" /></StatBox>
-          <StatBox label="Slot Bayar Terpakai" value={stats.paidUsed} colorClass="bg-orange-100 text-orange-700"><FileText className="w-5 h-5" /></StatBox>
+          <StatBox label="Quota Free Terpakai" value={stats.freeUsed} colorClass="bg-green-100 text-green-700"><FileText className="w-5 h-5" /></StatBox>
+          <StatBox label="Quota Rp 1 BRI Terpakai" value={stats.rp1Used} colorClass="bg-blue-100 text-blue-700"><FileText className="w-5 h-5" /></StatBox>
+          <StatBox label="Quota Special Terpakai" value={stats.specialUsed} colorClass="bg-purple-100 text-purple-700"><FileText className="w-5 h-5" /></StatBox>
         </div>
       </div>
 
@@ -292,13 +308,13 @@ export default function Reports() {
               <table className="w-full text-sm">
                 <thead className="bg-muted/30 border-y border-border/30">
                   <tr>
-                    {["Kode", "Nama Layanan", "Terlayani", "Total Antrian", "Slot Gratis", "Slot Berbayar", "Selesai (%)"].map((h, i) => (
+                    {["Kode", "Nama Layanan", "Terlayani", "Total Antrian", "Free", "Rp 1 BRI", "Special", "Selesai (%)"].map((h, i) => (
                       <th key={i} className="text-left text-xs font-semibold text-muted-foreground py-3 px-4">{h}</th>
                     ))}
                   </tr>
                 </thead>
                 <tbody>
-                  {stats.serviceBreakdown.map(({ svc, done, total, freeQ, paidQ }) => {
+                  {stats.serviceBreakdown.map(({ svc, done, total, freeQ, rp1Q, specialQ }) => {
                     const pct = total > 0 ? Math.round((done / total) * 100) : 0;
                     const isEye = svc.service_group === "EYE_CHECK";
                     return (
@@ -321,7 +337,10 @@ export default function Reports() {
                           <span className="text-green-700 font-medium">{freeQ}</span>
                         </td>
                         <td className="py-3.5 px-4">
-                          <span className="text-orange-700 font-medium">{paidQ}</span>
+                          <span className="text-blue-700 font-medium">{rp1Q}</span>
+                        </td>
+                        <td className="py-3.5 px-4">
+                          <span className="text-purple-700 font-medium">{specialQ}</span>
                         </td>
                         <td className="py-3.5 px-4">
                           <div className="flex items-center gap-2">
