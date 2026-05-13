@@ -16,9 +16,9 @@ import { Link } from "react-router-dom";
 import { useAuth } from "@/lib/AuthContext";
 
 const QUOTA_TYPES = [
-  { key: 'free',    limitField: 'free_quota',    statusValue: 'FREE',          label: 'Free',      color: 'text-green-700',  bg: 'bg-green-500',  trackBg: 'bg-green-100'  },
-  { key: 'rp1',     limitField: 'rp1_quota',     statusValue: 'RP1_BRI',       label: 'Rp 1 BRI',  color: 'text-blue-700',   bg: 'bg-blue-500',   trackBg: 'bg-blue-100'   },
-  { key: 'special', limitField: 'special_quota', statusValue: 'SPECIAL_PRICE', label: 'Special',   color: 'text-purple-700', bg: 'bg-purple-500', trackBg: 'bg-purple-100' },
+  { key: 'free',    limitField: 'free_quota',    usedField: 'used_free_quota',    statusValue: 'FREE',          label: 'Free',      color: 'text-green-700',  bg: 'bg-green-500',  trackBg: 'bg-green-100'  },
+  { key: 'rp1',     limitField: 'rp1_quota',     usedField: 'used_rp1_quota',     statusValue: 'RP1_BRI',       label: 'Rp 1 BRI',  color: 'text-blue-700',   bg: 'bg-blue-500',   trackBg: 'bg-blue-100'   },
+  { key: 'special', limitField: 'special_quota', usedField: 'used_special_quota', statusValue: 'SPECIAL_PRICE', label: 'Special',   color: 'text-purple-700', bg: 'bg-purple-500', trackBg: 'bg-purple-100' },
 ];
 
 // Only SERVING and DONE count as a consumed quota slot
@@ -62,14 +62,14 @@ function ServiceQuotaCard({ service, queues }) {
           <span className="text-xs text-muted-foreground flex-shrink-0 font-mono">{totalUsed}/{totalLimit}</span>
         </div>
 
-        {/* Per-quota rows */}
+        {/* Per-quota rows — read used_*_quota from DB (updated by booth on DONE, realtime via Service subscription) */}
         {activeTypes.length > 0 && (
           <div className="grid gap-1.5" style={{ gridTemplateColumns: `repeat(${activeTypes.length}, 1fr)` }}>
             {activeTypes.map(qt => {
               const limit = service[qt.limitField] || 0;
-              const used = svcQueues.filter(q => q.quota_status === qt.statusValue).length;
-              const rem = Math.max(0, limit - used);
-              const pct = limit > 0 ? Math.min(100, Math.round((used / limit) * 100)) : 0;
+              const used  = service[qt.usedField]  || 0;
+              const rem   = Math.max(0, limit - used);
+              const pct   = limit > 0 ? Math.min(100, Math.round((used / limit) * 100)) : 0;
               return (
                 <div key={qt.key} className={`rounded px-2 py-1.5 ${qt.trackBg}`}>
                   <div className="flex items-center justify-between mb-1">

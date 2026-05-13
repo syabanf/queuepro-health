@@ -138,14 +138,14 @@ function BoothPanel({ service, participants, services, currentUser, compact = fa
         performed_by: currentUser?.email || "mock-user", notes,
       }).catch(e => console.warn(e));
       if (newStatus === "DONE") {
-        const svc = services.find(s => s.id === queue.service_id);
-        if (svc) {
-          const qt = queue.quota_type || "FREE";
+        const freshSvc = await base44.entities.Service.get(queue.service_id).catch(() => services.find(s => s.id === queue.service_id));
+        if (freshSvc) {
+          const qt = queue.quota_status || "FREE";
           const quotaIncrement =
-            qt === "RP1_BRI"       ? { used_rp1_quota:     (svc.used_rp1_quota     || 0) + 1 }
-            : qt === "SPECIAL_PRICE" ? { used_special_quota: (svc.used_special_quota || 0) + 1 }
-            :                         { used_free_quota:    (svc.used_free_quota    || 0) + 1 };
-          await base44.entities.Service.update(svc.id, quotaIncrement).catch(e => console.warn(e));
+            qt === "RP1_BRI"       ? { used_rp1_quota:     (freshSvc.used_rp1_quota     || 0) + 1 }
+            : qt === "SPECIAL_PRICE" ? { used_special_quota: (freshSvc.used_special_quota || 0) + 1 }
+            :                         { used_free_quota:    (freshSvc.used_free_quota    || 0) + 1 };
+          await base44.entities.Service.update(freshSvc.id, quotaIncrement).catch(e => console.warn(e));
         }
         await base44.entities.Participant.update(queue.participant_id, { participant_status: "COMPLETED" }).catch(e => console.warn(e));
         setVerificationResult(null);
