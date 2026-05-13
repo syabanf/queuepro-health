@@ -220,24 +220,22 @@ const { user } = useAuth();
   const totalSpecialQuota = services.reduce((sum, s) => sum + (s.special_quota || 0), 0);
   const totalQuota = totalFreeQuota + totalRp1Quota + totalSpecialQuota || eventMaxParticipants;
 
-  // Count actual by quota status
-  const freeCheckParticipants   = participants.filter(p => p.quota_status === "FREE").length;
-  const rp1Participants         = participants.filter(p => p.quota_status === "RP1_BRI").length;
-  const specialParticipants     = participants.filter(p => p.quota_status === "SPECIAL_PRICE").length;
+  // Sum used_*_quota from DB service records (updated by booth on DONE, realtime via Service subscription)
+  const freeUsedTotal    = services.reduce((sum, s) => sum + (s.used_free_quota    || 0), 0);
+  const rp1UsedTotal     = services.reduce((sum, s) => sum + (s.used_rp1_quota     || 0), 0);
+  const specialUsedTotal = services.reduce((sum, s) => sum + (s.used_special_quota || 0), 0);
 
   const stats = useMemo(() => {
     const completed = participants.filter(p => p.participant_status === "COMPLETED").length;
-    const partial = participants.filter(p => p.participant_status === "PARTIALLY_COMPLETED").length;
-    const waiting = queues.filter(q => q.status === "WAITING").length;
-    const serving = queues.filter(q => q.status === "SERVING" || q.status === "CALLED").length;
-    const skipped = queues.filter(q => q.status === "SKIPPED").length;
+    const partial   = participants.filter(p => p.participant_status === "PARTIALLY_COMPLETED").length;
+    const waiting   = queues.filter(q => q.status === "WAITING").length;
+    const serving   = queues.filter(q => q.status === "SERVING" || q.status === "CALLED").length;
+    const skipped   = queues.filter(q => q.status === "SKIPPED").length;
     const cancelled = queues.filter(q => q.status === "CANCELLED").length;
-    const freeUsed    = freeCheckParticipants;
-    const rp1Used     = rp1Participants;
-    const specialUsed = specialParticipants;
     const remaining = totalQuota - participants.length;
-    return { completed, partial, waiting, serving, skipped, cancelled, freeUsed, rp1Used, specialUsed, remaining };
-  }, [participants, queues, totalQuota, freeCheckParticipants, rp1Participants, specialParticipants]);
+    return { completed, partial, waiting, serving, skipped, cancelled,
+             freeUsed: freeUsedTotal, rp1Used: rp1UsedTotal, specialUsed: specialUsedTotal, remaining };
+  }, [participants, queues, totalQuota, freeUsedTotal, rp1UsedTotal, specialUsedTotal]);
 
   const fillPct = Math.min(100, Math.round((participants.length / totalQuota) * 100));
   const medicalServices = services.filter(s => s.service_group === "MEDICAL");
