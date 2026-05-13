@@ -47,6 +47,12 @@ function quotaLabel(val) {
 function quotaColor(val) {
   return QUOTA_OPTIONS.find(o => o.value === val)?.color || "text-muted-foreground";
 }
+function quotaShort(val) {
+  const s = val || "FREE";
+  if (s === "RP1_BRI") return { label: "RP1", cls: "text-blue-600" };
+  if (s === "SPECIAL_PRICE") return { label: "SPL", cls: "text-purple-600" };
+  return { label: "GRS", cls: "text-green-600" };
+}
 // Only SERVING and DONE count as a consumed quota slot
 const OCCUPYING_STATUSES = new Set(["SERVING", "DONE"]);
 
@@ -336,6 +342,8 @@ function BoothPanel({ service, participants, services, currentUser, compact = fa
                           quota_category: val === "FREE" ? "FULL_FREE" : "PAID",
                         });
                         queryClient.invalidateQueries({ queryKey: ["booth-queues", service.id] });
+                        queryClient.invalidateQueries({ queryKey: ["queues"] });
+                        queryClient.invalidateQueries({ queryKey: ["services"] });
                       }}
                       disabled={updateQueue.isPending}
                     >
@@ -460,9 +468,7 @@ function BoothPanel({ service, participants, services, currentUser, compact = fa
                     <div key={q.id} className={`flex items-center gap-2 px-2 py-1 rounded text-xs ${i === 0 ? "bg-primary/5 border border-primary/20" : "bg-muted/40"}`}>
                       <span className="font-mono font-bold w-12 flex-shrink-0">{q.queue_number}</span>
                       <span className="text-muted-foreground truncate flex-1">{p?.full_name || "—"}</span>
-                      <span className={`text-[10px] font-bold flex-shrink-0 ${q.payment_display_status === "FREE" ? "text-green-600" : "text-orange-600"}`}>
-                        {q.payment_display_status === "FREE" ? "GRS" : "BYR"}
-                      </span>
+                      {(() => { const s = quotaShort(q.quota_status); return <span className={`text-[10px] font-bold flex-shrink-0 ${s.cls}`}>{s.label}</span>; })()}
                     </div>
                   );
                 })}
@@ -504,9 +510,7 @@ function BoothPanel({ service, participants, services, currentUser, compact = fa
                   {done.slice(-6).reverse().map(q => (
                     <div key={q.id} className="flex items-center justify-between px-2 py-1 rounded bg-green-50 text-xs">
                       <span className="font-mono font-bold text-green-700">{q.queue_number}</span>
-                      <span className={`text-[10px] font-bold ${q.payment_display_status === "FREE" ? "text-green-600" : "text-orange-600"}`}>
-                        {q.payment_display_status === "FREE" ? "Gratis" : "Berbayar"}
-                      </span>
+                      <span className={`text-[10px] font-bold ${quotaColor(q.quota_status)}`}>{quotaLabel(q.quota_status)}</span>
                     </div>
                   ))}
                 </div>
@@ -599,6 +603,8 @@ function BoothPanel({ service, participants, services, currentUser, compact = fa
                             quota_category: val === "FREE" ? "FULL_FREE" : "PAID",
                           });
                           queryClient.invalidateQueries({ queryKey: ["booth-queues", service.id] });
+                          queryClient.invalidateQueries({ queryKey: ["queues"] });
+                          queryClient.invalidateQueries({ queryKey: ["services"] });
                         }}
                         disabled={updateQueue.isPending}
                       >
@@ -678,7 +684,7 @@ function BoothPanel({ service, participants, services, currentUser, compact = fa
                     return p ? <p className="text-xs text-muted-foreground mt-1 flex items-center gap-1"><User className="w-3 h-3" /> {p.full_name}</p> : null;
                   })()}
                   {nextWaiting && (
-                    <p className="text-xs text-muted-foreground mt-0.5">{nextWaiting.payment_display_status === "FREE" ? "Gratis" : "Berbayar"}</p>
+                    <p className="text-xs mt-0.5"><span className={`text-xs font-semibold ${quotaColor(nextWaiting.quota_status)}`}>{quotaLabel(nextWaiting.quota_status)}</span></p>
                   )}
                 </div>
                 <div className="flex flex-col gap-2">
@@ -717,9 +723,7 @@ function BoothPanel({ service, participants, services, currentUser, compact = fa
                       <div key={q.id} className={`flex items-center gap-2 px-2 py-1.5 rounded-md text-sm ${i === 0 ? "bg-primary/5 border border-primary/20" : "bg-muted/40"}`}>
                         <span className="font-mono font-bold w-14 flex-shrink-0">{q.queue_number}</span>
                         <span className="text-xs text-muted-foreground truncate flex-1">{p?.full_name || "—"}</span>
-                        <span className={`text-[10px] font-bold flex-shrink-0 ${q.payment_display_status === "FREE" ? "text-green-600" : "text-orange-600"}`}>
-                          {q.payment_display_status === "FREE" ? "GRS" : "BYR"}
-                        </span>
+                        {(() => { const s = quotaShort(q.quota_status); return <span className={`text-[10px] font-bold flex-shrink-0 ${s.cls}`}>{s.label}</span>; })()}
                       </div>
                     );
                   })
@@ -778,9 +782,7 @@ function BoothPanel({ service, participants, services, currentUser, compact = fa
                       <span className="font-mono font-bold text-green-700">{q.queue_number}</span>
                       <div className="flex items-center gap-1.5">
                         {q.qr_verification_status === "VERIFIED" && <ShieldCheck className="w-3 h-3 text-green-500" />}
-                        <span className={`text-[10px] font-bold ${q.payment_display_status === "FREE" ? "text-green-600" : "text-orange-600"}`}>
-                          {q.payment_display_status === "FREE" ? "Gratis" : "Berbayar"}
-                        </span>
+                        <span className={`text-[10px] font-bold ${quotaColor(q.quota_status)}`}>{quotaLabel(q.quota_status)}</span>
                       </div>
                     </div>
                   ))
