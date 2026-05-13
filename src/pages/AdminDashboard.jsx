@@ -220,11 +220,6 @@ const { user } = useAuth();
   const totalSpecialQuota = services.reduce((sum, s) => sum + (s.special_quota || 0), 0);
   const totalQuota = totalFreeQuota + totalRp1Quota + totalSpecialQuota || eventMaxParticipants;
 
-  // Sum used_*_quota from DB service records (updated by booth on DONE, realtime via Service subscription)
-  const freeUsedTotal    = services.reduce((sum, s) => sum + (s.used_free_quota    || 0), 0);
-  const rp1UsedTotal     = services.reduce((sum, s) => sum + (s.used_rp1_quota     || 0), 0);
-  const specialUsedTotal = services.reduce((sum, s) => sum + (s.used_special_quota || 0), 0);
-
   const stats = useMemo(() => {
     const completed = participants.filter(p => p.participant_status === "COMPLETED").length;
     const partial   = participants.filter(p => p.participant_status === "PARTIALLY_COMPLETED").length;
@@ -233,9 +228,14 @@ const { user } = useAuth();
     const skipped   = queues.filter(q => q.status === "SKIPPED").length;
     const cancelled = queues.filter(q => q.status === "CANCELLED").length;
     const remaining = totalQuota - participants.length;
+    // Count consumed quota from queue records (same source as ServiceQuotaCard)
+    const doneQueues = queues.filter(q => OCCUPYING_STATUSES.has(q.status));
+    const freeUsed    = doneQueues.filter(q => !q.quota_status || q.quota_status === "FREE").length;
+    const rp1Used     = doneQueues.filter(q => q.quota_status === "RP1_BRI").length;
+    const specialUsed = doneQueues.filter(q => q.quota_status === "SPECIAL_PRICE").length;
     return { completed, partial, waiting, serving, skipped, cancelled,
-             freeUsed: freeUsedTotal, rp1Used: rp1UsedTotal, specialUsed: specialUsedTotal, remaining };
-  }, [participants, queues, totalQuota, freeUsedTotal, rp1UsedTotal, specialUsedTotal]);
+             freeUsed, rp1Used, specialUsed, remaining };
+  }, [participants, queues, totalQuota]);
 
   const fillPct = Math.min(100, Math.round((participants.length / totalQuota) * 100));
   const medicalServices = services.filter(s => s.service_group === "MEDICAL");
