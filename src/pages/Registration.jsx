@@ -145,7 +145,7 @@ export default function Registration() {
             onPrint={handlePrint}
             onReset={handleReset}
           />
-          <QuotaTable services={services} />
+          <QuotaTable services={services} queues={queues} />
         </div>
       </div>
 

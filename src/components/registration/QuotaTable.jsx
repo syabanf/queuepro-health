@@ -3,11 +3,21 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Activity, Stethoscope, Eye, Gift, CreditCard, Tag } from "lucide-react";
 
+const OCCUPYING_STATUSES = new Set(["SERVING", "DONE"]);
+
 const QUOTA_TYPES = [
-  { limitField: 'free_quota',    usedField: 'used_free_quota',    label: 'Free',    color: 'text-green-600',  barColor: 'bg-green-500' },
-  { limitField: 'rp1_quota',     usedField: 'used_rp1_quota',     label: 'Rp1 BRI', color: 'text-blue-600',   barColor: 'bg-blue-500' },
-  { limitField: 'special_quota', usedField: 'used_special_quota', label: 'Special', color: 'text-purple-600', barColor: 'bg-purple-500' },
+  { limitField: 'free_quota',    quotaStatus: 'FREE',          label: 'Free',    color: 'text-green-600',  barColor: 'bg-green-500' },
+  { limitField: 'rp1_quota',     quotaStatus: 'RP1_BRI',       label: 'Rp1 BRI', color: 'text-blue-600',   barColor: 'bg-blue-500' },
+  { limitField: 'special_quota', quotaStatus: 'SPECIAL_PRICE', label: 'Special', color: 'text-purple-600', barColor: 'bg-purple-500' },
 ];
+
+function usedFromQueues(queues, serviceId, quotaStatus) {
+  const svcQueues = queues.filter(q => q.service_id === serviceId && OCCUPYING_STATUSES.has(q.status));
+  if (quotaStatus === 'FREE') {
+    return svcQueues.filter(q => !q.quota_status || q.quota_status === 'FREE').length;
+  }
+  return svcQueues.filter(q => q.quota_status === quotaStatus).length;
+}
 
 function MiniBar({ used, total, barColor }) {
   if (!total) return null;
@@ -22,7 +32,7 @@ function MiniBar({ used, total, barColor }) {
   );
 }
 
-export default function QuotaTable({ services }) {
+export default function QuotaTable({ services, queues = [] }) {
   const active = services.filter(s => s.is_active);
 
   return (
@@ -38,7 +48,7 @@ export default function QuotaTable({ services }) {
           const isMedical = s.service_group === "MEDICAL";
           const Icon = isMedical ? Stethoscope : Eye;
           const totalLimit = QUOTA_TYPES.reduce((sum, qt) => sum + (s[qt.limitField] || 0), 0);
-          const totalUsed  = QUOTA_TYPES.reduce((sum, qt) => sum + (s[qt.usedField]  || 0), 0);
+          const totalUsed  = QUOTA_TYPES.reduce((sum, qt) => sum + usedFromQueues(queues, s.id, qt.quotaStatus), 0);
           const totalRem   = Math.max(0, totalLimit - totalUsed);
           return (
             <div key={s.id} className="space-y-2">
@@ -59,7 +69,7 @@ export default function QuotaTable({ services }) {
               <div className="space-y-1 pl-5">
                 {QUOTA_TYPES.map(qt => {
                   const limit = s[qt.limitField] || 0;
-                  const used  = s[qt.usedField]  || 0;
+                  const used  = usedFromQueues(queues, s.id, qt.quotaStatus);
                   if (limit === 0) return null;
                   return (
                     <div key={qt.limitField} className="flex items-center gap-2">
