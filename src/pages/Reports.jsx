@@ -5,9 +5,14 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { FileText, Download, Printer, Users, CheckCircle2, Clock, SkipForward, XCircle, TrendingUp, Stethoscope, Eye } from "lucide-react";
+import { FileText, Download, Printer, Users, CheckCircle2, Clock, SkipForward, XCircle, TrendingUp, Stethoscope, Eye, Activity } from "lucide-react";
 import { format } from "date-fns";
 import PageHeader from "@/components/layout/PageHeader";
+
+// Only SERVING + DONE count as consumed quota slots
+const OCCUPYING_STATUSES = new Set(["SERVING", "DONE"]);
+
+const QUOTA_LABEL = { FREE: "Free", RP1_BRI: "Rp 1 BRI", SPECIAL_PRICE: "Special Price" };
 
 export default function Reports() {
   const [filterService, setFilterService] = useState("all");
@@ -17,26 +22,24 @@ export default function Reports() {
   const { data: participants = [] } = useQuery({
     queryKey: ["participants"],
     queryFn: () => base44.entities.Participant.list(),
+    refetchInterval: 10000,
   });
 
   const { data: queues = [] } = useQuery({
     queryKey: ["queues"],
     queryFn: () => base44.entities.Queue.list(),
+    refetchInterval: 5000,
   });
 
   const { data: services = [] } = useQuery({
     queryKey: ["services"],
     queryFn: () => base44.entities.Service.list(),
+    refetchInterval: 10000,
   });
 
   const { data: eventSettings = [] } = useQuery({
     queryKey: ["eventSettings"],
     queryFn: () => base44.entities.EventSetting.list(),
-  });
-
-  const { data: queueEvents = [] } = useQuery({
-    queryKey: ["queue-events"],
-    queryFn: () => base44.entities.QueueEvent.list(),
   });
 
   const event = eventSettings[0];
@@ -51,10 +54,7 @@ export default function Reports() {
       const matchSlot = (() => {
         if (filterSlot === "all") return true;
         const pQueues = queues.filter(q => q.participant_id === p.id);
-        return pQueues.some(q => {
-          const qs = q.quota_status || "FREE";
-          return qs === filterSlot;
-        });
+        return pQueues.some(q => (q.quota_status || "FREE") === filterSlot);
       })();
       const matchStatus = filterStatus === "all" || p.participant_status === filterStatus;
       return matchService && matchSlot && matchStatus;
@@ -62,60 +62,84 @@ export default function Reports() {
   }, [participants, queues, filterService, filterSlot, filterStatus]);
 
   const stats = useMemo(() => {
-    const pIds = new Set(filteredParticipants.map(p => p.id));
+    // All queues belonging to filtered participants (filtered by service if needed)
     const filteredQueues = queues.filter(q => {
-      const p = filteredParticipants.find(pp => pp.id === q.participant_id);
-      if (!p) return false;
+      const inFiltered = filteredParticipants.some(p => p.id === q.participant_id);
+      if (!inFiltered) return false;
       if (filterService !== "all" && q.service_id !== filterService) return false;
       return true;
     });
 
-    const completed = filteredParticipants.filter(p => p.participant_status === "COMPLETED").length;
-    const partial = filteredParticipants.filter(p => p.participant_status === "PARTIALLY_COMPLETED").length;
+    // Participant-level stats
+    const completed  = filteredParticipants.filter(p => p.participant_status === "COMPLETED").length;
+    const partial    = filteredParticipants.filter(p => p.participant_status === "PARTIALLY_COMPLETED").length;
     const registered = filteredParticipants.filter(p => p.participant_status === "REGISTERED").length;
-    const skipped = filteredQueues.filter(q => q.status === "SKIPPED").length;
-    const cancelled = filteredQueues.filter(q => q.status === "CANCELLED").length;
-    const freeUsed    = filteredQueues.filter(q => (!q.quota_status || q.quota_status === "FREE") && q.status !== "CANCELLED").length;
-    const rp1Used     = filteredQueues.filter(q => q.quota_status === "RP1_BRI" && q.status !== "CANCELLED").length;
-    const specialUsed = filteredQueues.filter(q => q.quota_status === "SPECIAL_PRICE" && q.status !== "CANCELLED").length;
-    const paidUsed = rp1Used + specialUsed;
+
+    // Queue-level stats
+    const totalQueues   = filteredQueues.length;
+    const waitingQueues = filteredQueues.filter(q => q.status === "WAITING").length;
+    const servingQueues = filteredQueues.filter(q => q.status === "SERVING" || q.status === "CALLED" || q.status === "QR_VERIFIED").length;
+    const doneQueues    = filteredQueues.filter(q => q.status === "DONE").length;
+    const skipped       = filteredQueues.filter(q => q.status === "SKIPPED").length;
+    const cancelled     = filteredQueues.filter(q => q.status === "CANCELLED").length;
+
+    // Quota terpakai = only SERVING + DONE (consistent with other pages)
+    const occupying  = filteredQueues.filter(q => OCCUPYING_STATUSES.has(q.status));
+    const freeUsed    = occupying.filter(q => !q.quota_status || q.quota_status === "FREE").length;
+    const rp1Used     = occupying.filter(q => q.quota_status === "RP1_BRI").length;
+    const specialUsed = occupying.filter(q => q.quota_status === "SPECIAL_PRICE").length;
+
     const completionRate = filteredParticipants.length > 0
       ? Math.round((completed / filteredParticipants.length) * 100)
       : 0;
 
-    // Avg service time from DONE queues with serving_at + done_at
+    // Avg service time: DONE queues with serving_at + done_at
     const doneWithTimes = filteredQueues.filter(q => q.status === "DONE" && q.serving_at && q.done_at);
-    const avgServiceMs = doneWithTimes.length > 0
+    const avgServiceMs  = doneWithTimes.length > 0
       ? doneWithTimes.reduce((sum, q) => sum + (new Date(q.done_at) - new Date(q.serving_at)), 0) / doneWithTimes.length
       : null;
     const avgServiceMin = avgServiceMs ? Math.round(avgServiceMs / 60000) : null;
 
-    // Avg wait time from CALLED queues with created_date + called_at
+    // Avg wait time: queues with called_at + created_date
     const calledWithTimes = filteredQueues.filter(q => q.called_at && q.created_date);
     const avgWaitMs = calledWithTimes.length > 0
       ? calledWithTimes.reduce((sum, q) => sum + (new Date(q.called_at) - new Date(q.created_date)), 0) / calledWithTimes.length
       : null;
     const avgWaitMin = avgWaitMs ? Math.round(avgWaitMs / 60000) : null;
 
-    // Per service breakdown
+    // Per-service breakdown
     const serviceBreakdown = services.map(svc => {
-      const svcQueues = filteredQueues.filter(q => q.service_id === svc.id);
-      const done = svcQueues.filter(q => q.status === "DONE").length;
-      const total = svcQueues.filter(q => q.status !== "CANCELLED").length;
-      const freeQ    = svcQueues.filter(q => (!q.quota_status || q.quota_status === "FREE") && q.status !== "CANCELLED").length;
-      const rp1Q     = svcQueues.filter(q => q.quota_status === "RP1_BRI" && q.status !== "CANCELLED").length;
-      const specialQ = svcQueues.filter(q => q.quota_status === "SPECIAL_PRICE" && q.status !== "CANCELLED").length;
-      const paidQ = rp1Q + specialQ;
-      return { svc, done, total, freeQ, paidQ, rp1Q, specialQ };
-    }).filter(b => b.total > 0);
+      const svcQueues   = filteredQueues.filter(q => q.service_id === svc.id);
+      const svcOccupy   = svcQueues.filter(q => OCCUPYING_STATUSES.has(q.status));
+      const done        = svcQueues.filter(q => q.status === "DONE").length;
+      const serving     = svcQueues.filter(q => q.status === "SERVING" || q.status === "CALLED" || q.status === "QR_VERIFIED").length;
+      const waiting     = svcQueues.filter(q => q.status === "WAITING").length;
+      const totalActive = svcQueues.filter(q => q.status !== "CANCELLED").length;
+      // Quota terpakai (SERVING + DONE only)
+      const freeQ    = svcOccupy.filter(q => !q.quota_status || q.quota_status === "FREE").length;
+      const rp1Q     = svcOccupy.filter(q => q.quota_status === "RP1_BRI").length;
+      const specialQ = svcOccupy.filter(q => q.quota_status === "SPECIAL_PRICE").length;
+      // Quota limits from service config
+      const freeLimit    = svc.free_quota    || 0;
+      const rp1Limit     = svc.rp1_quota     || 0;
+      const specialLimit = svc.special_quota || 0;
+      return { svc, done, serving, waiting, totalActive, freeQ, rp1Q, specialQ, freeLimit, rp1Limit, specialLimit };
+    }).filter(b => b.totalActive > 0);
 
-    return { completed, partial, registered, skipped, cancelled, freeUsed, rp1Used, specialUsed, paidUsed, completionRate, avgServiceMin, avgWaitMin, serviceBreakdown, totalFiltered: filteredParticipants.length };
+    return {
+      completed, partial, registered,
+      totalQueues, waitingQueues, servingQueues, doneQueues,
+      skipped, cancelled,
+      freeUsed, rp1Used, specialUsed,
+      completionRate, avgServiceMin, avgWaitMin,
+      serviceBreakdown,
+      totalFiltered: filteredParticipants.length,
+    };
   }, [filteredParticipants, queues, services, filterService]);
 
   const handlePrint = () => window.print();
 
   const handleExportCSV = () => {
-    const QUOTA_LABEL = { FREE: "Free", RP1_BRI: "Rp 1 BRI", SPECIAL_PRICE: "Special Price" };
     const headers = ["No. Reg", "Nama", "No. Telp", "Unit/Divisi", "Layanan Medis", "Quota Medis", "Layanan Mata", "Quota Mata", "Status", "Waktu Daftar"];
     const rows = filteredParticipants.map(p => {
       const medQ = queues.find(q => q.participant_id === p.id && q.service_id === p.medical_service_id);
@@ -130,7 +154,7 @@ export default function Reports() {
         serviceMap[p.eye_service_id]?.service_name || "",
         QUOTA_LABEL[eyeQ?.quota_status] || (eyeQ ? "Free" : ""),
         p.participant_status,
-        p.registered_at ? format(new Date(p.registered_at), "dd/MM/yyyy HH:mm") : ""
+        p.registered_at ? format(new Date(p.registered_at), "dd/MM/yyyy HH:mm") : "",
       ];
     });
     const csv = [headers, ...rows].map(r => r.map(v => `"${String(v).replace(/"/g, '""')}"`).join(",")).join("\n");
@@ -229,7 +253,8 @@ export default function Reports() {
               </SelectContent>
             </Select>
             {(filterService !== "all" || filterSlot !== "all" || filterStatus !== "all") && (
-              <Button variant="ghost" size="sm" className="text-xs" onClick={() => { setFilterService("all"); setFilterSlot("all"); setFilterStatus("all"); }}>
+              <Button variant="ghost" size="sm" className="text-xs"
+                onClick={() => { setFilterService("all"); setFilterSlot("all"); setFilterStatus("all"); }}>
                 Reset Filter
               </Button>
             )}
@@ -237,16 +262,34 @@ export default function Reports() {
         </CardContent>
       </Card>
 
-      {/* Summary Stats */}
+      {/* Summary Stats — Peserta */}
       <div>
-        <h3 className="text-sm font-semibold text-foreground mb-3">Ringkasan Statistik</h3>
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
+        <h3 className="text-sm font-semibold text-foreground mb-3">Ringkasan Peserta</h3>
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
           <StatBox label="Total Peserta" value={stats.totalFiltered} colorClass="bg-primary/15 text-primary"><Users className="w-5 h-5" /></StatBox>
           <StatBox label="Selesai Lengkap" value={stats.completed} colorClass="bg-green-100 text-green-700"><CheckCircle2 className="w-5 h-5" /></StatBox>
           <StatBox label="Sebagian Selesai" value={stats.partial} colorClass="bg-amber-100 text-amber-700"><Clock className="w-5 h-5" /></StatBox>
           <StatBox label="Masih Terdaftar" value={stats.registered} colorClass="bg-blue-100 text-blue-700"><Users className="w-5 h-5" /></StatBox>
+        </div>
+      </div>
+
+      {/* Summary Stats — Antrian */}
+      <div>
+        <h3 className="text-sm font-semibold text-foreground mb-3">Ringkasan Antrian</h3>
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          <StatBox label="Total Antrian" value={stats.totalQueues} colorClass="bg-primary/15 text-primary"><Activity className="w-5 h-5" /></StatBox>
+          <StatBox label="Sedang Menunggu" value={stats.waitingQueues} colorClass="bg-amber-100 text-amber-700"><Clock className="w-5 h-5" /></StatBox>
+          <StatBox label="Sedang Dilayani" value={stats.servingQueues} colorClass="bg-blue-100 text-blue-700"><Stethoscope className="w-5 h-5" /></StatBox>
+          <StatBox label="Selesai Dilayani" value={stats.doneQueues} colorClass="bg-green-100 text-green-700"><CheckCircle2 className="w-5 h-5" /></StatBox>
           <StatBox label="Antrian Dilewati" value={stats.skipped} colorClass="bg-orange-100 text-orange-700"><SkipForward className="w-5 h-5" /></StatBox>
           <StatBox label="Antrian Dibatalkan" value={stats.cancelled} colorClass="bg-red-100 text-red-700"><XCircle className="w-5 h-5" /></StatBox>
+        </div>
+      </div>
+
+      {/* Summary Stats — Quota */}
+      <div>
+        <h3 className="text-sm font-semibold text-foreground mb-3">Quota Terpakai <span className="font-normal text-muted-foreground">(Serving + Done)</span></h3>
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
           <StatBox label="Quota Free Terpakai" value={stats.freeUsed} colorClass="bg-green-100 text-green-700"><FileText className="w-5 h-5" /></StatBox>
           <StatBox label="Quota Rp 1 BRI Terpakai" value={stats.rp1Used} colorClass="bg-blue-100 text-blue-700"><FileText className="w-5 h-5" /></StatBox>
           <StatBox label="Quota Special Terpakai" value={stats.specialUsed} colorClass="bg-purple-100 text-purple-700"><FileText className="w-5 h-5" /></StatBox>
@@ -308,46 +351,55 @@ export default function Reports() {
               <table className="w-full text-sm">
                 <thead className="bg-muted/30 border-y border-border/30">
                   <tr>
-                    {["Kode", "Nama Layanan", "Terlayani", "Total Antrian", "Free", "Rp 1 BRI", "Special", "Selesai (%)"].map((h, i) => (
-                      <th key={i} className="text-left text-xs font-semibold text-muted-foreground py-3 px-4">{h}</th>
+                    {["Kode", "Nama Layanan", "Menunggu", "Dilayani", "Selesai", "Total", "Free", "Rp 1 BRI", "Special", "Progress"].map((h, i) => (
+                      <th key={i} className="text-left text-xs font-semibold text-muted-foreground py-3 px-3 whitespace-nowrap">{h}</th>
                     ))}
                   </tr>
                 </thead>
                 <tbody>
-                  {stats.serviceBreakdown.map(({ svc, done, total, freeQ, rp1Q, specialQ }) => {
-                    const pct = total > 0 ? Math.round((done / total) * 100) : 0;
+                  {stats.serviceBreakdown.map(({ svc, done, serving, waiting, totalActive, freeQ, rp1Q, specialQ, freeLimit, rp1Limit, specialLimit }) => {
+                    const pct = totalActive > 0 ? Math.round((done / totalActive) * 100) : 0;
                     const isEye = svc.service_group === "EYE_CHECK";
                     return (
                       <tr key={svc.id} className="border-b border-border/30 last:border-0 hover:bg-muted/40 transition-colors">
-                        <td className="py-3.5 px-4">
+                        <td className="py-3 px-3">
                           <div className={`w-9 h-9 rounded-lg flex items-center justify-center text-xs font-bold shadow-sm
                             ${isEye ? "bg-accent/15 text-accent" : "bg-primary/15 text-primary"}`}>
                             {svc.service_code}
                           </div>
                         </td>
-                        <td className="py-3.5 px-4">
-                          <p className="font-medium text-foreground">{svc.service_name}</p>
+                        <td className="py-3 px-3">
+                          <p className="font-medium text-foreground whitespace-nowrap">{svc.service_name}</p>
                           <p className="text-xs text-muted-foreground mt-0.5">Booth {svc.booth_number}</p>
                         </td>
-                        <td className="py-3.5 px-4">
+                        <td className="py-3 px-3">
+                          <span className="text-amber-600 font-medium">{waiting}</span>
+                        </td>
+                        <td className="py-3 px-3">
+                          <span className="text-blue-600 font-medium">{serving}</span>
+                        </td>
+                        <td className="py-3 px-3">
                           <span className="font-bold text-green-700 bg-green-50 px-2 py-1 rounded text-xs">{done}</span>
                         </td>
-                        <td className="py-3.5 px-4 font-medium">{total}</td>
-                        <td className="py-3.5 px-4">
+                        <td className="py-3 px-3 font-medium text-muted-foreground">{totalActive}</td>
+                        <td className="py-3 px-3">
                           <span className="text-green-700 font-medium">{freeQ}</span>
+                          {freeLimit > 0 && <span className="text-muted-foreground text-xs">/{freeLimit}</span>}
                         </td>
-                        <td className="py-3.5 px-4">
+                        <td className="py-3 px-3">
                           <span className="text-blue-700 font-medium">{rp1Q}</span>
+                          {rp1Limit > 0 && <span className="text-muted-foreground text-xs">/{rp1Limit}</span>}
                         </td>
-                        <td className="py-3.5 px-4">
+                        <td className="py-3 px-3">
                           <span className="text-purple-700 font-medium">{specialQ}</span>
+                          {specialLimit > 0 && <span className="text-muted-foreground text-xs">/{specialLimit}</span>}
                         </td>
-                        <td className="py-3.5 px-4">
+                        <td className="py-3 px-3 min-w-[100px]">
                           <div className="flex items-center gap-2">
-                            <div className="flex-1 h-2.5 bg-muted rounded-full overflow-hidden min-w-[60px]">
+                            <div className="flex-1 h-2.5 bg-muted rounded-full overflow-hidden">
                               <div className="h-full bg-gradient-to-r from-green-400 to-green-600 rounded-full" style={{ width: `${pct}%` }} />
                             </div>
-                            <span className="text-xs font-bold text-foreground w-10 text-right">{pct}%</span>
+                            <span className="text-xs font-bold text-foreground w-9 text-right">{pct}%</span>
                           </div>
                         </td>
                       </tr>
