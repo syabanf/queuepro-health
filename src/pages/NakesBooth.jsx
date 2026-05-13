@@ -340,7 +340,7 @@ function BoothPanel({ service, participants, services, currentUser, compact = fa
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        {QUOTA_OPTIONS.map(opt => {
+                        {QUOTA_OPTIONS.filter(opt => (service[opt.limitField] || 0) > 0).map(opt => {
                           const full = isQuotaFull(service, opt.value, queues);
                           const rem = quotaRemaining(service, opt.value, queues);
                           return (
@@ -603,7 +603,7 @@ function BoothPanel({ service, participants, services, currentUser, compact = fa
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
-                          {QUOTA_OPTIONS.map(opt => {
+                          {QUOTA_OPTIONS.filter(opt => (service[opt.limitField] || 0) > 0).map(opt => {
                             const full = isQuotaFull(service, opt.value, queues);
                             const rem = quotaRemaining(service, opt.value, queues);
                             return (
