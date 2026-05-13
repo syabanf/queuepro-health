@@ -793,6 +793,7 @@ function BoothPanel({ service, participants, services, currentUser, compact = fa
 
 export default function NakesBooth() {
   const { toast } = useToast();
+  const queryClient = useQueryClient();
   const [selectedServiceId, setSelectedServiceId] = useState("");
   const [currentUser, setCurrentUser] = useState(null);
 
